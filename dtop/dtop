@@ -1,0 +1,76 @@
+#!/bin/bash
+
+usage(){
+    U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
+    U2="[-nettick <tick>] [-win] [-dbg] [-vsn <OTP version>] nodename"
+    echo $U1 $U2
+    exit
+}
+
+if [ ${0:0:1} == "/" ];then
+    SPATH=$0
+elif [ -x $PWD/$0 ];then
+    SPATH=$PWD/$0
+else
+    SPATH=`which $0`
+fi
+
+n=3
+while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
+echo SPATH $SPATH
+ERL=erl
+START="-s dtop start"
+
+while [ -n "$1" ] 
+  do
+  case $1 in
+      "-help"|"-h"|"-?")
+	  usage
+	  ;;
+      "-dbg")
+	  ;;
+      "-win")
+	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
+	  ;;
+      "-vsn"|"-version")
+	  vsn=$2
+	  shift
+	  ERLP=`which erl`
+	  ERLP=`dirname $ERLP` ; ERLP=`dirname $ERLP` ; ERLP=`dirname $ERLP`
+	  ERL=`echo $ERLP/${vsn}*/bin/erl`
+	  if [ ! -x "$ERL" ]; then usage; fi
+	  ;;
+      "-nettick"|"-tick")
+	  nettick="-kernel net_ticktime $2"
+	  shift 
+	  ;;
+      "-cookie"|"-setcookie")
+	  cookie="-setcookie $2"
+	  shift
+	  ;;
+      "-nocookie")
+	  cookie=""
+	  ;;
+      *)
+	  if [ $# -eq 1 ]; then
+	      TARG=$1
+	  else
+	      usage
+	  fi
+	  ;;
+  esac
+  shift
+done
+if [ -z "$TARG" ]; then 
+    usage; 
+else
+    START="$START $TARG"
+fi
+
+name="dtop_"$$
+FLAGS="-boot start_sasl -sasl errlog_type error +A16"
+DISTR="-hidden -sname $name $cookie $nettick"
+
+$WIN $ERL $FLAGS $DISTR \
+-pa $SPATH/ebin \
+$START

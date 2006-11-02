@@ -1,0 +1,78 @@
+#!/bin/bash
+
+usage(){
+    U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
+    U2="[-nettick <tick>] [-win] [-dbg] [-vsn <OTP version>] nodename"
+    echo $U1 $U2
+    exit
+}
+
+if [ ${0:0:1} == "/" ];then
+    SPATH=$0
+elif [ -x $PWD/$0 ];then
+    SPATH=$PWD/$0
+else
+    SPATH=`which $0`
+fi
+
+n=4
+while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
+echo SPATH $SPATH
+PATHS=""
+for p in `ls -d $SPATH/*/ebin`; do
+    PATHS=$PATHS" -pa $p"
+done
+
+detach="-detached"
+VSN=""
+START="-s gperf start"
+
+while [ -n "$1" ] 
+  do
+  case $1 in
+      "-help"|"-h"|"-?")
+	  usage
+	  ;;
+      "-dbg")
+	  detach=""
+	  ;;
+      "-win")
+	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
+	  detach=""
+	  ;;
+      "-vsn"|"-version")
+	  VSN="+R "$2
+	  shift
+	  ;;
+      "-nettick"|"-tick")
+	  nettick="-kernel net_ticktime $2"
+	  shift 
+	  ;;
+      "-cookie"|"-setcookie")
+	  cookie="-setcookie $2"
+	  shift
+	  ;;
+      "-nocookie")
+	  cookie=""
+	  ;;
+      *)
+	  if [ $# -eq 1 ]; then
+	      TARG=$1
+	  else
+	      usage
+	  fi
+	  ;;
+  esac
+  shift
+done
+if [ -z "$TARG" ]; then 
+    usage; 
+else
+    START="$START $TARG"
+fi
+
+name="gperf_"$$
+FLAGS="$detach -boot start_sasl -sasl errlog_type error +A16"
+DISTR="-hidden -sname $name $cookie $nettick"
+
+$WIN erl $VSN $FLAGS $DISTR $PATHS $START
