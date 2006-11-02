@@ -17,7 +17,6 @@ fi
 
 n=4
 while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
-echo SPATH $SPATH
 PATHS=""
 for p in `ls -d $SPATH/*/ebin`; do
     PATHS=$PATHS" -pa $p"
