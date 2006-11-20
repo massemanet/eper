@@ -22,7 +22,15 @@ go({call,PidStr}) ->
 
 str(X) -> flatten(io_lib:fwrite("~p",[X])).
 
-tag(P) -> sherk_ets:lup(sherk_scan,P).
+tag(P) -> 
+    case sherk_ets:lup(sherk_scan,P) of
+        Atom when is_atom(Atom) -> Atom;
+        {M,F,A} when is_integer(A) -> {M,F,A};
+        {M,F,As} when is_list(As) -> mangle(M,F,As)
+    end.
+
+mangle(M,F,As) ->
+    {M,F,length(As)}.
 
 percent(_,0) -> 0;
 percent(A,B) -> round(100*A/B).

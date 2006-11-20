@@ -12,7 +12,7 @@
 
 -export([action/5]).
 
--import(lists,[member/2,reverse/1,keysearch/3,map/2]).
+-import(lists,[member/2,reverse/1,keysearch/3,map/2,foreach/2]).
 
 -define(LOG(T), sherk:log(process_info(self()),T)).
 
@@ -166,21 +166,21 @@ mass({trace_ts, A, B, C, TS}) -> mass(A ,B, C, TS);
 mass({trace_ts, A, B, C, D, TS}) -> mass(A, B, {C, D}, TS);
 mass(X) -> ?LOG({unrec_msg, X}), [].
 
-mass(Pid, T=send, X, TS) ->                       mass_send(Pid,T,X,TS);
-mass(Pid, T=send_to_non_existing_process, X,TS) ->mass_send(Pid,T,X,TS);
+mass(Pid, T=send, X, TS) ->                         mass_send(Pid,T,X,TS);
+mass(Pid, T=send_to_non_existing_process, X,TS) ->  mass_send(Pid,T,X,TS);
 mass(Pid, T='receive', Message, TS) ->              {T,pi(Pid),Message,TS};
 mass(Pid, T=call, MFA, TS) ->                       {T,pi(Pid),MFA,TS};
 mass(Pid, T=return_to, MFA, TS) ->                  {T,pi(Pid),MFA,TS};
 mass(Pid, T=return_from, {MFA,R}, TS) ->            {T,pi(Pid),{MFA,R},TS};
-mass(Pid, T=spawn, {P2, MFA}, TS) ->    hps(P2,MFA),{T,pi(Pid),{pi(P2),MFA},TS};
+mass(Pid, T=spawn, {P2, MFA}, TS) ->  ins({P2,MFA}),{T,pi(Pid),{pi(P2),MFA},TS};
 mass(Pid, T=exit, Reason, TS) ->                    {T,pi(Pid),Reason,TS};
 mass(Pid, T=link, Pd, TS) ->                        {T,pi(Pid),pi(Pd),TS};
 mass(Pid, T=unlink, Pd, TS) when pid(Pd) ->         {T,pi(Pid),pi(Pd),TS};
 mass(Pid, T=unlink, _Crap, TS) ->                   {T,pi(Pid),unknown,TS};
 mass(Pid, T=getting_linked, Pd, TS) ->              {T,pi(Pid),pi(Pd),TS};
 mass(Pid, T=getting_unlinked, Pd, TS) ->            {T,pi(Pid),pi(Pd),TS};
-mass(Pid, T=register, Name, TS) ->    hpr(Pid,Name),{T,pi(Pid),Name,TS};
-mass(Pid, T=unregister, Name, TS) ->                {T,pi(Pid),Name,TS};
+mass(Pid, T=register, Nm, TS) ->      ins({Pid,Nm}),{T,pi(Pid),Nm,TS};
+mass(Pid, T=unregister, Name, TS) ->      del(Name),{T,pi(Pid),Name,TS};
 mass(Pid, T=in, MFA, TS) ->                         {T,pi(Pid),MFA,TS};
 mass(Pid, T=out, MFA, TS) ->                        {T,pi(Pid),MFA,TS};
 mass(Pid, T=gc_start, Info, TS) ->                  {T,pi(Pid),Info,TS};
@@ -211,24 +211,24 @@ pi(Pid) when is_pid(Pid) ->
 find_pid(Name) -> ets_lup(Name).
 
 
-handle_porti(Is) -> lists:foreach(fun(I)->ets_ins(I) end, Is).
+handle_porti(Is) -> foreach(fun(I)->ins(I) end, Is).
 
-handle_proci(Is) -> lists:foreach(fun proci/1, Is).
+handle_proci(Is) -> foreach(fun(I)->ins(I) end, Is).
 
 handle_traci(_I) -> ok.
-    
-proci({Pid,Name}) ->
-    ets_ins({Pid,Name}),
-    case is_atom(Name) of
-	true -> ets_ins({Name,Pid});
-	false -> ok
-    end.
 
-hps(Pid,{M,F,As}) -> hpr(Pid,mangle_ic({M,F,As})).
+%%% sherk_scan table translates Pid -> Tag, where Tag can be;
+%%% atom() -  (a registered name)
+%%% tuple(atom(),atom(),integer()) - an initial call (we missed the spawn)
+%%% tuple(atom(),atom(),list()) - info from spawn
+%%%
+%%% it also translates RegisteredName -> Pid
 
-hpr(Pid, Reg) ->
-    ets_ins({Pid,Reg}),
-    ets_ins({Reg,Pid}).
+ins({Pid,Reg}) when is_atom(Reg) -> ets_ins({Pid,Reg}),ets_ins({Reg,Pid});
+ins({Pid,{M,F,A}}) when is_integer(A) -> ets_ins({Pid,{M,F,A}});
+ins({Pid,{M,F,As}}) when is_list(As) -> ets_ins({Pid,mangle_ic({M,F,As})}).
+
+del(Reg) when is_atom(Reg) -> ?LOG({unregistered,Reg}),ets_del(Reg).
 
 mangle_ic(MFA) ->
     case MFA of
@@ -244,7 +244,7 @@ mangle_ic(MFA) ->
 	{erlang,apply,[Fun,[]]} when function(Fun) -> 
 	    funi(Fun);
 	{M,F,As} -> 
-	    {M,F,length(As)}
+	    {M,F,As}
     end.
 
 atomize(FileName) ->
@@ -301,3 +301,4 @@ ets_lup(Tab, Key) ->
 	[{Key, R}] -> R;
 	R -> R
     end.
+ets_del(Key) -> ets:delete(?MODULE, Key).
