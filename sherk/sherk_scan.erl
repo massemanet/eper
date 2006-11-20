@@ -224,6 +224,7 @@ handle_traci(_I) -> ok.
 %%%
 %%% it also translates RegisteredName -> Pid
 
+ins({Port,Desc}) when is_port(Port) -> ets_ins({Port,Desc});
 ins({Pid,Reg}) when is_atom(Reg) -> ets_ins({Pid,Reg}),ets_ins({Reg,Pid});
 ins({Pid,{M,F,A}}) when is_integer(A) -> ets_ins({Pid,{M,F,A}});
 ins({Pid,{M,F,As}}) when is_list(As) -> ets_ins({Pid,mangle_ic({M,F,As})}).

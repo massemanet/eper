@@ -7,7 +7,10 @@
 %%%-------------------------------------------------------------------
 -module(sherk).
 
--export([go/0]).
+-export([go/0]).  % interactive
+-export([ni/0]).  % non-interactive
+
+%% internal exports
 -export([log/2]).
 -export([loop/1]).
 
@@ -18,8 +21,10 @@
 -define(LOG(T), sherk:log(process_info(self()),T)).
 -define(LOOP(X), ?MODULE:loop(X)).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 go() -> spawn_link(fun init/0).
-
+ni() -> init().
+    
 init() ->
     
     %% start the GUI and load the glade file

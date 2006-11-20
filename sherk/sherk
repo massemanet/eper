@@ -24,7 +24,7 @@ done
 
 detach="-detached"
 VSN=""
-START="-s sherk go"
+START="-s sherk ni -s erlang halt"
 
 while [ -n "$1" ] 
   do
@@ -37,6 +37,7 @@ while [ -n "$1" ]
 	  ;;
       "-win")
 	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
+          START="-s sherk go"
 	  detach=""
 	  ;;
       "-vsn"|"-version")
