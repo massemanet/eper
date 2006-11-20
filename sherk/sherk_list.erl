@@ -9,12 +9,22 @@
 
 -export([go/1]).
 -import(lists,[sublist/2,reverse/1,sort/1,flatten/1,sort/1]).
+-define(LOG(T), sherk:log(process_info(self()),T)).
 
-go(perf) ->
+go(Tag) ->
+    ?LOG([{starting,Tag}]),
+    Start = now(),
+    X = do(Tag),
+    ?LOG([{finishing,Tag},
+          {length,length(X)},
+	  {time,timer:now_diff(now(),Start)/1000000}]),
+    X.
+
+do(perf) ->
     Tot = sherk_ets:lup(sherk_prof,{total,time}),
     L = reverse(sort(ets:match(sherk_prof,{{{pid,time},'$2'},'$1'}))),
     [[str(P),str(tag(P)),T,percent(T,Tot)] || [T,P] <- L];
-go({call,PidStr}) ->
+do({call,PidStr}) ->
     [{_,Pid}] = ets:lookup(sherk_prof,PidStr),
     Tot = sherk_ets:lup(sherk_prof,{{pid,time}, Pid}),
     TMFAs = reverse(sort(mfas(Pid))),
@@ -24,9 +34,8 @@ str(X) -> flatten(io_lib:fwrite("~p",[X])).
 
 tag(P) -> 
     case sherk_ets:lup(sherk_scan,P) of
-        Atom when is_atom(Atom) -> Atom;
-        {M,F,A} when is_integer(A) -> {M,F,A};
-        {M,F,As} when is_list(As) -> mangle(M,F,As)
+        {M,F,As} when is_list(As) -> mangle(M,F,As);
+        X -> X
     end.
 
 mangle(M,F,As) ->

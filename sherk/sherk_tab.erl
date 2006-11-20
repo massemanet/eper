@@ -27,10 +27,13 @@ assert(File) ->
             end;
         _ -> 
             %% make tab and save it
-            sherk_scan:action(File,'',sherk_prof,0,''),
+
+            sherk_scan:action(File,'',sherk_new_prof,0,''),
+            ?LOG([folding_pids]),
             ets:foldl(fun store_pid/2, [], sherk_prof),
             ets:insert(sherk_prof, {file, File}),
             try 
+                ?LOG(storing_tab),
                 sherk_ets:t2f([sherk_prof,sherk_scan],TabFile),
                 ?LOG({created,TabFile})
             catch 
