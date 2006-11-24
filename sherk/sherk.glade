@@ -174,7 +174,7 @@
 	  <property name="window_placement">GTK_CORNER_TOP_LEFT</property>
 
 	  <child>
-	    <widget class="GtkTreeView" id="perf_treeview">
+	    <widget class="GtkTreeView" id="procs_treeview">
 	      <property name="visible">True</property>
 	      <property name="can_focus">True</property>
 	      <property name="headers_visible">True</property>

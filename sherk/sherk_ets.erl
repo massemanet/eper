@@ -37,7 +37,7 @@ new(Tab, Opts) ->
     Tab.
 
 kill(Tab) ->
-    case catch (list_to_atom(atom_to_list(Tab)++"_tab") ! {quit, self()}) of
+    case catch (?TAB(Tab) ! {quit, self()}) of
 	{'EXIT', _} -> ok;
 	{quit,_} -> receive Tab -> ok end
     end.

@@ -150,7 +150,7 @@ pi(P) when pid(P) ->
     case process_info(P, registered_name) of
 	[] -> 
 	    case process_info(P, initial_call) of
-		{_, {proc_lib,init_p,5}} -> proc_lib:translate_initial_call(P);
+		{_, {proc_lib,init_p,_}} -> proc_lib:translate_initial_call(P);
 		{_,MFA} -> MFA;
 		undefined -> dead
 	    end;

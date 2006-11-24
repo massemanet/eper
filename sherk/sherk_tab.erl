@@ -28,7 +28,7 @@ assert(File) ->
         _ -> 
             %% make tab and save it
 
-            sherk_scan:action(File,'',sherk_new_prof,0,''),
+            sherk_scan:action(File,'',sherk_prof,0,''),
             ?LOG([folding_pids]),
             ets:foldl(fun store_pid/2, [], sherk_prof),
             ets:insert(sherk_prof, {file, File}),
@@ -41,7 +41,7 @@ assert(File) ->
             end
     end.
 
-store_pid({{{pid,time},P},_},_) -> ets:insert(sherk_prof,{pid_to_list(P),P});
+store_pid({{{pid,time},P},_},_) -> ets:insert(sherk_prof,{sherk:to_str(P),P});
 store_pid(_,_) -> ok.
 
 check_file(File) -> ".trz" = filename:extension(File).
