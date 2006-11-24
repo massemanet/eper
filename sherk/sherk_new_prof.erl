@@ -1,4 +1,4 @@
-x%%%-------------------------------------------------------------------
+%%%-------------------------------------------------------------------
 %%% File    : sherk_new_prof.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
 %%% Description : 
@@ -8,15 +8,10 @@ x%%%-------------------------------------------------------------------
 -module(sherk_new_prof).
 
 -export([go/3]).
--import(lists,[dropwhile/2,member/2]).
-
--record(state, {start}).
+-import(lists,[dropwhile/2,member/2,prefix/2]).
 
 -define(LOG(T), sherk:log(process_info(self()),T)).
 
-%%go(Msg,Seq,initial) -> {ok,FD}=file:open("/export/localhome/locmacr/pan/msgs.txt",[write]),go(Msg,Seq,FD);
-%%go(Msg,Seq,FD) -> io:fwrite(FD,"~.10w~p~n",[Seq,Msg]),FD;
-%%go(end_of_trace, _Seq, FD) -> file:close(FD);
 go(Msg, Seq, initial) 	     -> go(Msg, Seq, init());
 go(end_of_trace, Seq, State) -> terminate(Seq,State), State;
 go(Msg, Seq, State) 	     -> handler(Msg) ! {msg,Seq,Msg}, State.
@@ -25,9 +20,9 @@ init() ->
     ?LOG([{starting,?MODULE}]),
     sherk_ets:new(?MODULE),
     sherk_ets:new(sherk_prof),
-    #state{start=now()}.
+    {start,now()}.
 
-terminate(Seq,#state{start=Start}) -> 
+terminate(Seq,{start,Start}) -> 
     ?LOG([{finishing,?MODULE},
 	  {seq,Seq},
 	  {time,timer:now_diff(now(),Start)/1000000},
@@ -49,125 +44,137 @@ assert_handler(Pid) ->
 	    HandlerPid
     end.
 
--record(hstate,{gc=no,fd=no,sched=no,currf,ts}).
--record(hld,{stack=[],hstate=#hstate{},pid}).
+-record(s,{gc=no,fd=no,in=no,ts,pid,stack=[]}).
 
 handler() -> 
     receive
-	{pid,Pid} -> handler_loop(#hld{pid=Pid});
+	{pid,Pid} -> hloop(#s{pid=Pid});
 	quit -> ok
     end.
 
-handler_loop(HLD) ->
+hloop(S) ->
     receive
-	{msg,_Seq,{Tag,_,Info,TS}} -> handler_loop(hand(Tag,Info,TS,HLD));
+	{msg,_Seq,{Tag,_,Info,TS}} -> hloop(hand(Tag,Info,TS,S));
 	quit -> ok
     end.
 
-hand(Tag,Info,TS,HLD = #hld{pid=Pid,stack=OldStack,hstate=OldState}) ->
-    {Sig,Stack} = stack(Tag,Info,OldStack),
-    State = state(Sig, Stack, TS, OldState),
-    tab(Sig,Pid,State,OldState),
-    HLD#hld{stack=Stack,hstate=State}.
+hand(Tag,Info,TS,S) ->
+    case {Tag,Info} of
+        {out,0}         -> (out(Tag,S,TS))#s{fd=yes};
+        {in,0}          -> in(Tag,S#s{fd=no},TS);
+        {gc_start,_}    -> (out(Tag,S,TS))#s{gc=yes};
+        {gc_end,_}      -> in(Tag,S#s{gc=no},TS);
+        {out,MFA}       -> (out(Tag,stk(S,arity(MFA)),TS))#s{in=no};
+        {in,MFA}        -> in(Tag,stk(S#s{in=yes},arity(MFA)),TS);
+        {call,MFA}      -> call(S,TS,arity(MFA));
+        {return_to,MFA} -> retu(S,TS,arity(MFA));
+        {spawn,{_,MFA}} -> spwn(S,TS,arity(MFA));
+        {exit,_}        -> exIt(S,TS);
+        {_,_}           -> S
+    end.
 
-stack(out,0,Stack) 		-> {in_fd,Stack};
-stack(in,0,Stack) 		-> {out_fd,Stack};
-stack(gc_start,_,Stack) 	-> {in_gc,Stack};
-stack(gc_end,_,Stack) 		-> {out_gc,Stack};
-stack(out,MFA,[]) 		-> {out_sched,[MFA]};
-stack(in,MFA,[]) 		-> {in_sched,[MFA]};
-stack(out,MFA,[MFA|Stack]) 	-> {out_sched,[MFA|Stack]};
-stack(in,MFA,[MFA|Stack]) 	-> {in_sched,[MFA|Stack]};
-stack(call,MFA,[MFA|Stack]) 	-> {[],[arity(MFA)|Stack]};
-stack(call,MFA,Stack) 		-> {stack,[arity(MFA)|Stack]};
-stack(return_to,MFA,Stack) 	-> {stack,return(arity(MFA),Stack)};
-stack(spawn,{_,MFA},[]) 	-> {[],[arity(MFA)]};
-stack(exit,_,Stack) 		-> {out_sched,Stack};
-stack(getting_linked,_,Stack)	-> {[],Stack};
-stack(getting_unlinked,_,Stack)	-> {[],Stack};
-stack(unlink,_,Stack) 		-> {[],Stack};
-stack(link,_,Stack) 		-> {[],Stack};
-stack(_,_,Stack) 		-> {[],Stack}.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+out(Tag,S,TS) ->
+    %% left MFA at top of stack
+    upd({{total,sched},Tag}),
+    upd({{pid,sched},S#s.pid,Tag}),
+    case is_running(S) of
+        false ->
+            ?LOG([not_running,{tag,Tag},{state,S}]),
+            S;
+        true -> 
+            case S#s.ts of
+                undefined -> 
+                    ?LOG([no_time,{state,S}]);
+                _ -> 
+                    T = timer:now_diff(TS,S#s.ts),
+                    MFA = hd(S#s.stack),
+                    upd({total,time}, T),
+                    upd({{pid,time}, S#s.pid}, T),
+                    upd({{func,time}, MFA}, T),
+                    upd({{func,time}, S#s.pid, MFA}, T),
+                    upd({{stack,time}, S#s.pid, S#s.stack}, T)
+            end,
+            S#s{ts=TS}
+    end.
 
-state(in_fd,_,TS,State)       -> State#hstate{fd=yes,ts=TS};
-state(out_fd,_,TS,State)      -> State#hstate{fd=no,ts=TS};
-state(in_gc,_,TS,State)       -> State#hstate{gc=yes,ts=TS};
-state(out_gc,_,TS,State)      -> State#hstate{gc=no,ts=TS};
-state(in_sched,_,TS,State)    -> State#hstate{sched=yes,ts=TS};
-state(out_sched,_,TS,State)   -> State#hstate{sched=no,ts=TS};
-state(stack,[MFA|_],TS,State) -> State#hstate{currf=MFA,ts=TS};
-state([],_,_,State) 	      -> State.
+in(Tag,S,TS) ->
+    %% entered MFA at top of stack
+    upd({{total,sched},Tag}),
+    upd({{pid,sched},S#s.pid,Tag}),
+    case is_running(S) of
+        false -> ?LOG([not_running,{tag,Tag},{state,S}]),S;
+        true ->  S#s{ts=TS}
+    end.
 
-%#hstate{currf=CF,ts=TS},#hstate{currf=OCF,ts=OTS}) ->
+call(S,TS,MFA) ->
+    in(call,push_stack(MFA, out(call,S,TS)),TS).
 
-tab([],_,_,_) -> ok;
+retu(S,TS,MFA) ->
+    in(return,pop_stack(MFA, out(return,S,TS)),TS).
 
-tab(stack,Pid,#hstate{currf=CF,ts=TS},#hstate{currf=OCF,ts=OTS}) ->
-    upd({{func,calls},CF},1),
-    upd({{func,calls},Pid,CF},1),
-    try 
-	T = timer:now_diff(TS,OTS),
-	upd({total,time},T),
-	upd({{pid,time},Pid},T),
-	upd({{func,time},OCF},T),
-	upd({{func,time},Pid,OCF},T)
-    catch
-	_:_ -> ok
-    end;
+spwn(S,_TS,MFA) ->
+    push_stack(MFA, S).
 
-tab(in_sched,_,_,_) -> ok;
+exIt(S,TS) ->
+    out(exit,S,TS).
 
-tab(out_sched,Pid,#hstate{fd=no,gc=no,currf=CF,ts=TS},#hstate{ts=OTS}) ->
-    try 
-	T = timer:now_diff(TS,OTS),
-	upd({total,time},T),
-	upd({{pid,time},Pid},T),
-	upd({{func,time},CF},T),
-	upd({{func,time},Pid,CF},T)
-    catch
-	_:_ -> ok
-    end;
+push_stack(MFA,S) ->
+    case S#s.stack of
+        [MFA|_] -> 
+            S;
+        Stack ->
+            Trunced = truncate([MFA|Stack]),
+            upd({{func, calls}, MFA}),
+	    upd({{func, calls}, S#s.pid, MFA}),
+	    upd({{stack, calls}, S#s.pid, Trunced}),
+            S#s{stack=Trunced}
+    end.
 
-tab(in_gc,Pid,#hstate{sched=yes,ts=TS,currf=CF},#hstate{ts=OTS}) ->
-    upd({total,gc},1),
-    upd({{pid,gc},Pid},1),
-    try 
-	T = timer:now_diff(TS,OTS),
-	upd({total,time},T),
-	upd({{pid,time},Pid},T),
-	upd({{func,time},CF},T),
-	upd({{func,time},Pid,CF},T)
-    catch
-	_:_ -> ok
-    end;
+pop_stack(MFA,S) ->
+    case member(MFA,S#s.stack) of
+        false ->
+            ?LOG([dropped_headless_stack,{mfa,MFA},{state,S}]),
+            erase_bad_stack(S),
+            S#s{stack=[MFA]};
+        true ->
+            S#s{stack=dropwhile(fun(Mfa) -> MFA =/= Mfa end, S#s.stack)}
+    end.
 
-tab(in_gc,Pid,#hstate{sched=no,ts=TS},#hstate{ts=OTS}) ->
-    upd({total,gc},1),
-    upd({{pid,gc},Pid},1),
-    try 
-	T = timer:now_diff(TS,OTS),
-	upd({total,time},T),
-	upd({{pid,time},Pid},T)
-    catch
-	_:_ -> ok
-    end;
+truncate([MFA|Stack] = X) ->
+    case member(MFA,Stack) of
+        true ->
+            {H,[MFA|T]} = lists:splitwith(fun(E)->E/=MFA end,Stack),
+            case prefix(H,T) of
+                true -> [MFA|T];
+                false -> X
+            end;
+        false -> X
+    end.
 
-tab(out_gc,_Pid,_,_) -> ok;
+erase_bad_stack(S) ->
+    mdl({{{stack,calls}, S#s.pid, '_'},'_'}),
+    mdl({{{stack,time}, S#s.pid, '_'}, '_'}).
 
-tab(in_fd,_Pid,_,_) -> io:fwrite("in_fd",[]);
-tab(out_fd,_Pid,_,_) -> io:fwrite("out_fd",[]);
-tab(Sig,Pid,HS,OHS) -> 
-    ?LOG([{sig,Sig},{pid,Pid},{state,HS},{old_state,OHS}]).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     
 
-return(MFA,Stack) ->
-    case member(MFA,Stack) of
-	true -> dropwhile(fun(Mfa) -> MFA/=Mfa end, Stack);
-	false -> [MFA]
+stk(S,MFA) -> 
+    case S#s.stack of
+        [] -> S#s{stack=[arity(MFA)]};
+        _ -> S
     end.
 
 arity({M,F,A}) when is_list(A) -> {M,F,length(A)};
 arity(MFA) -> MFA.
 
+is_running(#s{gc=no,fd=no,in=yes}) -> true;
+is_running(_) -> false.
+
+upd(Key) -> 
+    upd(Key,1).
 upd(Key,Inc) ->
     sherk_ets:upd(sherk_prof,Key,Inc).
+
+mdl(Pat) ->
+    ets:match_delete(sherk_prof,Pat).
