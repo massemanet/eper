@@ -367,9 +367,10 @@ update_call(LD,Model,Path) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init_tree_view(TreeView,{Model,Cols}) ->
-    g('Gtk_tree_view_set_model',[TreeView,Model]),
+    g('Gtk_tree_view_collapse_all',[call_treeview]),
     remove_cols(TreeView),
-    [g('Gtk_tree_view_append_column',[TreeView,Col]) || Col <- Cols].
+    [g('Gtk_tree_view_append_column',[TreeView,Col]) || Col <- Cols],
+    g('Gtk_tree_view_set_model',[TreeView,Model]).
 
 remove_cols(TreeVw) ->
     case g('Gtk_tree_view_get_column',[TreeVw,0]) of

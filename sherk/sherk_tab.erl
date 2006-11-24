@@ -22,24 +22,23 @@ assert(File) ->
         {ok,#file_info{mtime=TabMT}} when MT < TabMT -> 
             %% the tab file exists and is up-to-date
             case sherk_ets:lup(sherk_prof, file) of
-                File -> ok;                     % table is in memory
-                _ -> sherk_ets:f2t(TabFile)     % need to load table
+                File -> ?LOG({is_cached,TabFile});
+                _ -> ?LOG(restoring_tab),sherk_ets:f2t(TabFile)
             end;
         _ -> 
             %% make tab and save it
-
+            ?LOG([creating_tab]),
             sherk_scan:action(File,'',sherk_prof,0,''),
-            ?LOG([folding_pids]),
-            ets:foldl(fun store_pid/2, [], sherk_prof),
             ets:insert(sherk_prof, {file, File}),
             try 
                 ?LOG(storing_tab),
-                sherk_ets:t2f([sherk_prof,sherk_scan],TabFile),
-                ?LOG({created,TabFile})
+                sherk_ets:t2f([sherk_prof,sherk_scan],TabFile)
             catch 
                 _:_ -> ?LOG({creation_failed,TabFile})
             end
-    end.
+    end,
+    ?LOG([folding_pids]),
+    ets:foldl(fun store_pid/2, [], sherk_prof).
 
 store_pid({{{pid,time},P},_},_) -> ets:insert(sherk_prof,{sherk:to_str(P),P});
 store_pid(_,_) -> ok.
