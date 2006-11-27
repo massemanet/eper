@@ -474,17 +474,6 @@ pth(P) -> flatten(pth(P,[])).
 pth([I],O) -> [to_str(I)|O];
 pth([H|T],O) -> pth(T,[$:,to_str(H)|O]).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-g(C,As) -> g([{C,As}]).
-g(CAs) ->
-    case gtknode:cmd(sherk,CAs) of
-        [{ok,Rep}] -> Rep;
-	Reps -> filter_reps(Reps,CAs)
-    end.
-
-filter_reps([{ok,_}|Reps],[_|CAs]) -> filter_reps(Reps,CAs);
-filter_reps([{error,R}|_],[CA|_]) -> exit({gtknode_error,{R,CA}});
-filter_reps([],[]) -> ok.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 set_selection_mode(View,Mode) ->
@@ -525,3 +514,8 @@ is_string(X) when not is_list(X) -> false;
 is_string([]) -> true;
 is_string([H|T]) when integer(H), H >= $ , H =< $~ -> is_string(T);
 is_string(_) -> false.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+g(C,As) -> g([{C,As}]).
+
+g(CAs) -> gtknode:cmd(sherk,CAs).
