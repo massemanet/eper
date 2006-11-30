@@ -1,0 +1,94 @@
+NAME
+  redbg - restricted debugging utility
+ 
+SYNOPSIS
+  redbg:go(Time,Msgs,Trc[,Proc[,Where[,Target]]]) -> pid()|EXIT
+  redbg:stop([Target]) -> atom()
+  redbg:kill([Target]) -> atom()
+
+DESCRIPTION
+
+  An interface to the Erlang trace mechanism, safer (hopefully) than
+  dbg. Disallows some of the more dangerous traces and exits if it
+  gets flooded by trace messages. It runs in the background,
+  collecting trace messages, until it reaches one of it's termination
+  criteria (number of messages/file size or elapsed time). Upon termination, 
+  it will send the atom 'stop' to the process that started it.
+
+  Time - integer() number of milliseconds to run for
+
+  Msgs - integer() number of messages to collect
+
+  Trc - list('send'|'receive'|RTP).
+  RTP - tuple {Module, Function}|{Module, Function, list(RMS)}
+  RMS - 'stack'|'return'|ALD. Restricted Match Spec. Using 'stack'
+  will include the call return stack, 'return' will include the return
+  value of the call.
+  ALD - tuple(). Argument List Description. Tuple with the same arity
+  as the traced function. It can contain constants (atoms and numbers)
+  and the wildcard; '_'. E.g. the ALD; {1,'_',x} would match if the
+  arity of the called function is 3, the first argument is 1 and the
+  third argument is 'x'. There can only be one ALD per RTP.
+  
+  Proc - 'all'|atom(RegisteredName),pid(),{pid,I1,I2} (which specifies
+  the pid <0.I1.I2>).
+
+  Where - 'screen'|'term'|{'file',Filename}|{'ip',Port}
+  If Where is 'screen, trace messages will be printed like this;
+[{Tag,Data,Process,Timestamp}...]
+  Tag - call|return|send|receive
+  Data - term(). If Tag is 
+    call; the called MFA
+    send; {DestinationProcess,Message}
+    receive; Message
+    return; {CalledMFA, ReturnValue} (Process and Timestamp is not shown)
+  Process is the registered name, if any, or else the initital call {M,F,A}.
+  Timestamp is {Hour, Minute, Second, Microsecond}
+  if Where is 'term', a list of all the messages will be sent to the process 
+  that started the trace.
+  If Where is {'file',Filename}, trace messages are written to a wrap
+  file. Filename must be absolute, i.e. start with a "/". In this
+  case, the Msgs argument will be interpreted as the maximum file size
+  (in MB). There will be at most 3 wrap files, named Filename0.trc,
+  Filename1.trc and Filename2.trc.
+  If Where is {'ip',Port}, trace messages will be sent to that trace port
+
+  Target - the Erlang node on which to start the trace
+ 
+EXAMPLES
+ 
+redbg:go(3000,3,'receive',prfTarg).
+ **redbg stopped - 3 msgs**
+{'receive',{timeout,#Ref<0.0.0.1649>,tick},prfTarg,{16,47,22,1009}}
+{'receive',{<0.175.0>,get_status,{ok,3657,3658}},prfTarg,{16,47,22,1072}}
+{'receive',{<0.382.0>,get_status,{ok,37,26}},prfTarg,{16,47,22,1088}}
+
+redbg:go(3000,3,['send','receive'],prfTarg).   
+**redbg stopped - 3 msgs**
+{'receive',{timeout,#Ref<0.0.0.2005>,tick},prfTarg,{16,52,48,1011}}
+{send,{{<0.364.0>,get_status},{inet_tcp_dist,do_accept,6}},
+      prfTarg,
+      {16,52,48,1068}}
+{'receive',{<0.175.0>,get_status,{ok,3820,3821}},prfTarg,{16,52,48,1088}}
+
+redbg:go(3000,3,{erlang,now}).
+**redbg stopped - 1 msgs**
+{call,{erlang,now,[]},{erlang,apply,2},{16,44,25,176124}}
+
+redbg:go(3000,3,{erlang,now,[return]}).
+**redbg stopped - 2 msgs**
+{call,{erlang,now,[]},{erlang,apply,2},{16,44,39,773608}}
+{return,{erlang,now,0},{1141,746279,773613}}
+
+redbg:go(3000,3,{erlang,now,[return,stack]}).
+ **redbg stopped - 2 msgs**
+{call,{erlang,now,[]},{erlang,apply,2},{16,44,58,386617}}
+  {shell,eval_loop,3}  
+  {shell,exprs,6}      
+{return,{erlang,now,0},{1141,746298,386621}}
+
+redbg:go(3000,3,{ets,tab2list,[{inet_db}]}).
+(erl@foo)1> ets:tab2list(inet_db).
+(erl@foo)2> ets:tab2list(ac_tab).
+**redbg stopped - 1 msgs**
+{call,{ets,tab2list,[inet_db]},{erlang,apply,2},{16,43,54,301126}}

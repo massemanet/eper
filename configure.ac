@@ -36,9 +36,10 @@ AC_SUBST([GTKDOCLINKS], [$_gtkdoclinks])
 dnl Specify the files to instantiate.
 AC_CONFIG_FILES([ \
 	Makefile \
-	prf/Makefile \
 	dtop/Makefile \
 	gperf/Makefile \
+	prf/Makefile \
+	redbug/Makefile \
 	sherk/Makefile \
 	])
 
