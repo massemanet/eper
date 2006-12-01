@@ -7,43 +7,40 @@
 %%%-------------------------------------------------------------------
 -module(prfHost).
 
--export([start/1, start/3, stop/1]).
+-export([start/3, stop/1]).
 -export([init/3,loop/1]).				%internal
 
 -record(ld, {node, server=[], collectors, consumer, consumer_data}).
 
 -include("prf.hrl").
 
-start([Name, Node, Consumer]) ->
-    %%started from unix shell
-    link(start(Name, Node, Consumer)), 
-    receive {'EXIT',_,_} -> ok end.
-
 start(Name, Node, Consumer) when atom(Name), atom(Node), atom(Consumer) -> 
-    %%started from erlang shell
     case whereis(Name) of
-	undefined -> spawn(?MODULE, init, [Name, Node, Consumer]);
-	_Pid -> {already_started, Name}
+	undefined -> spawn_link(?MODULE, init, [Name, Node, Consumer]);
+	Pid -> Pid
     end.
 
-stop(Name) when atom(Name) -> Name ! stop.
+stop(Name) -> 
+    case whereis(Name) of
+        Pid when is_pid(Pid) -> Name ! {self(),stop}, receive stopped -> ok end;
+        _ -> ok
+    end.
 
 init(Name, Node, Consumer) ->
     process_flag(trap_exit,true),
     register(Name, self()),
     erlang:start_timer(incr(?TICK)+?TICK div 2, self(),{tick}),
-    ?LOG(catch loop(#ld{node = Node, 
-			consumer = Consumer, 
-			collectors = subscribe(Node,Consumer:collectors()),
-			consumer_data = Consumer:init(Node)})),
-    exit(out).
+    loop(#ld{node = Node, 
+             consumer = Consumer, 
+             collectors = subscribe(Node,Consumer:collectors()),
+             consumer_data = Consumer:init(Node)}).
 
 loop(LD) ->
     receive
-	stop -> 
+	{Stopper,stop} -> 
 	    ?LOG(stopping),
-	    unsubscribe(LD#ld.node,LD#ld.collectors),
-	    (LD#ld.consumer):terminate(LD#ld.consumer_data);
+            do_stop(LD),
+            Stopper ! stopped;
 	{timeout, _, {tick}} when LD#ld.server == [] -> 
 	    erlang:start_timer(incr(?TICK), self(),{tick}),
 	    subscribe(LD#ld.node,LD#ld.collectors),
@@ -59,8 +56,8 @@ loop(LD) ->
 	    ?MODULE:loop(LD#ld{server=[]});
 	{'EXIT',Pid,Reason} ->
 	    ?LOG({got_EXIT, Pid, Reason}),
-	    self() ! stop,
-	    ?MODULE:loop(LD);
+            do_stop(LD),
+            exit({got_EXIT, Pid, Reason});
 	{subscribe, {ok, Pid}}  ->
 	    ?LOG({subscribe, {ok, node(Pid)}}),
 	    ?MODULE:loop(LD#ld{server = Pid});
@@ -71,6 +68,10 @@ loop(LD) ->
 	    Cdata = (LD#ld.consumer):config(LD#ld.consumer_data, Data),
 	    ?MODULE:loop(LD#ld{consumer_data = Cdata})
     end.
+
+do_stop(LD) ->
+    unsubscribe(LD#ld.node,LD#ld.collectors),
+    (LD#ld.consumer):terminate(LD#ld.consumer_data).
 
 get_data(LD) -> get_data(LD#ld.node, []).
 get_data(Node, InData) ->

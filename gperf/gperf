@@ -2,7 +2,7 @@
 
 usage(){
     U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
-    U2="[-nettick <tick>] [-win] [-dbg] [-vsn <OTP version>] nodename"
+    U2="[-nettick <tick>] [-win] [-vsn <OTP version>]"
     echo $U1 $U2
     exit
 }
@@ -17,7 +17,6 @@ fi
 
 n=4
 while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
-echo SPATH $SPATH
 PATHS=""
 for p in `ls -d $SPATH/*/ebin`; do
     PATHS=$PATHS" -pa $p"
@@ -25,7 +24,9 @@ done
 
 detach="-detached"
 VSN=""
-START="-s gperf start"
+START="-s gperf ni"
+HALT="-s erlang halt"
+XTRA=""
 
 while [ -n "$1" ] 
   do
@@ -33,11 +34,10 @@ while [ -n "$1" ]
       "-help"|"-h"|"-?")
 	  usage
 	  ;;
-      "-dbg")
-	  detach=""
-	  ;;
       "-win")
 	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
+          START="-s gperf start"
+          HALT=""
 	  detach=""
 	  ;;
       "-vsn"|"-version")
@@ -55,24 +55,18 @@ while [ -n "$1" ]
       "-nocookie")
 	  cookie=""
 	  ;;
+      "-*")
+          echo dollar_one $1
+          ;;
       *)
-	  if [ $# -eq 1 ]; then
-	      TARG=$1
-	  else
-	      usage
-	  fi
-	  ;;
+          XTRA="$1" $XTRA
+          ;;
   esac
   shift
 done
-if [ -z "$TARG" ]; then 
-    usage; 
-else
-    START="$START $TARG"
-fi
 
 name="gperf_"$$
 FLAGS="$detach -boot start_sasl -sasl errlog_type error +A16"
 DISTR="-hidden -sname $name $cookie $nettick"
 
-$WIN erl $VSN $FLAGS $DISTR $PATHS $START
+$WIN erl $VSN $FLAGS $DISTR $PATHS $START "$XTRA" $HALT

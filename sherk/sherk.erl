@@ -154,7 +154,7 @@ conf(LD) ->
 
 proxy(LD) ->
     case list_to_atom(g('Gtk_entry_get_text',[conf_proxy_entry])) of
-        "" -> 
+        '' -> 
             Proxy = node(),
             Cookie = erlang:get_cookie(),
             Tick = fetch(orig_ticktime,LD);

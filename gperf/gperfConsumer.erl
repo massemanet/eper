@@ -10,22 +10,17 @@
 -export([init/1, terminate/1, tick/2, collectors/0, config/2]).
 
 -record(data,{net=[],sys=[]}).
--record(ld, {node,gtkPid,data=#data{},
-	     mem_max=512*1024*1024,net_max=4000,load_max=1}).
+-record(ld, {node,data=#data{},mem_max=512*1024*1024,net_max=4000,load_max=1}).
 
 collectors() -> [prfSys,prfNet].
 
-init(Node) -> 
-    {_,Reg} = process_info(self(),registered_name),
-    GtkPid = gperfGtk:start(list_to_atom((atom_to_list(Reg)++"_GUI")),Node),
-    link(GtkPid),
-    #ld{node = Node, gtkPid=GtkPid}.
+init(Node) -> #ld{node = Node}.
 
-terminate(LD) -> gperfGtk:stop(LD#ld.gtkPid).
+terminate(_LD) -> ok.
 
 tick(LD, Data) -> 
     NLD = update_ld(LD, Data),
-    NLD#ld.gtkPid ! {tick, {ltime(NLD#ld.data),info(NLD,LD)}},
+    gperf ! {tick, {ltime(NLD#ld.data),info(NLD,LD)}},
     NLD.
 
 config(LD,{maxs,[Mem,Net]}) ->
