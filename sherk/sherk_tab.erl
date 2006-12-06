@@ -38,7 +38,8 @@ assert(File) ->
             end
     end,
     ?LOG([folding_pids]),
-    ets:foldl(fun store_pid/2, [], sherk_prof).
+    ets:foldl(fun store_pid/2, [], sherk_prof),
+    ?LOG([done]).
 
 store_pid({{{pid,time},P},_},_) -> ets:insert(sherk_prof,{sherk:to_str(P),P});
 store_pid(_,_) -> ok.

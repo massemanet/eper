@@ -19,6 +19,7 @@
 -record(state, {seq=0, hits=0, cbs, pattern, out, min, max, eof = false}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+action(FileName, Patt, CBs, '', Max) -> action(FileName, Patt, CBs, 0, Max);
 action(FileName, Patt, CBs, Min, Max) ->
     sherk_ets:new(?MODULE),
     {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
@@ -27,7 +28,7 @@ action(FileName, Patt, CBs, Min, Max) ->
     file:close(FD),
     {hits, St#state.hits}.
 
--define(CHUNKSIZE, 1024).
+-define(CHUNKSIZE, 100000).
 file_action(FD, Stat) ->
     file_action(make_chunk(FD, <<>>), FD, Stat).
 
@@ -37,13 +38,17 @@ file_action(eof, _FD, Stat) ->
     do(end_of_trace, Stat);
 file_action({Term, Rest}, FD, Stat) ->
     file_action(make_chunk(FD, Rest), FD, do(Term, Stat)).
-make_chunk(_FD, eof) -> eof;
-make_chunk(FD, <<_Op, Size:32, Tal/binary>> = Bin) ->
+
+make_chunk(_FD, eof) -> 
+    eof;
+make_chunk(FD, <<0, Size:32, Tal/binary>> = Bin) ->
     case Tal of
 	<<Term:Size/binary, Tail/binary>> -> {binary_to_term(Term), Tail};
 	_ -> make_chunk(FD, get_more_bytes(FD, Bin))
     end;
-make_chunk(FD, Bin) -> make_chunk(FD, get_more_bytes(FD, Bin)).
+make_chunk(FD, B) when size(B) < 5 -> 
+    make_chunk(FD, get_more_bytes(FD, B)).
+
 get_more_bytes(FD, Rest) ->
     case file:read(FD, ?CHUNKSIZE) of
 	{ok, Bin} -> <<Rest/binary, Bin/binary>>;
@@ -56,7 +61,8 @@ cbs([]) -> [];
 cbs([CB|T]) -> [to_cb(CB)|cbs(T)];
 cbs(Term) -> cbs([Term]).
 
-to_cb('') -> {fun write_msg/3,[]};
+to_cb('') -> {fun write_msg/3,standard_io};
+to_cb(File) when is_list(File) -> {fun write_msg/3,File};
 to_cb(Mod) when is_atom(Mod) -> to_cb({Mod,initial});
 to_cb(Fun) when is_function(Fun) -> to_cb({Fun,initial});
 to_cb({Mod,Init}) when is_atom(Mod) -> is_cb(Mod),{{Mod,go},Init};
@@ -98,8 +104,10 @@ do_safe_cbs([CB|CBs], Msg, Seq, O) ->
 safe_cb({{M,F},State},Msg,Seq) -> {{M,F},M:F(Msg,Seq,State)};
 safe_cb({Fun,State},Msg,Seq) -> {Fun,Fun(Msg,Seq,State)}.
 
-write_msg(Msg,Seq,_) ->
-    io:fwrite("~.9.0w ~w~n",[Seq,Msg]).
+write_msg(Msg,Seq,F) when is_list(F) -> write_msg(Msg,Seq,[open(F)]);
+write_msg(Msg,Seq,FD) -> io:fwrite(FD,"~.9.0w ~w~n",[Seq,Msg]),FD.
+
+open(File) -> {ok,FD}=file:open(File,[write]),FD.
 
 grep('',_) -> true;
 grep(P,T) when list(P) ->

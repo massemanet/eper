@@ -2,7 +2,7 @@
 
 usage(){
     U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
-    U2="[-nettick <tick>] [-win] [-dbg] [-vsn <OTP version>]"
+    U2="[-nettick <tick>] [-win] [-vsn <OTP version>]"
     echo $U1 $U2
     exit
 }
@@ -31,9 +31,6 @@ while [ -n "$1" ]
   case $1 in
       "-help"|"-h"|"-?")
 	  usage
-	  ;;
-      "-dbg")
-	  detach=""
 	  ;;
       "-win")
 	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
