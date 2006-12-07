@@ -16,7 +16,7 @@ go(Msg, Seq, initial) 	     -> go(Msg, Seq, init());
 go(end_of_trace, Seq, State) -> terminate(Seq,State), State;
 go(Msg, Seq, State) 	     -> handler(Msg) ! {msg,Seq,Msg}, State.
 
-init() -> 
+init() ->
     ?LOG([{starting,?MODULE}]),
     sherk_ets:new(?MODULE),
     sherk_ets:new(sherk_prof),
@@ -60,17 +60,18 @@ hloop(S) ->
 
 hand(Tag,Info,TS,S) ->
     case {Tag,Info} of
-        {out,0}         -> (out(Tag,S,TS))#s{fd=yes};
-        {in,0}          -> in(Tag,S#s{fd=no},TS);
-        {gc_start,_}    -> (out(Tag,S,TS))#s{gc=yes};
-        {gc_end,_}      -> in(Tag,S#s{gc=no},TS);
-        {out,MFA}       -> (out(Tag,stk(S,arity(MFA)),TS))#s{in=no};
-        {in,MFA}        -> in(Tag,stk(S#s{in=yes},arity(MFA)),TS);
-        {call,MFA}      -> call(S,TS,arity(MFA));
-        {return_to,MFA} -> retu(S,TS,arity(MFA));
-        {spawn,{_,MFA}} -> spwn(S,TS,arity(MFA));
-        {exit,_}        -> exIt(S,TS);
-        {_,_}           -> S
+        {out,0}               -> (out(Tag,S,TS))#s{fd=yes};
+        {in,0}                -> in(Tag,S#s{fd=no},TS);
+        {gc_start,_}          -> (out(Tag,S,TS))#s{gc=yes};
+        {gc_end,_}            -> in(Tag,S#s{gc=no},TS);
+        {out,MFA}             -> (out(Tag,stk(S,arity(MFA)),TS))#s{in=no};
+        {in,MFA}              -> in(Tag,stk(S#s{in=yes},arity(MFA)),TS);
+        {call,MFA}            -> call(S,TS,arity(MFA));
+        {return_to,undefined} -> S;
+        {return_to,MFA}       -> retu(S,TS,arity(MFA));
+        {spawn,{_,MFA}}       -> spwn(S,TS,arity(MFA));
+        {exit,_}              -> exIt(S,TS);
+        {_,_}                 -> S
     end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

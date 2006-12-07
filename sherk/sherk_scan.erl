@@ -19,25 +19,31 @@
 -record(state, {seq=0, hits=0, cbs, pattern, out, min, max, eof = false}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-action(FileName, Patt, CBs, '', Max) -> action(FileName, Patt, CBs, 0, Max);
+action(FileName, Patt, CBs, '', Max) -> 
+    action(FileName, Patt, CBs, 0, Max);
+action(FileName, _Patt, raw, Min, Max) -> 
+    {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
+    State = #state{min=Min,max=Max},
+    file_action(FD, State, fun raw/2),
+    file:close(FD);
 action(FileName, Patt, CBs, Min, Max) ->
     sherk_ets:new(?MODULE),
     {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
     State = #state{pattern=Patt,cbs=cbs(CBs),min=Min,max=Max},
-    St = file_action(FD, State),
+    St = file_action(FD, State, fun do/2),
     file:close(FD),
     {hits, St#state.hits}.
 
 -define(CHUNKSIZE, 100000).
-file_action(FD, Stat) ->
-    file_action(make_chunk(FD, <<>>), FD, Stat).
+file_action(FD, Stat,Fun) ->
+    file_action(make_chunk(FD, <<>>), FD, Stat, Fun).
 
-file_action(_, _FD, #state{eof = true} = Stat) -> 
-    do(end_of_trace, Stat);
-file_action(eof, _FD, Stat) -> 
-    do(end_of_trace, Stat);
-file_action({Term, Rest}, FD, Stat) ->
-    file_action(make_chunk(FD, Rest), FD, do(Term, Stat)).
+file_action(_, _FD, #state{eof = true} = Stat, Fun) -> 
+    Fun(end_of_trace, Stat);
+file_action(eof, _FD, Stat, Fun) -> 
+    Fun(end_of_trace, Stat);
+file_action({Term, Rest}, FD, Stat, Fun) ->
+    file_action(make_chunk(FD, Rest), FD, Fun(Term, Stat), Fun).
 
 make_chunk(_FD, eof) -> 
     eof;
@@ -135,6 +141,26 @@ grp(P, L) when list(L) ->
     end;
 grp(P, T) -> grp(P--[T], []).
 
+raw(end_of_trace,State) ->
+    State;
+raw(Mess,State) ->
+    case element(1,Mess) of
+        trace -> raw_out(Mess,State);
+        trace_ts -> raw_out(Mess,State);
+        _ -> State
+    end.
+
+raw_out(Mess, State = #state{seq=Seq}) ->
+    case {State#state.min < Seq, Seq < State#state.max} of
+        {true,true} ->
+            io:fwrite("~w - ~w~n",[Seq,Mess]),
+            State#state{seq=Seq+1};
+        {true,false} ->
+            State#state{eof=true};
+        {false,true} ->
+            State#state{seq=Seq+1}
+    end.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% format is {Tag, PI, Data, Timestamp}
 %%% PI is {pid(), Info} 
@@ -213,6 +239,7 @@ pi(Port) when is_port(Port) ->
 pi(Pid) when is_pid(Pid) ->
     case ets_lup(Pid) of
 	[] -> {Pid, unknown};
+	{M,F,A} when is_list(A) -> {Pid, {M,F,length(A)}};
 	Name -> {Pid, Name}
     end.
 

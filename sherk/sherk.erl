@@ -46,8 +46,9 @@ init() ->
     %% init calls treeview
     CallList = {init_list_store([string,integer,integer]),
                 init_tree_view_cols([{0,"MFA"},{1,"calls"},{2,"%"}])},
-    CallTree = {init_tree_store([string,integer,integer]),
-                init_tree_view_cols([{0,"MFA"},{1,"time"},{2,"cumtime"}])},
+    CallTree = {init_tree_store([string,integer,integer,integer]),
+                init_tree_view_cols([{0,"MFA"},{1,"calls"},
+                                     {2,"time"},{3,"cumtime"}])},
     
     %% init procs treeview
     ProcsTree = init_tree_store([string,integer,integer,integer]),
