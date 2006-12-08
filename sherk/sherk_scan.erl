@@ -259,9 +259,10 @@ handle_traci(_I) -> ok.
 %%%
 %%% it also translates RegisteredName -> Pid
 
-ins({Port,Desc}) when is_port(Port) -> ets_ins({Port,Desc});
 ins({Pid,Reg}) when is_atom(Reg) -> ets_ins({Pid,Reg}),ets_ins({Reg,Pid});
+ins({Port,Desc}) when is_port(Port) -> ets_ins({Port,Desc});
 ins({Pid,{M,F,A}}) when is_integer(A) -> ets_ins({Pid,{M,F,A}});
+ins({Pid,Fun}) when is_function(Fun) -> ets_ins({Pid,funi(Fun)});
 ins({Pid,{M,F,As}}) when is_list(As) -> ets_ins({Pid,mangle_ic({M,F,As})}).
 
 del(Reg) when is_atom(Reg) -> ?LOG({unregistered,Reg}),ets_del(Reg).
@@ -277,7 +278,7 @@ mangle_ic(MFA) ->
 	{application_master,start_it,[_,{state,_,ApplD,_,_,_},_,_]} ->
 	    {appl_data,App,_,_,_,_,_,_,_} = ApplD,
 	    {application_master, {App}};
-	{erlang,apply,[Fun,[]]} when function(Fun) -> 
+	{erlang,apply,[Fun,[]]} when is_function(Fun) -> 
 	    funi(Fun);
 	{M,F,As} -> 
 	    {M,F,As}
