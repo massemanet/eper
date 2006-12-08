@@ -28,7 +28,7 @@
 -define(LOG(T), gperf:log(process_info(self()),T)).
 
 -record(dArea, {win,px_fg,px_bg,gc_fg,gc_bg,gcs,layout}).
--record(ld, {node='', tick, cookie, orig_tick=net_kernel:get_net_ticktime(),
+-record(ld, {node='', tick, cookie, 
              minute,x=?XHALF,dAreas=[],state=disc,stat_ctxt}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -64,9 +64,10 @@ loop(LD) ->
 	{gperf_gtk,{signal,{memory,'activate'}}}  -> maybe_show(),?LP(LD);
 	{gperf_gtk,{signal,{netload,'activate'}}} -> maybe_show(),?LP(LD);
 
-	{gperf_gtk,{signal,{Darea,'expose-event'}}}-> ?LP(do_expose(LD,Darea));
+	{gperf_gtk,{signal,{Darea,'expose-event'}}}->?LP(do_expose(LD,Darea));
 
-        {node,Node}                               -> ?LP(beg(LD#ld{node=Node}));
+        {args,['']}                               -> ?LP(LD);
+        {args,[Node]}                             -> ?LP(beg(LD#ld{node=Node}));
 	{tick, Stuff}                             -> ?LP(do_tick(LD,Stuff));
 	dbg                                       -> ?LP(dump_ld(LD));
 	X                                         -> ?LP(do_unknown(LD,X))
