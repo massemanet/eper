@@ -14,6 +14,8 @@
 -import(gb_trees,[empty/0,insert/3,iterator/1,
 		  lookup/2,next/1,update/3,to_list/1]).
 
+-import(net_kernel,[get_net_ticktime/0]).
+
 -record(st, {collectors=empty()}).
 -record(collector, {subscribers=[],mod=[],state=init}).
 
@@ -21,10 +23,11 @@
 
 %%% interface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 subscribe(Node, Pid, Collectors) -> 
-    PID = assert(Node,Collectors),
+    {PID,Tick} = assert(Node,Collectors),
     link(PID), 
     PID ! {subscribe, {Pid,Collectors}}, 
-    PID.
+    {PID,Tick}.
+
 unsubscribe(Node, Pid, Collectors) -> 
     {Node,?MODULE} ! {unsubscribe, {Pid,Collectors}}.
 
@@ -72,11 +75,10 @@ assert_started(Node) ->
 	    Ref = erlang:monitor(process, Pid),
 	    Pid ! {start,self()},
 	    receive 
-		{ack, Pid} -> erlang:demonitor(Ref), Pid;
-		{'DOWN', Ref, process, Pid, {use_me, PID}} -> PID
+		{ack, Pid, Tick} -> erlang:demonitor(Ref), {Pid,Tick};
+		{'DOWN', Ref, process, Pid, {use_me, PID,Tick}} -> {PID,Tick}
 	    after 
 		?TICK -> exit(timeout)
-
 	    end
     end.
 
@@ -88,14 +90,14 @@ init() ->
 	undefined -> 
 	    case catch register(?MODULE, self()) of
 		{'EXIT', {badarg, _}} ->       %somebody beat us to it
-		    exit({use_me, whereis(?MODULE)});
+		    exit({use_me, whereis(?MODULE),get_net_ticktime()});
 		true -> 
-		    Pid ! {ack, self()},
+		    Pid ! {ack, self(),get_net_ticktime()},
 		    erlang:start_timer(incr(?TICK), self(), tick),
 		    loop(#st{})
 	    end;
 	PID ->
-	    exit({use_me, PID})
+	    exit({use_me, PID,get_net_ticktime()})
     end.
 
 loop(St) ->

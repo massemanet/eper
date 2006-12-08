@@ -88,9 +88,12 @@ subscribe(Node, Collectors) ->
     spawn(fun() -> 
 		  %% this runs in its own process since it can block 
 		  %% nettick_time seconds (if the target is hung)
-		  case catch prfTarg:subscribe(Node, Self, Collectors) of
-		      {'EXIT',R} -> Self ! {subscribe, {failed,R}};
-		      Pid ->  Self ! {subscribe, {ok, Pid}}
+		  try prfTarg:subscribe(Node, Self, Collectors) of
+		      {Pid,Tick} -> 
+                          net_kernel:set_net_ticktime(Tick),
+                          Self ! {subscribe, {ok, Pid}}
+                  catch
+		      _:R -> Self ! {subscribe, {failed,R}}
 		  end 
 	  end),
     Collectors.
