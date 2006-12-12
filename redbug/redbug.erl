@@ -13,6 +13,7 @@
 -export([go/3,go/4,go/5,go/6]).
 -export([stop/0,stop/1,kill/0,kill/1]).
 
+-define(LOG(T), prf:log(process_info(self()),T)).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% the API
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -285,7 +286,7 @@ msg({'call',Pid,TS,{MFA,B}}) ->          {'call',{MFA,B},pi(Pid),ts(TS)};
 msg({'call',Pid,TS,MFA}) ->              {'call',{MFA,<<>>},pi(Pid),ts(TS)}.
 
 pi(P) when pid(P) ->
-    case process_info(P, registered_name) of
+    try process_info(P, registered_name) of
 	[] -> 
 	    case process_info(P, initial_call) of
 		{_, {proc_lib,init_p,5}} -> proc_lib:translate_initial_call(P);
@@ -294,6 +295,8 @@ pi(P) when pid(P) ->
 	    end;
 	{_,Nam} -> Nam;
 	undefined -> dead
+    catch 
+        Class:bad_arg -> ?LOG({class,Class}),non_local
     end;
 pi(P) when port(P) -> 
     {name,N} = erlang:port_info(P,name),

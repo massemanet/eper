@@ -12,7 +12,8 @@
 -record(data,{net=[],sys=[]}).
 -record(ld, {node,data=#data{},mem_max=512*1024*1024,net_max=4000,load_max=1}).
 
--define(LOG(T), prf:log(process_info(self()),T)).
+%%-define(LOG(T), prf:log(process_info(self()),T)).
+-define(LOG(T), ok).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 collectors() -> [prfSys,prfNet].
