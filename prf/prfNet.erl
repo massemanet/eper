@@ -9,8 +9,6 @@
 
 -export([collect/1]).
 
--include("prf.hrl").
-
 %%% returns {State, Data}
 collect(State) -> {State, {?MODULE, data()}}.
 data() ->

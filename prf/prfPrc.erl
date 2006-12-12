@@ -11,9 +11,7 @@
 
 -import(gb_trees,[empty/0,smallest/1,lookup/2,insert/3,delete/2,to_list/1]).
 
--record(cst,{info = empty()}).
-
--include("prf.hrl").
+-record(cst,{info = empty(),items=19}).
 
 %%%reductions,message_queue_len,memory
 %%%current_function,initial_call,registered_name
@@ -22,21 +20,21 @@
 collect(init) -> 
     collect(#cst{});
 collect(Cst) -> 
-    {I,Red,Mem,Msg} = collect(processes(),Cst#cst.info,
+    {I,Red,Mem,Msg} = collect(processes(),Cst#cst.info,Cst#cst.items,
 			      empty(),empty(),empty(),empty()),
     {Cst#cst{info=I},{?MODULE,{post(I),post(Red,I),post(Mem,I),post(Msg,I)}}}.
 
-collect([],_,NewInfo,Red,Mem,Msg) -> {NewInfo,Red,Mem,Msg};
-collect([P|Ps],OldInfo,NewInfo,Red,Mem,Msg) ->
+collect([],_,_Items,NewInfo,Red,Mem,Msg) -> {NewInfo,Red,Mem,Msg};
+collect([P|Ps],OldInfo,Items,NewInfo,Red,Mem,Msg) ->
     case catch [pinf(P,T) || T <- [reductions,memory,message_queue_len]] of
 	{'EXIT',_} ->
-	    collect(Ps,OldInfo,NewInfo,Red,Mem,Msg);
+	    collect(Ps,OldInfo,Items,NewInfo,Red,Mem,Msg);
 	[Vred,Vmem,Vmsg] ->
 	    {Reds,NNewInfo} = redder(P,Vred,Vmem,Vmsg,OldInfo,NewInfo),
-	    NMem = tree_it(Mem,P,Vmem),
-	    NMsg = tree_it(Msg,P,Vmsg),
-	    NRed = tree_it(Red,P,Reds),
-	    collect(Ps,OldInfo,NNewInfo,NRed,NMem,NMsg)
+	    NMem = tree_it(Mem,P,Vmem,Items),
+	    NMsg = tree_it(Msg,P,Vmsg,Items),
+	    NRed = tree_it(Red,P,Reds,Items),
+	    collect(Ps,OldInfo,Items,NNewInfo,NRed,NMem,NMsg)
     end.
 
 redder(P,Red,Mem,Msg,OldInfo,NewInfo) ->
@@ -48,10 +46,10 @@ redder(P,Red,Mem,Msg,OldInfo,NewInfo) ->
 	    {Red,insert(P,{Red,Red,Mem,Msg},NewInfo)}
     end.
 
-tree_it(Tree,_Key,0) -> Tree;
-tree_it(Tree,Key,Val) ->
+tree_it(Tree,_Key,0,_Items) -> Tree;
+tree_it(Tree,Key,Val,Items) ->
     case gb_trees:size(Tree) of
-	X when X < ?ITEMS -> insert({Val,Key},[],Tree);
+	X when X < Items -> insert({Val,Key},[],Tree);
 	_ -> 
 	    case smallest(Tree) of
 		{K,_} when K < {Val,Key} -> insert({Val,Key},[],delete(K,Tree));

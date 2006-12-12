@@ -10,7 +10,7 @@
 -export([start/1,stop/0,sort/1]).
 
 start(Node) when atom(Node) -> start([Node]);
-start([Node]) -> prfHost:start(dtop,Node,prfDtop).
+start([Node]) -> prfHost:start(dtop,Node,dtopConsumer).
 
 stop() -> prfHost:stop(dtop).
 

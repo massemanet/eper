@@ -19,8 +19,7 @@
 -record(st, {collectors=empty()}).
 -record(collector, {subscribers=[],mod=[],state=init}).
 
--include("prf.hrl").
-
+-define(LOG(T), prf:log(process_info(self()),T)).
 %%% interface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 subscribe(Node, Pid, Collectors) -> 
     {PID,Tick} = assert(Node,Collectors),
@@ -37,7 +36,7 @@ assert(Node,Collector) ->
     assert_started(Node).
 
 assert_loaded(Node, Collectors) ->
-    lists:foreach(fun(M) -> ass_loaded(Node,M) end, [?MODULE|Collectors]).
+    lists:foreach(fun(M) -> ass_loaded(Node,M) end, [prf,?MODULE|Collectors]).
 
 ass_loaded(Node, Mod) ->
     case rpc:call(Node,Mod,module_info,[compile]) of
@@ -78,7 +77,7 @@ assert_started(Node) ->
 		{ack, Pid, Tick} -> erlang:demonitor(Ref), {Pid,Tick};
 		{'DOWN', Ref, process, Pid, {use_me, PID,Tick}} -> {PID,Tick}
 	    after 
-		?TICK -> exit(timeout)
+		3000 -> exit(timeout)
 	    end
     end.
 
@@ -93,7 +92,7 @@ init() ->
 		    exit({use_me, whereis(?MODULE),get_net_ticktime()});
 		true -> 
 		    Pid ! {ack, self(),get_net_ticktime()},
-		    erlang:start_timer(incr(?TICK), self(), tick),
+                    prf:ticker_odd(),
 		    loop(#st{})
 	    end;
 	PID ->
@@ -102,8 +101,8 @@ init() ->
 
 loop(St) ->
     receive
-	{timeout, _, tick} -> 
-	    erlang:start_timer(incr(?TICK), self(), tick),
+	{timeout, _, {tick}} -> 
+	    prf:ticker_odd(),
 	    ?MODULE:loop(collect_and_send(St));
 	{subscribe, {Pid,Collectors}} -> 
 	    ?MODULE:loop(subscr(St, Pid, Collectors));
@@ -181,7 +180,3 @@ regrr(Sub,Tree,Data) ->
 send(Tree) -> lists:foreach(fun sendf/1, to_list(Tree)).
 
 sendf({Sub,Data}) -> Sub ! {{data,node()},Data}.
-
-incr(Tick) ->
-    {_, Sec, Usec} = now(),
-    Tick+500-(round(Sec*1000+Usec/1000+500) rem Tick).

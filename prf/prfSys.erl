@@ -11,7 +11,7 @@
 
 -record(cst,{beam, os}).
 
--include("prf.hrl").
+-define(LOG(T), prf:log(process_info(self()),T)).
 
 %%% returns {State, Data}
 collect(init) ->
@@ -80,7 +80,7 @@ get_beam({unix,_}, {Port, Cmd}) when port(Port) ->
 		X -> ?LOG({nai,X}), [{beamsize, 0}]
 	    end
     after 
-	?TICK div 4 -> []
+	500 -> []
     end;
 get_beam(_, _) -> [].
 

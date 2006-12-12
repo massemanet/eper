@@ -1,5 +1,5 @@
 erlsrcdir = $(ERLANG_INSTALL_LIB_DIR_eper)/src
-erlsrc_DATA = dtop.erl prfDtop.erl
+erlsrc_DATA = dtop.erl dtopConsumer.erl
 
 bindir = $(ERLANG_INSTALL_LIB_DIR_eper)/priv/bin
 dist_bin_SCRIPTS = dtop

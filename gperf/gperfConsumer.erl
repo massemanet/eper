@@ -12,6 +12,9 @@
 -record(data,{net=[],sys=[]}).
 -record(ld, {node,data=#data{},mem_max=512*1024*1024,net_max=4000,load_max=1}).
 
+-define(LOG(T), prf:log(process_info(self()),T)).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 collectors() -> [prfSys,prfNet].
 
 init(Node) -> #ld{node = Node}.
@@ -35,21 +38,22 @@ info(NLD,LD) ->
      net(LD#ld.net_max,NLD#ld.data,LD#ld.data)].
 
 dump_ld(LD) ->
-    F = fun({N,V}) -> io:fwrite("~p~n",[{N,V}]) end,
-    lists:foreach(F,zip(record_info(fields,ld),tl(tuple_to_list(LD)))).
+    ?LOG(zip(record_info(fields,ld),tl(tuple_to_list(LD)))).
 
 zip([],[]) -> [];
 zip([A|As],[B|Bs]) -> [{A,B}|zip(As,Bs)].
 
 update_ld(LD,[]) -> 
-    LD#ld{data=#data{}};
-update_ld(LD,[[{prfNet,Net},{prfSys,Sys}]|_]) -> 
-    LD#ld{data=#data{net=Net,sys=Sys}}.
+    ?LOG({no_data}), LD#ld{data=#data{}};
+update_ld(LD,[{prfNet,Net},{prfSys,Sys}]) -> 
+    LD#ld{data=#data{net=Net,sys=Sys}};
+update_ld(LD,[X]) -> 
+    ?LOG({unrecognized_data,X}), LD.
 
 ltime(#data{sys=Sys}) ->
-    case catch calendar:now_to_local_time(w(now,Sys)) of
-	{'EXIT',_} -> io:fwrite("bad time: ~p~n",[catch w(now,Sys)]),no_time;
-	{_Date,Time}-> Time
+    case T=w(now,Sys) of
+        {_,_,_} -> {_,Time} = calendar:now_to_local_time(T),Time;
+        Bad -> ?LOG({bad_time,Bad}),no_time
     end.
 
 load(Max,#data{sys=N},#data{sys=O}) ->

@@ -10,9 +10,10 @@
 -export([start/3, stop/1]).
 -export([init/3,loop/1]).				%internal
 
--record(ld, {node, server=[], collectors, consumer, consumer_data}).
+-record(ld, {node, server=[], collectors, consumer, consumer_data, data=[]}).
 
--include("prf.hrl").
+-define(LOG(T), prf:log(process_info(self()),T)).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 start(Name, Node, Consumer) when atom(Name), atom(Node), atom(Consumer) -> 
     case whereis(Name) of
@@ -29,7 +30,7 @@ stop(Name) ->
 init(Name, Node, Consumer) ->
     process_flag(trap_exit,true),
     register(Name, self()),
-    erlang:start_timer(incr(?TICK)+?TICK div 2, self(),{tick}),
+    prf:ticker_even(),
     loop(#ld{node = Node, 
              consumer = Consumer, 
              collectors = subscribe(Node,Consumer:collectors()),
@@ -42,15 +43,15 @@ loop(LD) ->
             do_stop(LD),
             Stopper ! stopped;
 	{timeout, _, {tick}} when LD#ld.server == [] -> 
-	    erlang:start_timer(incr(?TICK), self(),{tick}),
+	    prf:ticker_even(),
 	    subscribe(LD#ld.node,LD#ld.collectors),
 	    Cdata = (LD#ld.consumer):tick(LD#ld.consumer_data, []),
 	    ?MODULE:loop(LD#ld{consumer_data = Cdata});
 	{timeout, _, {tick}} -> 
-	    erlang:start_timer(incr(?TICK), self(),{tick}),
-	    Data = get_data(LD),
-	    Cdata = (LD#ld.consumer):tick(LD#ld.consumer_data, Data),
-	    ?MODULE:loop(LD#ld{consumer_data = Cdata});
+	    prf:ticker_even(),
+	    {Data,NLD} = get_data(LD),
+	    Cdata = (NLD#ld.consumer):tick(NLD#ld.consumer_data, Data),
+	    ?MODULE:loop(NLD#ld{consumer_data = Cdata});
 	{'EXIT',Pid,Reason} when Pid == LD#ld.server ->
 	    ?LOG({lost_target, Reason}),
 	    ?MODULE:loop(LD#ld{server=[]});
@@ -73,11 +74,17 @@ do_stop(LD) ->
     unsubscribe(LD#ld.node,LD#ld.collectors),
     (LD#ld.consumer):terminate(LD#ld.consumer_data).
 
-get_data(LD) -> get_data(LD#ld.node, []).
-get_data(Node, InData) ->
-    receive 
-	{{data, Node}, Data} -> get_data(Node, [Data|InData])
-    after 0 -> InData
+get_data(LD) -> 
+    case {get_datas(LD#ld.node), LD#ld.data} of
+	{[],[]} -> {[],LD};
+	{[],[Data]} -> {Data,LD#ld{data=[]}};
+	{[Data],_} -> {Data,LD#ld{data=[]}};
+	{[Data,D2|_],_} ->{Data,LD#ld{data=[D2]}}
+    end.
+
+get_datas(Node) -> 
+    receive {{data, Node}, Data} -> [Data|get_datas(Node)]
+    after 0 -> []
     end.
 
 unsubscribe(Node, Collectors) ->

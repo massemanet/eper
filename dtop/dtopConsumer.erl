@@ -5,12 +5,11 @@
 %%%
 %%% Created : 16 Dec 2003 by Mats Cronqvist <qthmacr@duna283>
 %%%-------------------------------------------------------------------
--module(prfDtop).
+-module(dtopConsumer).
 
 -export([init/1, terminate/1, tick/2, collectors/0, config/2]).
--include("../prf/prf.hrl").
 
--record(cld, {sort=cpu, node, prfSys, cpu, reds = 0, dreds}).
+-record(cld, {sort=cpu, node, prfSys, cpu, reds = 0, dreds, items=19}).
 
 collectors() -> [prfPrc,prfSys].
 init(Node) -> #cld{node = Node}.
@@ -22,7 +21,7 @@ config(LD,_) -> LD.
 tick(LD,Data) ->
     case Data of
 	[] -> LD;
-	[[{prfPrc,PrfPrc},{prfSys,PrfSys}]|_] -> 
+	[{prfPrc,PrfPrc},{prfSys,PrfSys}] -> 
 	    print(update_ld(LD,PrfSys),PrfSys,PrfPrc)
     end.
 
@@ -76,17 +75,17 @@ print_del() -> io:fwrite("~s~n", [lists:duplicate(79, $-)]).
 -define(TAGS, ["pid","name","current","msgq","mem","cpu"]).
 print_tags() -> io:fwrite(?FORMAT, ?TAGS).
 
-print_procs(LD = #cld{sort=cpu},PrfPrcRed,PrfPrcMem,_) -> 
-    print_procs(LD, pad(PrfPrcRed,PrfPrcMem));
-print_procs(LD = #cld{sort=msgq},_,PrfPrcMem,PrfPrcMsg) ->
-    print_procs(LD, pad(PrfPrcMsg,PrfPrcMem));
-print_procs(LD = #cld{sort=mem},_,PrfPrcMem,_) -> 
-    print_procs(LD, PrfPrcMem).
+print_procs(LD = #cld{sort=cpu,items=Items},PrfPrcRed,PrfPrcMem,_) -> 
+    print_procs(LD, pad(PrfPrcRed,PrfPrcMem,Items),Items);
+print_procs(LD = #cld{sort=msgq,items=Items},_,PrfPrcMem,PrfPrcMsg) ->
+    print_procs(LD, pad(PrfPrcMsg,PrfPrcMem,Items),Items);
+print_procs(LD = #cld{sort=mem,items=Items},_,PrfPrcMem,_) -> 
+    print_procs(LD, PrfPrcMem,Items).
 
-pad(Prc,PrcMem) ->
-    case length(Prc) == ?ITEMS of
+pad(Prc,PrcMem,Items) ->
+    case length(Prc) == Items of
 	true -> Prc;
-	false -> pad(Prc,PrcMem,[],?ITEMS)
+	false -> pad(Prc,PrcMem,[],Items)
     end.
 
 pad(_,_,_,0) -> [];
@@ -99,9 +98,9 @@ pad([],[PrcMem|PrcMems],Pids,N) ->
 pad([],[],_,_) -> [].
 	    
 
-print_procs(LD, PrfPrc) -> 
+print_procs(LD, PrfPrc,Items) -> 
     lists:foreach(fun(PP) -> procsI(LD,PP) end, PrfPrc),
-    io:fwrite("~s",[lists:duplicate(?ITEMS-length(PrfPrc),10)]).
+    io:fwrite("~s",[lists:duplicate(Items-length(PrfPrc),10)]).
 
 procsI(#cld{cpu = Cpu, dreds = Dreds}, PP) ->
     io:fwrite(?FORMAT, [pidf(to_list(lks(pid,PP))),
