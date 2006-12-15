@@ -9,6 +9,9 @@
 
 -export([go/0]).  % interactive
 -export([ni/0]).  % non-interactive
+-export([scan/1,scan/2,scan/3,scan/4,scan/5]).
+
+%% sherk-specific export
 -export([to_str/1]).
 
 %% internal exports
@@ -24,8 +27,16 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 go() -> spawn_link(fun init/0).
+
 ni() -> init().
-    
+
+scan(File) -> scan(File,'').
+scan(File,Patt) -> scan(File,Patt,'').
+scan(File,Patt,CBs) -> scan(File,Patt,CBs,0,'').
+scan(File,Patt,CBs,Seq) -> scan(File,Patt,CBs,Seq,Seq).
+scan(File,Patt,CBs,Min,Max) -> sherk_scan:go(File,Patt,CBs,Min,Max).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init() ->
     
     %% start the GUI and load the glade file

@@ -10,7 +10,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--export([action/5]).
+-export([go/5]).
 
 -import(lists,[member/2,reverse/1,keysearch/3,map/2,foreach/2]).
 
@@ -19,14 +19,14 @@
 -record(state, {seq=0, hits=0, cbs, pattern, out, min, max, eof = false}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-action(FileName, Patt, CBs, '', Max) -> 
-    action(FileName, Patt, CBs, 0, Max);
-action(FileName, _Patt, raw, Min, Max) -> 
+go(FileName, Patt, CBs, '', Max) -> 
+    go(FileName, Patt, CBs, 0, Max);
+go(FileName, _Patt, raw, Min, Max) -> 
     {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
     State = #state{min=Min,max=Max},
     file_action(FD, State, fun raw/2),
     file:close(FD);
-action(FileName, Patt, CBs, Min, Max) ->
+go(FileName, Patt, CBs, Min, Max) ->
     sherk_ets:new(?MODULE),
     {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
     State = #state{pattern=Patt,cbs=cbs(CBs),min=Min,max=Max},

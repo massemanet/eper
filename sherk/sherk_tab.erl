@@ -28,7 +28,7 @@ assert(File) ->
         _ -> 
             %% make tab and save it
             ?LOG([creating_tab]),
-            sherk_scan:action(File,'',sherk_prof,0,''),
+            sherk_scan:go(File,'',sherk_prof,0,''),
             ets:insert(sherk_prof, {file, File}),
             try 
                 ?LOG(storing_tab),
