@@ -81,6 +81,7 @@ mem(Max,#data{sys=Sys},_LD) ->
      max(1,dv(w(processes,Sys),Max))].
 
 net(Max,#data{net=NetN},#data{net=NetO}) -> 
+    ?LOG(NetN),
     {InO,OutO} = net1(NetO,0,0),
     {InN,OutN} = net1(NetN,0,0),
     [max(1,dv(InN-InO,Max)),
@@ -92,8 +93,8 @@ net1([{_Nod,N}|X],I,O) ->
     net1(X,I+In,O+Out).
 
 net2(_,I,O) when is_integer(I),is_integer(O) -> {I,O};
-net2([{in,I}|X],_,O) -> net2(X,I,O);
-net2([{out,O}|X],I,_) -> net2(X,I,O);
+net2([{recv_oct,I}|X],_,O) -> net2(X,I,O);
+net2([{send_oct,O}|X],I,_) -> net2(X,I,O);
 net2([_|X],I,O) -> net2(X,I,O).
 
 w(Tag,List) ->

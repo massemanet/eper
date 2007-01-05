@@ -79,8 +79,8 @@ dump_ld(LD) ->
     LD.
 
 beg(LD) ->
-    prfHost:stop(gperf_prf),
-    prfHost:start(gperf_prf,LD#ld.node,gperfConsumer),
+    prf:stop(gperf_prf),
+    prf:start(gperf_prf,LD#ld.node,gperfConsumer),
     statbar("waiting - "++atom_to_list(LD#ld.node), LD),
     LD.
 

@@ -7,8 +7,16 @@
 %%%-------------------------------------------------------------------
 -module(prf).
 
+-export([start/3,stop/1]).
+
+%% prf internal
 -export([log/2,ticker_odd/0,ticker_even/0]).
+
 -define(TICK,2000).
+
+start(Name, Node, Consumer) -> prfHost:start(Name, Node, Consumer).
+
+stop(Name) -> prfHost:stop(Name).
 
 ticker_even()-> erlang:start_timer(incr(?TICK,0), self(),{tick}).
 ticker_odd() -> erlang:start_timer(incr(?TICK,?TICK div 2), self(),{tick}).
