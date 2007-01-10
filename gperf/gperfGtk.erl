@@ -212,9 +212,12 @@ timeline(LD = #ld{dAreas=Dareas},{_,M,_}=HMS) ->
     LD#ld{minute=M}.
 
 stat_change(up,LD) ->     
-    statbar("connected - "++to_str(conf_get_val(node,LD)),LD),
+    Nod = to_str(conf_get_val(node,LD)),
+    g('Gtk_window_set_title',[window,"gperf - "++Nod]),
+    statbar("connected - "++Nod,LD),
     LD#ld{state=conn};
 stat_change(down,LD) ->
+    g('Gtk_window_set_title',[window,"gperf"]),
     statbar("disconnected - "++to_str(conf_get_val(node,LD)),LD),
     LD#ld{state=disc}.
 
