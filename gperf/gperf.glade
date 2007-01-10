@@ -346,7 +346,7 @@ Use it or suffer the consequences</property>
 		  <child>
 		    <widget class="GtkLabel" id="label9">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">&lt;span foreground=&quot;red&quot;&gt;total CPU load&lt;/span&gt;</property>
+		      <property name="label" translatable="yes">&lt;span foreground=&quot;blue&quot;&gt;beam process load&lt;/span&gt;</property>
 		      <property name="use_underline">False</property>
 		      <property name="use_markup">True</property>
 		      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -371,7 +371,7 @@ Use it or suffer the consequences</property>
 		  <child>
 		    <widget class="GtkLabel" id="label10">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">&lt;span foreground=&quot;blue&quot;&gt;user-space load&lt;/span&gt;</property>
+		      <property name="label" translatable="yes">&lt;span foreground=&quot;red&quot;&gt;user-space load&lt;/span&gt;</property>
 		      <property name="use_underline">False</property>
 		      <property name="use_markup">True</property>
 		      <property name="justify">GTK_JUSTIFY_LEFT</property>
@@ -421,7 +421,7 @@ Use it or suffer the consequences</property>
 		  <child>
 		    <widget class="GtkLabel" id="label12">
 		      <property name="visible">True</property>
-		      <property name="label" translatable="yes">&lt;span foreground=&quot;magenta&quot;&gt;io/wait&lt;/span&gt;</property>
+		      <property name="label" translatable="yes">&lt;span foreground=&quot;magenta&quot;&gt;iowait load&lt;/span&gt;</property>
 		      <property name="use_underline">False</property>
 		      <property name="use_markup">True</property>
 		      <property name="justify">GTK_JUSTIFY_LEFT</property>
