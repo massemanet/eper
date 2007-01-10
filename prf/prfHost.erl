@@ -8,7 +8,7 @@
 -module(prfHost).
 
 -export([start/3, stop/1]).
--export([init/3,loop/1]).				%internal
+-export([init/2,loop/1]).				%internal
 
 -record(ld, {node, server=[], collectors, consumer, consumer_data, data=[]}).
 
@@ -17,7 +17,7 @@
 
 start(Name, Node, Consumer) when atom(Name), atom(Node), atom(Consumer) -> 
     case whereis(Name) of
-	undefined -> spawn_link(?MODULE, init, [Name, Node, Consumer]);
+	undefined -> register(Name, spawn_link(?MODULE, init, [Node,Consumer]));
 	Pid -> Pid
     end.
 
@@ -27,9 +27,8 @@ stop(Name) ->
         _ -> ok
     end.
 
-init(Name, Node, Consumer) ->
+init(Node, Consumer) ->
     process_flag(trap_exit,true),
-    register(Name, self()),
     prf:ticker_even(),
     loop(#ld{node = Node, 
              consumer = Consumer, 
@@ -104,7 +103,3 @@ subscribe(Node, Collectors) ->
 		  end 
 	  end),
     Collectors.
-
-incr(TCK) ->
-    {_, _SEC_, _USEC_} = now(),
-    TCK+1500-(round(_SEC_*1000+_USEC_/1000+500) rem TCK).

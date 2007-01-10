@@ -28,8 +28,8 @@
 -define(LOG(T), gperf:log(process_info(self()),T)).
 
 -record(dArea, {win,px_fg,px_bg,gc_fg,gc_bg,gcs,layout}).
--record(ld, {node='', tick, cookie, 
-             minute,x=?XHALF,dAreas=[],state=disc,stat_ctxt}).
+-record(conf, {widget, val, type}).
+-record(ld, {conf=conf(),minute,x=?XHALF,dAreas=[],state=disc,stat_ctxt}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 start() -> spawn(fun()-> init() end).
@@ -54,11 +54,11 @@ loop(LD) ->
 	{gperf_gtk,{signal,{window,'delete-event'}}}-> die(LD);
         
         {gperf_gtk,{signal,{conf_cancel,_}}} -> hide_cf(),?LP(LD);
-        {gperf_gtk,{signal,{conf_ok,_}}}     -> hide_cf(),?LP(beg(conf(LD)));
+        {gperf_gtk,{signal,{conf_ok,_}}}     -> hide_cf(),?LP(conf(LD));
         
         %% menu items
 	{gperf_gtk,{signal,{quit,'activate'}}}    -> die(LD);
-        {gperf_gtk,{signal,{conf,'activate'}}}    -> show(conf_window),?LP(LD);
+        {gperf_gtk,{signal,{conf,'activate'}}}    -> show_cf(LD),?LP(LD);
 	{gperf_gtk,{signal,{about,'activate'}}}   -> show(about),?LP(LD);
 	{gperf_gtk,{signal,{load,'activate'}}}    -> maybe_show(),?LP(LD);
 	{gperf_gtk,{signal,{memory,'activate'}}}  -> maybe_show(),?LP(LD);
@@ -66,11 +66,12 @@ loop(LD) ->
 
 	{gperf_gtk,{signal,{Darea,'expose-event'}}}->?LP(do_expose(LD,Darea));
 
-        {args,['']}                               -> ?LP(LD);
-        {args,[Node]}                             -> ?LP(beg(LD#ld{node=Node}));
-	{tick, Stuff}                             -> ?LP(do_tick(LD,Stuff));
-	dbg                                       -> ?LP(dump_ld(LD));
-	X                                         -> ?LP(do_unknown(LD,X))
+        {args,['']}                      -> ?LP(LD);
+        {args,[Node]}                    -> ?LP(conf(LD,node,Node));
+
+	{tick, Stuff}                    -> ?LP(do_tick(LD,Stuff));
+	dbg                              -> ?LP(dump_ld(LD));
+	X                                -> ?LP(do_unknown(LD,X))
     end.
 
 dump_ld(LD) ->
@@ -78,26 +79,62 @@ dump_ld(LD) ->
     foreach(F,zip(record_info(fields,ld),tl(tuple_to_list(LD)))),
     LD.
 
-beg(LD) ->
-    prf:stop(gperf_prf),
-    prf:start(gperf_prf,LD#ld.node,gperfConsumer),
-    statbar("waiting - "++atom_to_list(LD#ld.node), LD),
-    LD.
+conf() ->
+    dict:from_list([{node,  #conf{widget=conf_node,  val='',  type=atom}}, 
+                    {cookie,#conf{widget=conf_cookie,val='',  type=atom}}, 
+                    {cpu,   #conf{widget=conf_cpu,   val=100, type=integer}},
+                    {mem,   #conf{widget=conf_mem,   val=1024,type=integer}},
+                    {net,   #conf{widget=conf_net,   val=10,  type=integer}}]).
 
-conf(LD) ->
-    case g('Gtk_entry_get_text',[conf_node_entry]) of
-        "" -> LD#ld{node = node()};
-        NodeS -> 
-            Node = list_to_atom(NodeS),
-            case g('Gtk_entry_get_text',[conf_cookie_entry]) of
-                "" -> ok;
-                CS -> erlang:set_cookie(Node,list_to_atom(CS))
-            end,
-            LD#ld{node =Node}
+conf(LD) -> 
+    LD#ld{conf=dict:map(fun(Key,C)->conf_f(Key,C,LD) end, LD#ld.conf)}.
+
+conf(LD,K,V) -> 
+    LD#ld{conf=dict:update(K, fun(C)->conf_handler(K,C,V,LD) end, LD#ld.conf)}.
+
+conf_f(Key,C,LD) ->
+    NewV = get_gui_val(C#conf.widget,C#conf.type,C#conf.val),
+    case NewV == C#conf.val of
+        true -> C;
+        false-> conf_handler(Key,C,NewV,LD)
+    end.
+
+conf_handler(Key,C,Val,LD) ->
+    case Key of
+        node ->
+            prf:stop(gperf_prf),
+            prf:start(gperf_prf,Val,gperfConsumer),
+            [conf_send(K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
+        cookie ->
+            erlang:set_cookie(conf_get_val(node,LD),Val);
+        _ ->
+            conf_send(Key, Val)
+    end,
+    C#conf{val=Val}.
+
+conf_send(Key, Val) -> gperf_prf ! {config,{Key,Val}}.
+
+conf_fill(Confs) -> dict:fold(fun conf_fill/3, [], Confs).
+
+conf_fill(_Key,#conf{widget=Widget, val=Val},_) ->
+    g('Gtk_entry_set_text',[Widget,to_str(Val)]).
+
+conf_get_val(Tag,LD) -> (dict:fetch(Tag,LD#ld.conf))#conf.val.
+
+get_gui_val(Widget,Type,Val) -> 
+    X = g('Gtk_entry_get_text',[Widget]),
+    case Type of 
+        atom -> try list_to_atom(X) catch _:_ -> Val end;
+        integer-> try list_to_integer(X) catch _:_ -> Val end
     end.
 
 zip([],[]) -> [];
 zip([A|As],[B|Bs]) -> [{A,B}|zip(As,Bs)].
+
+to_str(L) when is_list(L) -> L;
+to_str(A) when is_atom(A) -> atom_to_list(A);
+to_str(F) when is_float(F) ->float_to_list(F);
+to_str(I) when is_integer(I) ->integer_to_list(I).
 
 die(_LD) ->
     io:fwrite("~w - terminating~n", [?MODULE]),
@@ -128,6 +165,10 @@ show(Darea) -> g('Gtk_widget_show',[Darea]).
 hide(Darea) -> g('Gtk_widget_hide',[Darea]).
 
 hide_cf() -> hide(conf_window).
+
+show_cf(LD) -> 
+    conf_fill(LD#ld.conf),
+    show(conf_window).
 
 resize_toplevel(Widget) ->
     TopLevel = g('Gtk_widget_get_toplevel',[Widget]),
@@ -167,10 +208,10 @@ timeline(LD = #ld{dAreas=Dareas},{_,M,_}=HMS) ->
     LD#ld{minute=M}.
 
 stat_change(up,LD) ->     
-    statbar("connected - "++atom_to_list(LD#ld.node),LD),
+    statbar("connected - "++to_str(conf_get_val(node,LD)),LD),
     LD#ld{state=conn};
 stat_change(down,LD) ->
-    statbar("disconnected - "++atom_to_list(LD#ld.node),LD),
+    statbar("disconnected - "++to_str(conf_get_val(node,LD)),LD),
     LD#ld{state=disc}.
 
 statbar(Msg, #ld{stat_ctxt=Ctxt}) ->
@@ -258,7 +299,7 @@ gcs(_Win,[]) -> [];
 gcs(Win,[Color|T]) ->
     GC = g('Gdk_gc_new',[Win]),
     ColorMap = g('Gdk_gc_get_colormap',[GC]),
-    g('Gdk_color_parse',[atom_to_list(Color),Color]),
+    g('Gdk_color_parse',[to_str(Color),Color]),
     g('Gdk_colormap_alloc_color',[ColorMap,Color,false,true]),
     g('Gdk_gc_set_foreground',[GC,Color]),
     [GC|gcs(Win,T)].

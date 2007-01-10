@@ -10,10 +10,10 @@
 -export([init/1, terminate/1, tick/2, collectors/0, config/2]).
 
 -record(data,{net=[],sys=[]}).
--record(ld, {node,data=#data{},mem_max=512*1024*1024,net_max=4000,load_max=1}).
+-record(ld, {node,data=#data{},mem_max=0,net_max=0,load_max=0}).
 
-%%-define(LOG(T), prf:log(process_info(self()),T)).
--define(LOG(T), ok).
+-define(LOG(T), prf:log(process_info(self()),T)).
+%%-define(LOG(T), ok).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 collectors() -> [prfSys,prfNet].
@@ -27,8 +27,15 @@ tick(LD, Data) ->
     gperf ! {tick, {ltime(NLD#ld.data),info(NLD,LD)}},
     NLD.
 
-config(LD,{maxs,[Mem,Net]}) ->
-    LD#ld{net_max=Net,mem_max=Mem};
+config(LD,{mem,Mem}) ->
+    %% gui unit is MByte
+    LD#ld{mem_max=Mem*1024*1024};
+config(LD,{net,Net}) ->
+    %% gui unit is kByte/s
+    LD#ld{net_max=Net*1024};
+config(LD,{cpu,Cpu}) ->
+    %% gui unit is %
+    LD#ld{load_max=Cpu/100.0};
 config(LD,dbg) ->
     dump_ld(LD),
     LD.
@@ -45,7 +52,7 @@ zip([],[]) -> [];
 zip([A|As],[B|Bs]) -> [{A,B}|zip(As,Bs)].
 
 update_ld(LD,[]) -> 
-    ?LOG({no_data}), LD#ld{data=#data{}};
+    LD#ld{data=#data{}};
 update_ld(LD,[{prfNet,Net},{prfSys,Sys}]) -> 
     LD#ld{data=#data{net=Net,sys=Sys}};
 update_ld(LD,[X]) -> 
@@ -58,19 +65,18 @@ ltime(#data{sys=Sys}) ->
     end.
 
 load(Max,#data{sys=N},#data{sys=O}) ->
+    Beam = beamload(N,O),
     User = w(user,N)/100,
     Kern = w(kernel,N)/100,
     Wait = w(wait,N)/100,
-    case User of
-	0.0 -> Beam = beamload(1,N,O);
-	_ -> Beam = beamload(User,N,O)
-    end,
-    [Beam,User,User+Kern,max(User+Kern+Wait, Max)].
+    [max(1,dv(Beam,Max)),
+     max(1,dv(User,Max)),
+     max(1,dv(User+Kern,Max)),
+     max(1,dv(User+Kern+Wait,Max))].
 
-beamload(Max,N,O) ->
+beamload(N,O) ->
     case dv(w(runtime,N)-w(runtime,O),w(wall_clock,N)-w(wall_clock,O)) of
 	Load when Load < 0 -> 0;
-	Load when Max < Load -> Max;
 	Load -> Load
     end.
 
@@ -81,7 +87,6 @@ mem(Max,#data{sys=Sys},_LD) ->
      max(1,dv(w(processes,Sys),Max))].
 
 net(Max,#data{net=NetN},#data{net=NetO}) -> 
-    ?LOG(NetN),
     {InO,OutO} = net1(NetO,0,0),
     {InN,OutN} = net1(NetN,0,0),
     [max(1,dv(InN-InO,Max)),
