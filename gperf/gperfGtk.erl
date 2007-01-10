@@ -106,7 +106,7 @@ conf_handler(Key,C,Val,LD) ->
             prf:start(gperf_prf,Val,gperfConsumer),
             [conf_send(K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
         cookie ->
-            erlang:set_cookie(conf_get_val(node,LD),Val);
+            erlang:set_cookie(get_gui_val(node,LD),Val);
         _ ->
             conf_send(Key, Val)
     end,
@@ -119,7 +119,11 @@ conf_fill(Confs) -> dict:fold(fun conf_fill/3, [], Confs).
 conf_fill(_Key,#conf{widget=Widget, val=Val},_) ->
     g('Gtk_entry_set_text',[Widget,to_str(Val)]).
 
-conf_get_val(Tag,LD) -> (dict:fetch(Tag,LD#ld.conf))#conf.val.
+conf_get_val(Key,LD) -> (dict:fetch(Key,LD#ld.conf))#conf.val.
+
+get_gui_val(Key,LD) -> 
+    C = dict:fetch(Key,LD#ld.conf),
+    get_gui_val(C#conf.widget,C#conf.type,C#conf.val).
 
 get_gui_val(Widget,Type,Val) -> 
     X = g('Gtk_entry_get_text',[Widget]),

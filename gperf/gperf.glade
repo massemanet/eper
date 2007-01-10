@@ -78,7 +78,7 @@
 			      <property name="visible">True</property>
 			      <property name="label" translatable="yes">Netload</property>
 			      <property name="use_underline">True</property>
-			      <property name="active">False</property>
+			      <property name="active">True</property>
 			      <signal name="activate" handler="gn_sighandler" last_modification_time="Tue, 20 Sep 2005 13:17:54 GMT"/>
 			    </widget>
 			  </child>
@@ -497,12 +497,12 @@ Use it or suffer the consequences</property>
 		  <property name="xpad">0</property>
 		  <property name="ypad">0</property>
 		  <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
-		  <property name="width_chars">-1</property>
+		  <property name="width_chars">12</property>
 		  <property name="single_line_mode">False</property>
 		  <property name="angle">0</property>
 		</widget>
 		<packing>
-		  <property name="padding">10</property>
+		  <property name="padding">0</property>
 		  <property name="expand">False</property>
 		  <property name="fill">False</property>
 		</packing>
@@ -554,12 +554,12 @@ Use it or suffer the consequences</property>
 		  <property name="xpad">0</property>
 		  <property name="ypad">0</property>
 		  <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
-		  <property name="width_chars">-1</property>
+		  <property name="width_chars">12</property>
 		  <property name="single_line_mode">False</property>
 		  <property name="angle">0</property>
 		</widget>
 		<packing>
-		  <property name="padding">3</property>
+		  <property name="padding">0</property>
 		  <property name="expand">False</property>
 		  <property name="fill">False</property>
 		</packing>
@@ -611,12 +611,12 @@ Use it or suffer the consequences</property>
 		  <property name="xpad">0</property>
 		  <property name="ypad">0</property>
 		  <property name="ellipsize">PANGO_ELLIPSIZE_NONE</property>
-		  <property name="width_chars">-1</property>
+		  <property name="width_chars">12</property>
 		  <property name="single_line_mode">False</property>
 		  <property name="angle">0</property>
 		</widget>
 		<packing>
-		  <property name="padding">3</property>
+		  <property name="padding">0</property>
 		  <property name="expand">False</property>
 		  <property name="fill">False</property>
 		</packing>
