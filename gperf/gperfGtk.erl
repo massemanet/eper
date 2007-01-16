@@ -13,6 +13,7 @@
 
 -import(random,[uniform/1]).
 -import(lists,[foreach/2,flatten/1,keysearch/3,nth/2,reverse/1,seq/2,sort/1]).
+-import(orddict,[fold/3,update/3,map/2,fetch/2,from_list/1]).
 
 -define(LP(X), ?MODULE:loop(X)).
 -define(MARG,10).
@@ -67,7 +68,7 @@ loop(LD) ->
 	{gperf_gtk,{signal,{Darea,'expose-event'}}}->?LP(do_expose(LD,Darea));
 
         {args,['']}                      -> ?LP(LD);
-        {args,[Node]}                    -> ?LP(conf(LD,node,Node));
+        {args,[Node]}                    -> ?LP(conf(LD,anode,Node));
 
 	{tick, Stuff}                    -> ?LP(do_tick(LD,Stuff));
 	dbg                              -> ?LP(dump_ld(LD));
@@ -80,17 +81,17 @@ dump_ld(LD) ->
     LD.
 
 conf() ->
-    dict:from_list([{node,  #conf{widget=conf_node,  val='',  type=atom}}, 
-                    {cookie,#conf{widget=conf_cookie,val='',  type=atom}}, 
-                    {cpu,   #conf{widget=conf_cpu,   val=100, type=integer}},
-                    {mem,   #conf{widget=conf_mem,   val=1024,type=integer}},
-                    {net,   #conf{widget=conf_net,   val=10,  type=integer}}]).
+    from_list([{anode, #conf{widget=conf_node,  val='',  type=atom}}, 
+               {cookie,#conf{widget=conf_cookie,val='',  type=atom}}, 
+               {cpu,   #conf{widget=conf_cpu,   val=100, type=integer}},
+               {mem,   #conf{widget=conf_mem,   val=1024,type=integer}},
+               {net,   #conf{widget=conf_net,   val=1024,type=integer}}]).
 
 conf(LD) -> 
-    LD#ld{conf=dict:map(fun(Key,C)->conf_f(Key,C,LD) end, LD#ld.conf)}.
+    LD#ld{conf=map(fun(Key,C)->conf_f(Key,C,LD) end, LD#ld.conf)}.
 
 conf(LD,K,V) -> 
-    LD#ld{conf=dict:update(K, fun(C)->conf_handler(K,C,V,LD) end, LD#ld.conf)}.
+    LD#ld{conf=update(K, fun(C)->conf_handler(K,C,V,LD) end, LD#ld.conf)}.
 
 conf_f(Key,C,LD) ->
     NewV = get_gui_val(C#conf.widget,C#conf.type,C#conf.val),
@@ -101,12 +102,12 @@ conf_f(Key,C,LD) ->
 
 conf_handler(Key,C,Val,LD) ->
     case Key of
-        node ->
+        anode ->
             prf:stop(gperf_prf),
             prf:start(gperf_prf,Val,gperfConsumer),
             [conf_send(K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
         cookie ->
-            erlang:set_cookie(get_gui_val(node,LD),Val);
+            erlang:set_cookie(get_gui_val(anode,LD),Val);
         _ ->
             conf_send(Key, Val)
     end,
@@ -114,15 +115,15 @@ conf_handler(Key,C,Val,LD) ->
 
 conf_send(Key, Val) -> gperf_prf ! {config,{Key,Val}}.
 
-conf_fill(Confs) -> dict:fold(fun conf_fill/3, [], Confs).
+conf_fill(Confs) -> fold(fun conf_fill/3, [], Confs).
 
 conf_fill(_Key,#conf{widget=Widget, val=Val},_) ->
     g('Gtk_entry_set_text',[Widget,to_str(Val)]).
 
-conf_get_val(Key,LD) -> (dict:fetch(Key,LD#ld.conf))#conf.val.
+conf_get_val(Key,LD) -> (fetch(Key,LD#ld.conf))#conf.val.
 
 get_gui_val(Key,LD) -> 
-    C = dict:fetch(Key,LD#ld.conf),
+    C = fetch(Key,LD#ld.conf),
     get_gui_val(C#conf.widget,C#conf.type,C#conf.val).
 
 get_gui_val(Widget,Type,Val) -> 
@@ -212,13 +213,13 @@ timeline(LD = #ld{dAreas=Dareas},{_,M,_}=HMS) ->
     LD#ld{minute=M}.
 
 stat_change(up,LD) ->     
-    Nod = to_str(conf_get_val(node,LD)),
+    Nod = to_str(conf_get_val(anode,LD)),
     g('Gtk_window_set_title',[window,"gperf - "++Nod]),
     statbar("connected - "++Nod,LD),
     LD#ld{state=conn};
 stat_change(down,LD) ->
     g('Gtk_window_set_title',[window,"gperf"]),
-    statbar("disconnected - "++to_str(conf_get_val(node,LD)),LD),
+    statbar("disconnected - "++to_str(conf_get_val(anode,LD)),LD),
     LD#ld{state=disc}.
 
 statbar(Msg, #ld{stat_ctxt=Ctxt}) ->
