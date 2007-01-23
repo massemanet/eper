@@ -64,7 +64,7 @@ get_more_bytes(FD, Rest) ->
 %%% CBs - CB|list(CB)
 %%% CB - fun(F)|atom(M)|{fun(F),term(Init)}|{atom(M),term(Init)}
 cbs([]) -> [];
-cbs([CB|T]) -> [to_cb(CB)|cbs(T)];
+cbs([CB|T]) -> try [to_cb(CB)|cbs(T)] catch _:_ -> exit({not_cb,CB}) end;
 cbs(Term) -> cbs([Term]).
 
 to_cb('') -> {fun write_msg/3,standard_io};

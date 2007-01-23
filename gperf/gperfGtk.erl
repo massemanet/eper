@@ -105,15 +105,15 @@ conf_handler(Key,C,Val,LD) ->
         anode ->
             prf:stop(gperf_prf),
             prf:start(gperf_prf,Val,gperfConsumer),
-            [conf_send(K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
+            [conf_send(gperf_prf,K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
         cookie ->
             erlang:set_cookie(get_gui_val(anode,LD),Val);
         _ ->
-            conf_send(Key, Val)
+            conf_send(gperf_prf, Key, Val)
     end,
     C#conf{val=Val}.
 
-conf_send(Key, Val) -> gperf_prf ! {config,{Key,Val}}.
+conf_send(Name, Key, Val) -> prf:config(consumer,Name,{Key,Val}).
 
 conf_fill(Confs) -> fold(fun conf_fill/3, [], Confs).
 
