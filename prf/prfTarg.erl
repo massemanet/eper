@@ -7,17 +7,14 @@
 %%%-------------------------------------------------------------------
 -module(prfTarg).
 
--export([subscribe/3,unsubscribe/3]).
+-export([subscribe/3,unsubscribe/2]).
 -export([init/0,loop/1]).		 %internal; otp r5 compatible!
-%%-export([netload/2]).
-
--import(gb_trees,[empty/0,insert/3,iterator/1,
-		  lookup/2,next/1,update/3,to_list/1]).
 
 -import(net_kernel,[get_net_ticktime/0]).
+-import(orddict,[new/0,store/3,fold/3,map/2,find/2]).
 
--record(st, {collectors=empty()}).
--record(collector, {subscribers=[],mod=[],state=init}).
+-record(st, {collectors=new()}).
+-record(collector, {subscribers=[],state=init}).
 
 -define(LOG(T), prf:log(process_info(self()),T)).
 %%% interface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -27,12 +24,12 @@ subscribe(Node, Pid, Collectors) ->
     PID ! {subscribe, {Pid,Collectors}}, 
     {PID,Tick}.
 
-unsubscribe(Node, Pid, Collectors) -> 
-    {Node,?MODULE} ! {unsubscribe, {Pid,Collectors}}.
+unsubscribe(Node, Pid) -> 
+    {Node,?MODULE} ! {unsubscribe, {Pid}}.
 
 %%% runs on host %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-assert(Node,Collector) ->
-    assert_loaded(Node,Collector), 
+assert(Node,Collectors) ->
+    assert_loaded(Node,Collectors), 
     assert_started(Node).
 
 assert_loaded(Node, Collectors) ->
@@ -84,6 +81,7 @@ assert_started(Node) ->
 %%% runs on target %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init() ->
     erlang:process_flag(trap_exit,true),
+    erlang:group_leader(whereis(user),self()),
     receive {start,Pid} -> ok end,
     case whereis(?MODULE) of   %to avoid register error msg...
 	undefined -> 
@@ -106,77 +104,71 @@ loop(St) ->
 	    ?MODULE:loop(collect_and_send(St));
 	{subscribe, {Pid,Collectors}} -> 
 	    ?MODULE:loop(subscr(St, Pid, Collectors));
-	{unsubscribe, {Pid,Collectors}} -> 
-	    ?MODULE:loop(unsubscr(St, Pid, Collectors));
+	{unsubscribe, {Pid}} -> 
+	    ?MODULE:loop(unsubscr(St, Pid));
 	{'EXIT', Pid, _} ->
-	    ?MODULE:loop(unsubscr(St, Pid, all));
+	    ?MODULE:loop(unsubscr(St, Pid));
+        {config,Data} ->
+            ?MODULE:loop(config(St,Data));
 	dbg ->
-	    L = [Val || {_Key,Val} <- to_list(St#st.collectors)],
-	    X = [[{mod,M},{subsc,S}] || #collector{subscribers=S,mod=M} <- L],
-	    ?LOG([{pid,self()}|X]),
+	    F = fun(M,#collector{subscribers=S},A) -> [{mod,M},{subsc,S}|A] end,
+	    ?LOG([{pid,self()} | fold(F,[],St#st.collectors)]),
 	    ?MODULE:loop(St);
-	stop -> ok
+	stop -> 
+            ok
     end.
 
-subscr(St = #st{collectors=CollTree}, Pid, Colls) ->
+config(St,Data) ->
+    St#st{collectors=map(fun(K,V)->conf(K,V,Data) end,St#st.collectors)}.
+
+conf(C,Collector,Data) ->
+    State = C:config(Collector#collector.state,Data),
+    Collector#collector{state=State}.
+
+subscr(St, Pid, Cs) ->
     link(Pid),
-    St#st{collectors=subsc(CollTree, Pid, Colls)}.
+    {Pid,Collectors} = lists:foldl(fun subs/2, {Pid,St#st.collectors}, Cs),
+    St#st{collectors=Collectors}.
 
-subsc(CollTree, _Pid, []) -> CollTree;
-subsc(CollTree, Pid, [Coll|Colls]) ->
-    case lookup(Coll, CollTree) of
-	{value, C = #collector{subscribers=Subs}} ->
-	    Val = C#collector{subscribers=[Pid|(Subs--[Pid])],mod=Coll},
-	    subsc(update(Coll,Val,CollTree),Pid,Colls);
-	none -> 
-	    Val = #collector{subscribers=[Pid],mod=Coll},
-	    subsc(insert(Coll,Val,CollTree),Pid,Colls)
+subs(C, {Pid, Collectors}) -> 
+    {Pid,store(C,collector(Collectors,Pid,C),Collectors)}.
+
+collector(Colls,Pid,C) ->
+    case find(C, Colls) of
+	{ok, Coll = #collector{subscribers=Subs}} ->
+	    Coll#collector{subscribers=lists:umerge(Subs,[Pid])};
+	error -> 
+	    #collector{subscribers=[Pid]}
     end.
 
-unsubscr(St= #st{collectors = CollTree}, Pid, all) ->
-    unsubscr(St, Pid, get_colls(CollTree,Pid));
-unsubscr(St= #st{collectors = CollTree}, Pid, Colls) ->
-    St#st{collectors=unsubsc(CollTree,Pid,Colls)}.
+unsubscr(St = #st{collectors = Colls}, Pid) ->
+    St#st{collectors=map(fun(_K,V)->unsubs(Pid,V) end, Colls)}.
 
-unsubsc(CollTree,_Pid,[]) -> CollTree;
-unsubsc(CollTree,Pid,[Coll|Colls]) -> 
-    {value,C = #collector{subscribers=Subs}} = lookup(Coll,CollTree),
-    Val = C#collector{subscribers=Subs--[Pid]},
-    unsubsc(update(Coll,Val,CollTree),Pid,Colls).
+unsubs(Pid,C) -> 
+    C#collector{subscribers=C#collector.subscribers--[Pid]}.
 
-get_colls(CollTree,Pid) ->
-    get_colls(Pid,next(iterator(CollTree)),[]).
 
-get_colls(_Pid,none,O) -> O;
-get_colls(Pid,{_Key,#collector{subscribers=Ss,mod=Mod},Iter},O) ->
-    case lists:member(Pid,Ss) of
-	true -> get_colls(Pid,next(Iter),[Mod|O]);
-	false -> get_colls(Pid,next(Iter),O)
-    end.
-
-collect_and_send(St = #st{collectors=CollTree}) ->
-    St#st{collectors=cns(next(iterator(CollTree)),CollTree,[])}.
-
-cns(none,Tree,Data) -> 
+collect_and_send(St) ->
+    {Data,Colls} = fold(fun cns/3, {[],St#st.collectors},St#st.collectors),
     send(regroup(Data)),
-    Tree;
-cns({_Key,#collector{subscribers=[]},Iter},Tree,O) ->
-    cns(next(Iter),Tree,O);
-cns({Key,C = #collector{subscribers=Ss},Iter},Tree,O) ->
-    {NState, Data} = (C#collector.mod):collect(C#collector.state),
-    cns(next(Iter),update(Key,C#collector{state=NState},Tree),[{Data,Ss}|O]).
+    St#st{collectors=Colls}.
 
-regroup(Data) -> lists:foldl(fun regr/2,empty(),Data).
+cns(C,Coll,{Datas,Colls}) ->
+    #collector{state=State, subscribers=Subs} = Coll,
+    {NState, Data} = (C):collect(State),
+    {[{Data,Subs}|Datas], store(C,Coll#collector{state=NState},Colls)}.
 
-regr({Data,Subs},Tree) ->
-    lists:foldl(fun(S,T) -> regrr(S,T,Data) end, Tree, Subs).
+regroup(Data) -> lists:foldl(fun regr/2,new(),Data).
 
-regrr(Sub,Tree,Data) ->
-    case lookup(Sub,Tree) of
-	none -> insert(Sub,[Data],Tree);
-	{value,Datas} -> update(Sub,[Data|Datas],Tree)
+regr({Data,Subs},Dict) ->
+    lists:foldl(fun(S,T) -> regrr(S,T,Data) end, Dict, Subs).
+
+regrr(Sub,Dict,Data) ->
+    case find(Sub,Dict) of
+	{ok,Datas} -> store(Sub,[Data|Datas],Dict);
+	error -> store(Sub,[Data],Dict)
     end.
 
-send(Tree) -> lists:foreach(fun sendf/1, to_list(Tree)).
+send(Dict) -> fold(fun sendf/3, [], Dict).
 
-sendf({Sub,Data}) -> Sub ! {{data,node()},Data}.
+sendf(Sub,Data,_) -> Sub ! {{data,node()},Data}.

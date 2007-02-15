@@ -20,51 +20,51 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 go(FileName, Patt, CBs, '', Max) -> 
-    go(FileName, Patt, CBs, 0, Max);
+  go(FileName, Patt, CBs, 0, Max);
 go(FileName, _Patt, raw, Min, Max) -> 
-    {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
-    State = #state{min=Min,max=Max},
-    file_action(FD, State, fun raw/2),
-    file:close(FD);
+  {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
+  State = #state{min=Min,max=Max},
+  file_action(FD, State, fun raw/2),
+  file:close(FD);
 go(FileName, Patt, CBs, Min, Max) ->
-    sherk_ets:new(?MODULE),
-    {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
-    State = #state{pattern=Patt,cbs=cbs(CBs),min=Min,max=Max},
-    St = file_action(FD, State, fun do/2),
-    file:close(FD),
-    {hits, St#state.hits}.
+  sherk_ets:new(?MODULE),
+  {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
+  State = #state{pattern=Patt,cbs=cbs(CBs),min=Min,max=Max},
+  St = file_action(FD, State, fun do/2),
+  file:close(FD),
+  {hits, St#state.hits}.
 
 -define(CHUNKSIZE, 100000).
 file_action(FD, Stat,Fun) ->
-    file_action(make_chunk(FD, <<>>), FD, Stat, Fun).
+  file_action(make_chunk(FD, <<>>), FD, Stat, Fun).
 
 file_action(_, _FD, #state{eof = true} = Stat, Fun) -> 
-    Fun(end_of_trace, Stat);
+  Fun(end_of_trace, Stat);
 file_action(eof, _FD, Stat, Fun) -> 
-    Fun(end_of_trace, Stat);
+  Fun(end_of_trace, Stat);
 file_action({Term, Rest}, FD, Stat, Fun) ->
-    file_action(make_chunk(FD, Rest), FD, Fun(Term, Stat), Fun).
+  file_action(make_chunk(FD, Rest), FD, Fun(Term, Stat), Fun).
 
 make_chunk(_FD, eof) -> 
-    eof;
+  eof;
 make_chunk(FD, <<0, Size:32, Tal/binary>> = Bin) ->
-    case Tal of
-	<<Term:Size/binary, Tail/binary>> -> {binary_to_term(Term), Tail};
-	_ -> make_chunk(FD, get_more_bytes(FD, Bin))
-    end;
+  case Tal of
+    <<Term:Size/binary, Tail/binary>> -> {binary_to_term(Term), Tail};
+    _ -> make_chunk(FD, get_more_bytes(FD, Bin))
+  end;
 make_chunk(FD, B) when size(B) < 5 -> 
-    make_chunk(FD, get_more_bytes(FD, B)).
+  make_chunk(FD, get_more_bytes(FD, B)).
 
 get_more_bytes(FD, Rest) ->
-    case file:read(FD, ?CHUNKSIZE) of
-	{ok, Bin} -> <<Rest/binary, Bin/binary>>;
-	_ -> eof
-    end.
+  case file:read(FD, ?CHUNKSIZE) of
+    {ok, Bin} -> <<Rest/binary, Bin/binary>>;
+    _ -> eof
+  end.
 
 %%% CBs - CB|list(CB)
 %%% CB - fun(F)|atom(M)|{fun(F),term(Init)}|{atom(M),term(Init)}
 cbs([]) -> [];
-cbs([CB|T]) -> try [to_cb(CB)|cbs(T)] catch _:_ -> exit({not_cb,CB}) end;
+cbs([CB|T]) -> [to_cb(CB)|cbs(T)];
 cbs(Term) -> cbs([Term]).
 
 to_cb('') -> {fun write_msg/3,standard_io};
@@ -78,34 +78,34 @@ is_cb(M) when is_atom(M) -> true = member({go,3},M:module_info(exports));
 is_cb(F) when is_function(F) -> {arity,3} = erlang:fun_info(F,arity).
 
 do(end_of_trace, State) -> 
-    do_do(end_of_trace, State);
+  do_do(end_of_trace, State);
 do(_Mess, #state{max = Max, seq = Seq} = Stat) when Max < Seq -> 
-    Stat#state{eof=true};
+  Stat#state{eof=true};
 do(Mess, #state{min = Min, seq = Seq} = Stat) when Seq < Min -> 
-    case mass(Mess) of
-	[] -> Stat;
-	_ -> Stat#state{seq = Seq+1}
-    end;
+  case mass(Mess) of
+    [] -> Stat;
+    _ -> Stat#state{seq = Seq+1}
+  end;
 do(Mess, Stat) ->
-    case mass(Mess) of
-	[] -> Stat;
-	Ms -> do_do(Ms, Stat)
-    end.
+  case mass(Mess) of
+    [] -> Stat;
+    Ms -> do_do(Ms, Stat)
+  end.
 
 do_do(end_of_trace = Ms, #state{cbs=CBs, seq=Seq} = State) ->
-    State#state{cbs=do_safe_cbs(CBs, Ms, Seq, [])};
+  State#state{cbs=do_safe_cbs(CBs, Ms, Seq, [])};
 do_do(Mess, #state{pattern=Patt, cbs=CBs, seq=Seq} = State) ->
-    case grep(Patt, Mess) of
-	false -> State#state{seq = Seq+1};
-	true -> 
-	    State#state{seq = Seq+1, 
-			hits = State#state.hits+1, 
-			cbs=do_safe_cbs(CBs, Mess, Seq, [])}
-    end.
+  case grep(Patt, Mess) of
+    false -> State#state{seq = Seq+1};
+    true -> 
+      State#state{seq = Seq+1, 
+                  hits = State#state.hits+1, 
+                  cbs=do_safe_cbs(CBs, Mess, Seq, [])}
+  end.
 
 do_safe_cbs([], _, _, O) -> reverse(O);
 do_safe_cbs([CB|CBs], Msg, Seq, O) ->
-    do_safe_cbs(CBs, Msg, Seq, [safe_cb(CB,Msg,Seq)|O]).
+  do_safe_cbs(CBs, Msg, Seq, [safe_cb(CB,Msg,Seq)|O]).
 
 safe_cb({{M,F},State},Msg,Seq) -> {{M,F},M:F(Msg,Seq,State)};
 safe_cb({Fun,State},Msg,Seq) -> {Fun,Fun(Msg,Seq,State)}.
@@ -117,10 +117,10 @@ open(File) -> {ok,FD}=file:open(File,[write]),FD.
 
 grep('',_) -> true;
 grep(P,T) when list(P) ->
-    case grp(P, T) of
-	[] -> true;
-	_ -> false
-    end;
+  case grp(P, T) of
+    [] -> true;
+    _ -> false
+  end;
 grep(P, T) -> grep([P], T).
 
 grp([], _) -> [];
@@ -130,36 +130,36 @@ grp(P, Port) when port(Port) -> grp(P, list_to_atom(erlang:port_to_list(Port)));
 grp(P, Rf) when reference(Rf) -> grp(P, list_to_atom(erlang:ref_to_list(Rf)));
 grp(P, Pid) when pid(Pid) -> grp(P, list_to_atom(pid_to_list(Pid)));
 grp(P, T) when tuple(T) -> 
-    case lists:member(T,P) of
-	true -> grp(P--[T], []);
-	false -> grp(P,tuple_to_list(T))
-    end;
+  case lists:member(T,P) of
+    true -> grp(P--[T], []);
+    false -> grp(P,tuple_to_list(T))
+  end;
 grp(P, L) when list(L) -> 
-    case lists:member(L, P) of
-	true -> grp(P--[L], []);
-	false -> grp(grp(P, hd(L)), tl(L))
-    end;
+  case lists:member(L, P) of
+    true -> grp(P--[L], []);
+    false -> grp(grp(P, hd(L)), tl(L))
+  end;
 grp(P, T) -> grp(P--[T], []).
 
 raw(end_of_trace,State) ->
-    State;
+  State;
 raw(Mess,State) ->
-    case element(1,Mess) of
-        trace -> raw_out(Mess,State);
-        trace_ts -> raw_out(Mess,State);
-        _ -> State
-    end.
+  case element(1,Mess) of
+    trace -> raw_out(Mess,State);
+    trace_ts -> raw_out(Mess,State);
+    _ -> State
+  end.
 
 raw_out(Mess, State = #state{seq=Seq}) ->
-    case {State#state.min < Seq, Seq < State#state.max} of
-        {true,true} ->
-            io:fwrite("~w - ~w~n",[Seq,Mess]),
-            State#state{seq=Seq+1};
-        {true,false} ->
-            State#state{eof=true};
-        {false,true} ->
-            State#state{seq=Seq+1}
-    end.
+  case {State#state.min < Seq, Seq < State#state.max} of
+    {true,true} ->
+      io:fwrite("~w - ~w~n",[Seq,Mess]),
+      State#state{seq=Seq+1};
+    {true,false} ->
+      State#state{eof=true};
+    {false,true} ->
+      State#state{seq=Seq+1}
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% format is {Tag, PI, Data, Timestamp}
@@ -221,27 +221,27 @@ mass(Pid, T=gc_start, Info, TS) ->                  {T,pi(Pid),Info,TS};
 mass(Pid, T=gc_end, Info, TS) ->                    {T,pi(Pid),Info,TS}.
 
 mass_send(Pid, T, {Msg, To}, TS) when pid(To); port(To) -> 
-    {T,pi(Pid),{pi(To), Msg},TS};
+  {T,pi(Pid),{pi(To), Msg},TS};
 mass_send(Pid, T, {Msg, To}, TS) when atom(To) -> 
-    {T,pi(Pid),{{find_pid(To),To}, Msg},TS};
+  {T,pi(Pid),{{find_pid(To),To}, Msg},TS};
 mass_send(Pid, T, {Msg, {To,Node}}, TS) when atom(To), Node==node(Pid) -> 
-    {T,pi(Pid),{{find_pid(To),To}, Msg},TS};
+  {T,pi(Pid),{{find_pid(To),To}, Msg},TS};
 mass_send(Pid, T, {Msg, {To,Node}}, TS) when atom(To), atom(Node) -> 
-    {T,pi(Pid),{{remote,{To,Node}}, Msg},TS}.
+  {T,pi(Pid),{{remote,{To,Node}}, Msg},TS}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pi(file_driver) -> {trace,file_driver};
 pi(Port) when is_port(Port) ->
-    case ets_lup(Port) of
-	[] -> {Port, unknown};
-	Name -> {Port, Name}
-    end;
+  case ets_lup(Port) of
+    [] -> {Port, unknown};
+    Name -> {Port, Name}
+  end;
 pi(Pid) when is_pid(Pid) ->
-    case ets_lup(Pid) of
-	[] -> {Pid, unknown};
-	{M,F,A} when is_list(A) -> {Pid, {M,F,length(A)}};
-	Name -> {Pid, Name}
-    end.
+  case ets_lup(Pid) of
+    [] -> {Pid, unknown};
+    {M,F,A} when is_list(A) -> {Pid, {M,F,length(A)}};
+    Name -> {Pid, Name}
+  end.
 
 find_pid(Name) -> ets_lup(Name).
 
@@ -268,74 +268,76 @@ ins({Pid,{M,F,As}}) when is_list(As) -> ets_ins({Pid,mangle_ic({M,F,As})}).
 del(Reg) when is_atom(Reg) -> ?LOG({unregistered,Reg}),ets_del(Reg).
 
 mangle_ic(MFA) ->
-    case MFA of
-	{proc_lib,init_p,[_,_,M,F,A]} -> 
-	    {proc_lib, trans_init(M,F,A)};
-	{file,file,[_,FileName,_]} ->
-	    {file, {atomize(FileName)}};
-	{dets,do_open_file,[Tab,_FileName,_,_,_,_,_,_Ram,_,_,_]} ->
-	    {dets, {Tab}};
-	{application_master,start_it,[_,{state,_,ApplD,_,_,_},_,_]} ->
-	    {appl_data,App,_,_,_,_,_,_,_} = ApplD,
-	    {application_master, {App}};
-	{erlang,apply,[Fun,[]]} when is_function(Fun) -> 
-	    funi(Fun);
-	{M,F,As} -> 
-	    {M,F,As}
-    end.
+  case MFA of
+    {proc_lib,init_p,[_,_,M,F,A]} -> 
+      {proc_lib, trans_init(M,F,A)};
+    {file,file,[_,FileName,_]} ->
+      {file, {atomize(FileName)}};
+    {dets,do_open_file,[Tab,_FileName,_,_,_,_,_,_Ram,_,_,_]} ->
+      {dets, {Tab}};
+    {application_master,start_it,[_,{state,_,ApplD,_,_,_},_,_]} ->
+      {appl_data,App,_,_,_,_,_,_,_} = ApplD,
+      {application_master, {App}};
+    {erlang,apply,[Fun,[]]} when is_function(Fun) -> 
+      funi(Fun);
+    {M,F,As} -> 
+      {M,F,As}
+  end.
 
 atomize(FileName) ->
-    list_to_atom(hd(reverse(string:tokens(FileName, "/")))).
+  list_to_atom(hd(reverse(string:tokens(FileName, "/")))).
 
 funi(Fun) ->
-    case erlang:fun_info(Fun, module) of
-	{_, rpc} ->
-	    case erlang:fun_info(Fun, env) of
-		{_, [_, _, Pid, A, _F, _M]} when is_pid(Pid), is_list(A) ->
-		    {rpc, {call_dummy, node(Pid)}};
-		{_, [_, Pid, A, F, M]} when is_pid(Pid)->
-		    {rpc, {call, node(Pid)}, {M, F, length(A)}};
-		{_, [Pid, A, F, M]} when is_pid(Pid), is_list(A) ->
-		    {rpc, {cast, node(Pid)}, {M, F, length(A)}};
-		_X -> 
-		    {rpc}
-	    end;
-	{_, Mod} -> 
-	    case erlang:fun_info(Fun, pid) of
-		{_, Pid} when is_pid(Pid) -> {'fun', {Mod, node(Pid)}};
-		{_, X} -> {'fun', {Mod, X}}
-	    end
-    end.
+  case erlang:fun_info(Fun, module) of
+    {_, rpc} ->
+      case erlang:fun_info(Fun, env) of
+        {_, [_, _, Pid, A, _F, _M]} when is_pid(Pid), is_list(A) ->
+          {rpc, {call_dummy, node(Pid)}};
+        {_, [_, Pid, A, F, M]} when is_pid(Pid)->
+          {rpc, {call, node(Pid)}, {M, F, length(A)}};
+        {_, [Pid, A, F, M]} when is_pid(Pid), is_list(A) ->
+          {rpc, {cast, node(Pid)}, {M, F, length(A)}};
+        _X -> 
+          {rpc}
+      end;
+    {_, Mod} -> 
+      case erlang:fun_info(Fun, pid) of
+        {_, Pid} when is_pid(Pid) -> {'fun', {Mod, node(Pid)}};
+        {_, X} -> {'fun', {Mod, X}}
+      end
+  end.
 
 trans_init(gen,init_it,[gen_server,_,_,supervisor,{_,Module,_},_]) ->
-    {supervisor,Module,1};
+  {supervisor,Module,1};
 trans_init(gen,init_it,[gen_server,_,_,_,supervisor,{_,Module,_},_]) ->
-    {supervisor,Module,1};
+  {supervisor,Module,1};
 trans_init(gen,init_it,[gen_server,_,_,supervisor_bridge,[Module|_],_]) ->
-    {supervisor_bridge,Module,1};
+  {supervisor_bridge,Module,1};
 trans_init(gen,init_it,[gen_server,_,_,_,supervisor_bridge,[Module|_],_]) ->
-    {supervisor_bridge,Module,1};
+  {supervisor_bridge,Module,1};
 trans_init(gen,init_it,[gen_server,_,_,Module,_,_]) ->
-    {gen_server,Module};
+  {gen_server,Module};
 trans_init(gen,init_it,[gen_server,_,_,_,Module|_]) ->
-    {gen_server,Module};
+  {gen_server,Module};
 trans_init(gen,init_it,[gen_fsm,_,_,Module,_,_]) ->
-    {gen_fsm,Module};
+  {gen_fsm,Module};
 trans_init(gen,init_it,[gen_fsm,_,_,_,Module|_]) ->
-    {gen_fsm,Module};
+  {gen_fsm,Module};
 trans_init(gen,init_it,[gen_event|_]) ->
-    {gen_event};
+  {gen_event};
 trans_init(M,F,A) ->
-    {M,F,length(A)}.
+  {M,F,length(A)}.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 ets_ins(Rec) -> ets_ins(?MODULE, Rec).
 ets_ins(Tab, Rec) -> ets:insert(Tab, Rec).
+
 ets_lup(Key) -> ets_lup(?MODULE, Key).
 ets_lup(Tab, Key) ->
-    case catch ets:lookup(Tab, Key) of
-	{'EXIT', _} ->[];
-	[{Key, R}] -> R;
-	R -> R
-    end.
+  try ets:lookup(Tab, Key) of
+      [{Key, R}] -> R;
+      R -> R
+  catch _:_ -> []
+  end.
+
 ets_del(Key) -> ets:delete(?MODULE, Key).

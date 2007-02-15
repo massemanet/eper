@@ -38,6 +38,7 @@ AC_CONFIG_FILES([ \
 	Makefile \
 	dtop/Makefile \
 	gperf/Makefile \
+	ntop/Makefile \
 	prf/Makefile \
 	redbug/Makefile \
 	sherk/Makefile \

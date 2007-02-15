@@ -1,5 +1,5 @@
 erlsrcdir = $(ERLANG_INSTALL_LIB_DIR_eper)/src
-erlsrc_DATA = prfNet.erl prfSys.erl prfPrc.erl \
+erlsrc_DATA = prfNet.erl prfSys.erl prfPrc.erl prfTrc.erl \
 prf.erl prfHost.erl prfTarg.erl prfClient.erl
 
 erlbeamdir = $(ERLANG_INSTALL_LIB_DIR_eper)/ebin

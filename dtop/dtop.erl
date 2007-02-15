@@ -14,4 +14,4 @@ start([Node]) -> prf:start(dtop,Node,dtopConsumer).
 
 stop() -> prf:stop(dtop).
 
-sort(Sort) -> prf:config(consumer,dtop,{sort,Sort}).
+sort(Sort) -> prf:config(dtop,consumer,{sort,Sort}).

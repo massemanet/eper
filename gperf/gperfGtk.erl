@@ -105,15 +105,15 @@ conf_handler(Key,C,Val,LD) ->
         anode ->
             prf:stop(gperf_prf),
             prf:start(gperf_prf,Val,gperfConsumer),
-            [conf_send(gperf_prf,K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
+            [conf_send(K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
         cookie ->
             erlang:set_cookie(get_gui_val(anode,LD),Val);
         _ ->
-            conf_send(gperf_prf, Key, Val)
+            conf_send(Key, Val)
     end,
     C#conf{val=Val}.
 
-conf_send(Name, Key, Val) -> prf:config(consumer,Name,{Key,Val}).
+conf_send(Key, Val) -> prf:config(gperf_prf,consumer,{Key,Val}).
 
 conf_fill(Confs) -> fold(fun conf_fill/3, [], Confs).
 
@@ -215,11 +215,11 @@ timeline(LD = #ld{dAreas=Dareas},{_,M,_}=HMS) ->
 stat_change(up,LD) ->     
     Nod = to_str(conf_get_val(anode,LD)),
     g('Gtk_window_set_title',[window,"gperf - "++Nod]),
-    statbar(Nod++" - connected",LD),
+    statbar("connected - "++Nod,LD),
     LD#ld{state=conn};
 stat_change(down,LD) ->
     g('Gtk_window_set_title',[window,"gperf"]),
-    statbar(to_str(conf_get_val(anode,LD))++" - disconnected",LD),
+    statbar("disconnected - "++to_str(conf_get_val(anode,LD)),LD),
     LD#ld{state=disc}.
 
 statbar(Msg, #ld{stat_ctxt=Ctxt}) ->
