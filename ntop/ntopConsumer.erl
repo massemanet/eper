@@ -33,14 +33,15 @@ print(#ld{prfNet=OPrfNet},_,PrfNet) ->
   print_header(PrfNet),
   [print(Name,Data) || {Name,Data} <- net(PrfNet,OPrfNet)].
 
-print_header([{_Name,Data}|_])->  
-  io:fwrite("~s",[lists:flatten([str("~n~-19w",[name]),
-                                 [str("~6w",[short(I)])|| {I,_V}<-Data, ok(I)],
+print_header(NDs)->
+  [{_Name,Data}|_] = lists:reverse(NDs),
+  io:fwrite("~s",[lists:flatten([str("~n~-23w",[name]),
+                                 [str("~8w",[short(I)])|| {I,_V}<-Data, ok(I)],
                                  str("~n",[])])]).
 
 print(Name,Data) ->
-  io:fwrite("~s",[lists:flatten([str("~-19s",[name(Name)]),
-                                 [str("~6w", [V]) || {I,V}<-Data, ok(I)],
+  io:fwrite("~s",[lists:flatten([str("~-23s",[name(Name)]),
+                                 [str("~8w", [V]) || {I,V}<-Data, ok(I)],
                                  str("~n",[])])]).
 
 net(NetN,NetO) -> 
@@ -53,13 +54,16 @@ foldf(Key,Val,{KVs,O}) ->
   end.
 
 zipsub([],[]) -> [];
-zipsub([{K,V1}|R1],[{K,V2}|R2]) -> [{K,V1-V2}|zipsub(R1,R2)].
+zipsub([{K,V1}|R1],[{K,V2}|R2]) when is_integer(V1),is_integer(V2)-> 
+  [{K,V1-V2}|zipsub(R1,R2)];
+zipsub([{K,V}|R1],[{K,V}|R2]) -> [{K,V}|zipsub(R1,R2)].
 
 str(F,A) -> io_lib:fwrite(F,A).
 
 name({tcp,{Host,Port}}) -> Host++[$:|integer_to_list(Port)];
 name({udp,Port}) -> [$:|integer_to_list(Port)];
 name({node,NodeName}) -> NodeName;
+name({driver,Dr}) -> Dr;
 name(X) -> X.
 
 ok(recv_oct) -> true;
@@ -69,8 +73,6 @@ ok(send_cnt) -> true;
 ok(send_pend)-> true;
 ok(input)    -> true;
 ok(output)   -> true;
-ok(send_max) -> true;
-ok(recv_max) -> true;
 ok(_)        -> false.
 
 short(recv_oct) -> r_oct;

@@ -20,17 +20,16 @@ data() -> lists:sort(data(erlang:ports())).
 
 data([]) -> [];
 data([P|Ports]) ->
-  try [{name(P),stats(P)}|data(Ports)] 
+  try [stats(P,name(P))|data(Ports)] 
   catch _:_ -> data(Ports) 
   end.
 
-stats(P) ->
+stats(P,{driver,Name}) -> 
+  {{driver,Name},erlang:port_info(P)};
+stats(P,Name) -> 
   Info = erlang:port_info(P),
-  try 
-    {ok,Stats} = inet:getstat(P),
-    Info++Stats
-  catch _:_ ->
-    Info
+  try {ok,Stats} = inet:getstat(P), {Name,Info++Stats}
+  catch _:_ -> {Name,Info}
   end.
 
 name(P) -> name(erlang:port_info(P,name),P).
@@ -52,4 +51,6 @@ name({name,"tcp_inet"},P) ->
     _ -> 
       X = tuple_to_list(IP),
       {tcp,{tl(lists:flatten([[$.,integer_to_list(I)]||I<-X])),Port}} 
-  end.
+  end;
+name({name,Name},_P) ->
+  {driver,Name}.

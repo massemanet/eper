@@ -215,11 +215,11 @@ timeline(LD = #ld{dAreas=Dareas},{_,M,_}=HMS) ->
 stat_change(up,LD) ->     
     Nod = to_str(conf_get_val(anode,LD)),
     g('Gtk_window_set_title',[window,"gperf - "++Nod]),
-    statbar("connected - "++Nod,LD),
+    statbar(Nod++" - connected",LD),
     LD#ld{state=conn};
 stat_change(down,LD) ->
     g('Gtk_window_set_title',[window,"gperf"]),
-    statbar("disconnected - "++to_str(conf_get_val(anode,LD)),LD),
+    statbar(to_str(conf_get_val(anode,LD))++" - disconnected",LD),
     LD#ld{state=disc}.
 
 statbar(Msg, #ld{stat_ctxt=Ctxt}) ->
