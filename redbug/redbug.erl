@@ -9,6 +9,7 @@
 -module(redbug).
 
 -export([help/0]).
+-export([start/1]).
 -export([start/3,start/4,start/5]).
 -export([stop/0]).
 
@@ -23,6 +24,11 @@ help() ->
         "Trc: list('send'|'receive'|{M,F}|{M,F,RestrictedMatchSpec})",
         "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}",
         "Targ: node()"]).
+
+start(Strs) -> 
+  self() ! {start,list_to_tuple([to_term(S) || S <- Strs])},
+  init(),
+  erlang:halt().
 
 start(Time,Msgs,Trc) -> start(Time,Msgs,Trc,all).
 
@@ -197,4 +203,12 @@ mfaf(I) ->
       end;
     ["unknown","function"] ->
       unknown_function
+  end.
+
+to_term("_") -> '_';
+to_term(Str) -> 
+  {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "["++Str++"]. ", 1),
+  case erl_parse:parse_term(Toks) of
+    {ok, [Term]} -> Term;
+    {ok, L} when list(L) -> L
   end.

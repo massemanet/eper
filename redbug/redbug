@@ -1,0 +1,63 @@
+#!/bin/bash
+
+usage(){
+    U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
+    U2="[-nettick <tick>] [-vsn <OTP version>]"
+    echo $U1 $U2
+    exit
+}
+
+if [ ${0:0:1} == "/" ];then
+    SPATH=$0
+elif [ -x $PWD/$0 ];then
+    SPATH=$PWD/$0
+else
+    SPATH=`which $0`
+fi
+
+n=4
+while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
+PATHS=""
+for p in `ls -d $SPATH/*/ebin`; do
+    PATHS=$PATHS" -pa $p"
+done
+
+VSN=""
+XTRA=""
+
+while [ -n "$1" ] 
+  do
+  case $1 in
+      "-help"|"-h"|"-?")
+	  usage
+	  ;;
+      "-vsn"|"-version")
+	  VSN="+R "$2
+	  shift
+	  ;;
+      "-nettick"|"-tick")
+	  nettick="-kernel net_ticktime $2"
+	  shift 
+	  ;;
+      "-cookie"|"-setcookie")
+	  cookie="-setcookie $2"
+	  shift
+	  ;;
+      "-nocookie")
+	  cookie=""
+	  ;;
+      "-*")
+          echo dollar_one $1
+          ;;
+      *)
+          XTRA=" $XTRA \"$1\""
+          ;;
+  esac
+  shift
+done
+
+name="redbug"$$ 
+DISTR="-noshell -hidden -sname $name $cookie $nettick"
+START="-run redbug start"
+
+erl $VSN $DISTR $PATHS $START $XTRA
