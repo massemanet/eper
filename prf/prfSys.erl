@@ -98,3 +98,43 @@ get_beam({unix,_}) ->
   {open_port({spawn,"sh -s prfSys 2>&1"},[stream]),
    "ps -o 'vsz' -p "++os:getpid()++" | tail -1\n"};
 get_beam(_) -> no.
+
+get_load({{unix,linux},{2,SubV,_}}) when SubV >= 6 ->
+  {ok,FD} = file:open("/proc/stat", [read,raw]),
+  get_load(FD);
+get_load(FD) when element(1,FD)==file_descriptor ->
+  {ok,3} = file:position(FD, 3),
+  {ok,Str} = file:read(FD, 100),
+  {ok,[User,Nice,Kern,Idle,IoWt],_} = io_lib:fread("~d~d~d~d~d", Str),
+  {FD,[User,Nice,Kern,Idle,IoWt]}.
+
+f().
+
+Ts=[user,nice,kern,idle,iowt,hirq,sirq].
+
+
+O = fun(Vs,OVs) ->
+        Tot = lists:sum(Vs)-lists:sum(OVs),
+        Z = fun(T,O,V) -> try {T,round((100*(V-O))/Tot)} 
+                          catch C:R -> {T,0} end end,
+        io:fwrite("~p~n",[[{tot,TVs-TOVs}|lists:zipwith3(Z,Ts,OVs,Vs)]])
+    end.
+
+H = fun(FD)->{ok,3} = file:position(FD, 3),
+             {ok,Str} = file:read(FD, 100),
+             {ok,Vs,_} = io_lib:fread("~d~d~d~d~d~d~d", Str),
+             Vs 
+    end.
+
+F = fun(G,[],[]) -> G(G,element(2,file:open("/proc/stat", [read,raw])),[]);
+       (G,FD,[]) -> G(G,FD,H(FD));
+       (G,FD,OVs) ->Vs=H(FD),
+                    O(Vs,OVs),
+                    receive quit->ok after 60000 -> G(G,FD,Vs) end 
+    end.
+
+I = fun() ->register(ticker,self()),
+            F(F,[],[]) end.
+
+G = fun() -> spawn(I) end.
+         

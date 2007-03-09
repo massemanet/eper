@@ -7,20 +7,8 @@ usage(){
     exit
 }
 
-if [ ${0:0:1} == "/" ];then
-    SPATH=$0
-elif [ -x $PWD/$0 ];then
-    SPATH=$PWD/$0
-else
-    SPATH=`which $0`
-fi
-
-n=4
-while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
-PATHS=""
-for p in `ls -d $SPATH/*/ebin`; do
-    PATHS=$PATHS" -pa $p"
-done
+deps="eper"
+. `dirname $0`/paths
 
 VSN=""
 XTRA=""
@@ -47,16 +35,17 @@ while [ -n "$1" ]
 	  cookie=""
 	  ;;
       "-*")
-          echo dollar_one $1
+          echo unrecognized flag $1
+	  usage
           ;;
       *)
-          XTRA=" $XTRA \"$1\""
+          XTRA=" $XTRA $1"
           ;;
   esac
   shift
 done
 
-name="redbug"$$ 
+name="redbug_"$$ 
 DISTR="-noshell -hidden -sname $name $cookie $nettick"
 START="-run redbug start"
 

@@ -25,9 +25,15 @@ help() ->
         "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}",
         "Targ: node()"]).
 
-start(Strs) -> 
-  self() ! {start,list_to_tuple([to_term(S) || S <- Strs])},
-  init(),
+start([Node,Time,Msgs,Pat]) -> start([Node,Time,Msgs,Pat,"all"]);
+start([Node,Time,Msgs,Pat,Proc]) ->
+  try 
+    A = {to_int(Time),to_int(Msgs),to_term(Pat),to_atom(Proc),to_atom(Node)},
+    self() ! {start,A},
+    init()
+  catch 
+    C:R -> io:fwrite("~p~n",[{C,R,erlang:get_stacktrace()}])
+  end,
   erlang:halt().
 
 start(Time,Msgs,Trc) -> start(Time,Msgs,Trc,all).
@@ -148,7 +154,8 @@ printi(Pid) ->
 
 printl() ->
   receive
-    {'DOWN',_Ref,process,_Pid,_Reason} -> ok;
+    {'DOWN',_Ref,process,_Pid,_Reason} -> 
+      io:fwrite("got DOWN from ~p~n",[node(_Pid)]);
     X -> outer(X), printl()
   end.
 
@@ -198,13 +205,15 @@ mfaf(I) ->
   [_, C|_] = string:tokens(I,"()+"),
   case string:tokens(C,":/ ") of
     [M,F,A] ->
-      try {list_to_atom(M),list_to_atom(F),list_to_integer(A)}
+      try {to_atom(M),to_atom(F),to_int(A)}
       catch _:_ -> C
       end;
     ["unknown","function"] ->
       unknown_function
   end.
 
+to_int(L) -> list_to_integer(L).
+to_atom(L) -> list_to_atom(L).
 to_term("_") -> '_';
 to_term(Str) -> 
   {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "["++Str++"]. ", 1),
