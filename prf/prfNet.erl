@@ -27,9 +27,12 @@ data([P|Ports]) ->
 stats(P,{driver,Name}) -> 
   {{driver,Name},erlang:port_info(P)};
 stats(P,Name) -> 
-  Info = erlang:port_info(P),
-  try {ok,Stats} = inet:getstat(P), {Name,Info++Stats}
-  catch _:_ -> {Name,Info}
+  case erlang:port_info(P) of
+    undefined -> throw(port_gone);
+    Info ->
+      try {ok,Stats} = inet:getstat(P), {Name,Info++Stats}
+      catch _:_ -> {Name,Info}
+      end
   end.
 
 name(P) -> name(erlang:port_info(P,name),P).
