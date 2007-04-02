@@ -33,12 +33,8 @@ while [ -n "$1" ]
 	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
 	  ;;
       "-vsn"|"-version")
-	  vsn=$2
+	  VSN="+R "$2
 	  shift
-	  ERLP=`which erl`
-	  ERLP=`dirname $ERLP` ; ERLP=`dirname $ERLP` ; ERLP=`dirname $ERLP`
-	  ERL=`echo $ERLP/${vsn}*/bin/erl`
-	  if [ ! -x "$ERL" ]; then usage; fi
 	  ;;
       "-nettick"|"-tick")
 	  nettick="-kernel net_ticktime $2"
@@ -71,6 +67,4 @@ name="dtop_"$$
 FLAGS="-boot start_sasl -sasl errlog_type error +A16"
 DISTR="-hidden -sname $name $cookie $nettick"
 
-$WIN $ERL $FLAGS $DISTR \
--pa $SPATH/ebin \
-$START
+$WIN erl $VSN $FLAGS $DISTR -pa $SPATH/ebin $START
