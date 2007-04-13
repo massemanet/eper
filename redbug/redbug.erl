@@ -21,20 +21,28 @@ help() ->
   strs(["redbug:start(Time,Msgs,Trc[,Proc[,Targ]])",
         "Time: integer() [ms]",
         "Msgs: integer() [#]",
-        "Trc: list('send'|'receive'|{M,F}|{M,F,RestrictedMatchSpec})",
+        "Trc: list('send'|'receive'|{M,F}|{M,F,RestrictedMatchSpecs})",
         "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}",
-        "Targ: node()"]).
+        "Targ: node()",
+        "RestrictedMatchSpecs: list(RMS)",
+        "RMS: 'stack'|'return'|tuple(ArgDescriptor)",
+        "ArgDescriptor: '_'|literal()"]).
 
 start([Node,Time,Msgs,Pat]) -> start([Node,Time,Msgs,Pat,"all"]);
 start([Node,Time,Msgs,Pat,Proc]) ->
   try 
-    A = {to_int(Time),to_int(Msgs),to_term(Pat),to_atom(Proc),to_atom(Node)},
-    self() ! {start,A},
-    init()
+    self() ! {start,{term_stream,to_int(Time),to_int(Msgs),
+                     to_term(Pat),to_atom(Proc),to_atom(Node)}},
+    init(),
+    erlang:halt()
   catch 
-    C:R -> io:fwrite("~p~n",[{C,R,erlang:get_stacktrace()}])
-  end,
-  erlang:halt().
+    C:R -> 
+      io:fwrite("~p~n",[{C,R,erlang:get_stacktrace()}]),
+      erlang:halt(1)
+  end;
+start(X) ->
+  io:fwrite("bad args: ~p~n",[X]),
+  erlang:halt(1).
 
 start(Time,Msgs,Trc) -> start(Time,Msgs,Trc,all).
 
@@ -45,7 +53,7 @@ start(Time,Msgs,Trc,Proc,Targ)  ->
     undefined -> 
       try 
         register(redbug, spawn(fun init/0)),
-        redbug ! {start,{Time,Msgs,Trc,Proc,Targ}},
+        redbug ! {start,{term_buffer,Time,Msgs,Trc,Proc,Targ}},
         ok
       catch C:R -> {oops,{C,R}}
       end;
@@ -62,14 +70,14 @@ stop() ->
 init() ->
   process_flag(trap_exit,true),
   receive 
-    {start,{Time,Msgs,Trc,Proc,Targ}} -> 
+    {start,{How,Time,Msgs,Trc,Proc,Targ}} -> 
       try 
-        Conf = pack(Time,Msgs,Trc,Proc),
+        Conf = pack(How,Time,Msgs,Trc,Proc),
         prf:start(prf_redbug,Targ,redbugConsumer),
         prf:config(prf_redbug,collectors,{start,{self(),Conf}}),
         iloop()
       catch 
-        C:R -> ?LOG({C,R})
+        C:R -> ?LOG([{C,R},{stack,erlang:get_stacktrace()}])
       end
   end.
 
@@ -102,13 +110,13 @@ stop_msg(Args)                        -> ?LOG({stopping,Args}).
 %%% Where = {term_buffer,Pid,Count} | {term_stream,Pid,Count} |
 %%%         {file,File,Size} | {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pack(Time,Msgs,Trc,Proc) ->
+pack(How,Time,Msgs,Trc,Proc) ->
   {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},ass_list(Trc)),
   dict:from_list([{time,chk_time(Time)},
                   {flags,[call,timestamp|Flags]},
                   {rtps,RTPs},
                   {procs,chk_proc(Proc)},
-                  {where,{term_stream,ass_printer(),chk_msgs(Msgs)}}]).
+                  {where,{How,ass_printer(),chk_msgs(Msgs)}}]).
 
 chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> exit({bad_time,X}).

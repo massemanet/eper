@@ -1,22 +1,21 @@
 #!/bin/bash
 
 usage(){
-    U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
-    U2="[-nettick <tick>] [-vsn <OTP version>]"
+    U1="usage: `basename $0` [-setcookie <cookie>] [-nocookie] "
+    U2="[-nettick <tick>] [-vsn <OTP version>] node time msgs trace [proc]"
     echo $U1 $U2
     exit
 }
 
-deps="eper"
-. `dirname $0`/paths
-
 VSN=""
 XTRA=""
+
+PTH=$0 ; n=3 ; while [ 0 -lt "$n" ]; do PTH=`dirname $PTH`; let n=n-1; done
 
 while [ -n "$1" ] 
   do
   case $1 in
-      "-help"|"-h"|"-?")
+      "--help"|"-h"|"-?")
 	  usage
 	  ;;
       "-vsn"|"-version")
@@ -45,8 +44,13 @@ while [ -n "$1" ]
   shift
 done
 
+if [ -z "$XTRA" ]; then usage; fi
+
+PATHS="-pa $PTH/ebin"
 name="redbug_"$$ 
 DISTR="-noshell -hidden -sname $name $cookie $nettick"
 START="-run redbug start"
 
 erl $VSN $DISTR $PATHS $START $XTRA
+
+if [ "$?" -eq "1" ]; then usage; fi

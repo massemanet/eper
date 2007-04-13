@@ -132,7 +132,6 @@ set_tps(TPs) -> foreach(fun set_tps_f/1,TPs).
 
 set_tps_f({MFA,MS,Fs}) -> erlang:trace_pattern(MFA,MS,Fs).
 
-
 mk_prc(all) -> all;
 mk_prc(Pid) when pid(Pid) -> Pid;
 mk_prc({pid,P1,P2}) when integer(P1), integer(P2) -> c:pid(0,P1,P2);
