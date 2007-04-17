@@ -1,0 +1,6 @@
+2007-04-17  Mats Cronqvist  <locmacr@mwlx084>
+
+	* () this is version 0.33
+	* COPYING: MIT license
+	* INSTALL: documented the configure/build/install sequence
+
