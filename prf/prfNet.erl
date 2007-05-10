@@ -42,6 +42,11 @@ name({name,"udp_inet"},P) ->
   {udp,Port};
 name({name,"tcp_inet"},P) -> 
   {ok,{IP,Port}} = inet:peername(P),
+  memoize({prfNet,tcp_name,IP,Port}, fun tcp_name/1);
+name({name,Name},_P) ->
+  {driver,Name}.
+
+tcp_name({prfNet,tcp_name,IP,Port}) ->
   case inet:gethostbyaddr(IP) of 
     {ok,#hostent{h_name=HostName}} ->
       try 
@@ -53,7 +58,12 @@ name({name,"tcp_inet"},P) ->
       end;
     _ -> 
       X = tuple_to_list(IP),
-      {tcp,{tl(lists:flatten([[$.,integer_to_list(I)]||I<-X])),Port}} 
-  end;
-name({name,Name},_P) ->
-  {driver,Name}.
+      {tcp,{tl(lists:flatten([[$.,integer_to_list(I)]||I<-X])),Port}}
+  end.
+
+memoize(Key,F) ->
+  case get(Key) of
+    undefined -> put(Key,F(Key)), get(Key);
+    Name -> Name
+  end.
+
