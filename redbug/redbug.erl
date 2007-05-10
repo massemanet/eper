@@ -17,22 +17,39 @@
 
 -define(LOG(T), prf:log(process_info(self()),T)).
 
-help() ->
-  strs(["redbug:start(Time,Msgs,Trc[,Proc[,Targ]])",
-        "Time: integer() [ms]",
-        "Msgs: integer() [#]",
-        "Trc: list('send'|'receive'|{M,F}|{M,F,RestrictedMatchSpecs})",
-        "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}",
-        "Targ: node()",
-        "RestrictedMatchSpecs: list(RMS)",
-        "RMS: 'stack'|'return'|tuple(ArgDescriptor)",
-        "ArgDescriptor: '_'|literal()"]).
+%% sensible defaults;
+%% Proc = all
+%% Targ = node()
+%% Buffered = yes
+%% PrintF = print_fun()
+-record(cnf,{time,msgs,trc,
+             proc=all,targ=node(),buffered=yes,printf=print_fun()}).
 
-start([Node,Time,Msgs,Pat]) -> start([Node,Time,Msgs,Pat,"all"]);
-start([Node,Time,Msgs,Pat,Proc]) ->
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+print_fun() -> fun(Str) -> io:fwrite("~s~n",[Str]) end.
+
+help() ->
+  F = print_fun(),
+  foreach(F,["redbug:start(Time,Msgs,Trc[,Proc[,Targ]])",
+             "Time: integer() [ms]",
+             "Msgs: integer() [#]",
+             "Trc: list('send'|'receive'|{M}|{M,F}|{M,RMSs}|{M,F,RMSs})",
+             "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}",
+             "Targ: node()",
+             "RMSs: (restricted match specs): list(RMS)",
+             "RMS: 'stack'|'return'|tuple(ArgDescriptor)",
+             "ArgDescriptor: '_'|literal()"]).
+
+start([Node,Time,Msgs,Trc]) -> start([Node,Time,Msgs,Trc,"all"]);
+start([Node,Time,Msgs,Trc,Proc]) ->
   try 
-    self() ! {start,{term_stream,to_int(Time),to_int(Msgs),
-                     to_term(Pat),to_atom(Proc),to_atom(Node)}},
+    Cnf = #cnf{time=to_int(Time),
+               msgs=to_int(Msgs),
+               trc=to_term(Trc),
+               proc=to_atom(Proc),
+               targ=to_atom(Node)},
+    self() ! {start,Cnf},
     init(),
     erlang:halt()
   catch 
@@ -46,14 +63,18 @@ start(X) ->
 
 start(Time,Msgs,Trc) -> start(Time,Msgs,Trc,all).
 
-start(Time,Msgs,Trc,Proc) -> start(Time,Msgs,Trc,Proc,node()).
+start(Time,Msgs,Trc) -> go(Time,Msgs,Trc,#cnf{}).
 
-start(Time,Msgs,Trc,Proc,Targ)  -> 
+start(Time,Msgs,Trc,Proc) -> go(Time,Msgs,Trc,#cnf{proc=Proc}).
+
+start(Time,Msgs,Trc,Proc,Targ)  -> go(Time,Msgs,Trc,#cnf{targ=Targ,proc=Proc}).
+
+go(Time,Msgs,Trc,Cnf) ->
   case whereis(redbug) of
     undefined -> 
       try 
         register(redbug, spawn(fun init/0)),
-        redbug ! {start,{term_buffer,Time,Msgs,Trc,Proc,Targ}},
+        redbug ! {start,Cnf#cnf{time=Time,msgs=Msgs,trc=Trc}},
         ok
       catch C:R -> {oops,{C,R}}
       end;
@@ -70,56 +91,79 @@ stop() ->
 init() ->
   process_flag(trap_exit,true),
   receive 
-    {start,{How,Time,Msgs,Trc,Proc,Targ}} -> 
+    {start,Cnf} -> 
       try 
-        Conf = pack(How,Time,Msgs,Trc,Proc),
-        prf:start(prf_redbug,Targ,redbugConsumer),
+        PrintPid = ass_printer(Cnf#cnf.printf),
+        Conf = pack(Cnf,PrintPid),
+        prf:start(prf_redbug,Cnf#cnf.targ,redbugConsumer),
         prf:config(prf_redbug,collectors,{start,{self(),Conf}}),
-        iloop()
+        iloop(PrintPid)
       catch 
         C:R -> ?LOG([{C,R},{stack,erlang:get_stacktrace()}])
       end
   end.
 
-iloop() ->
+iloop(PrintPid) ->
   receive
     {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
-    {prfTrc,{starting,TrcPid}}         -> loop(TrcPid);
+    {prfTrc,{starting,TrcPid}}         -> loop(TrcPid,PrintPid);
     {prfTrc,{already_started,_TrcPid}} -> ?LOG(already_started);
-    {'EXIT',Pid,R}                     -> ?LOG([{exited,Pid},{reason,R}]);
+    {'EXIT',PrintPid,R}                -> ?LOG([printer_died,{reason,R}]);
     {'EXIT',R}                         -> ?LOG([exited,{reason,R}]);
     X                                  -> ?LOG([{unknown_message,X}])
   end.
 
-loop(TrcPid) ->
+loop(TrcPid,PrintPid) ->
   receive
-    {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
-    {prfTrc,{stopping,TrcPid,Args}}->  stop_msg(Args);
+    {stop,Args}       -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
+    {prfTrc,{stopping,TrcPid,Args}} -> stop_loop(PrintPid,Args);
+    {'EXIT',TrcPid,R}               -> stop_loop(PrintPid,{tracer_died,R});
     {prfTrc,{not_started,TrcPid}}   -> ?LOG(not_started);
-    {'EXIT',TrcPid,R}               -> ?LOG([tracer_died,{reason,R}]);
-    {'EXIT',R}                      -> ?LOG([exited,{reason,R}]);
+    {'EXIT',PrintPid,R}             -> ?LOG([printer_died,{reason,R}]);
     X                               -> ?LOG([{unknown_message,X}])
   end.
 
-stop_msg({timeout})                   -> io:fwrite("done: ~p~n",[timeout]);
-stop_msg({consumer_died,{msg_count}}) -> io:fwrite("done: ~p~n",[msg_count]);
-stop_msg(Args)                        -> ?LOG({stopping,Args}).
+stop_loop(PrintPid,Args) ->
+  PrintPid ! {done,self(),stop_msg(Args)},
+  receive
+    {PrintPid,ok}       -> ok;
+    {'EXIT',PrintPid,R} -> ?LOG([printer_died,{reason,R}]);
+    X                   -> ?LOG([{unknown_message,X}])
+  end.
+
+stop_msg({timeout}) -> timeout;
+stop_msg({consumer_died,{msg_count}}) -> msg_count;
+stop_msg(X) ->  X.
+
+ass_printer(PrintF) ->
+  Self = self(),
+  spawn_link(fun()->printi(Self,PrintF) end).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Conf = {time,flags,rtps,procs,where}
 %%% Where = {term_buffer,Pid,Count} | {term_stream,Pid,Count} |
 %%%         {file,File,Size} | {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pack(How,Time,Msgs,Trc,Proc) ->
-  {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},ass_list(Trc)),
-  dict:from_list([{time,chk_time(Time)},
+pack(Cnf,PrintPid) ->
+  {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},ass_list(Cnf#cnf.trc)),
+  dict:from_list([{time,chk_time(Cnf#cnf.time)},
                   {flags,[call,timestamp|Flags]},
                   {rtps,RTPs},
-                  {procs,chk_proc(Proc)},
-                  {where,{How,ass_printer(),chk_msgs(Msgs)}}]).
+                  {procs,chk_proc(Cnf#cnf.proc)},
+                  {where,{chk_buffered(Cnf#cnf.buffered),
+                          PrintPid,
+                          chk_msgs(Cnf#cnf.msgs)}}]).
 
 chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> exit({bad_time,X}).
+
+chk_buffered(yes) -> term_buffer;
+chk_buffered(no) -> term_stream.
+
+chk_proc(Pid) when is_pid(Pid) -> Pid;
+chk_proc(Atom) when is_atom(Atom)-> Atom;
+chk_proc({pid,I1,I2}) when is_integer(I1), is_integer(I2) -> {pid,I1,I2};
+chk_proc(X) -> exit({bad_proc,X}).
 
 chk_msgs(Msgs) when is_integer(Msgs) -> Msgs;
 chk_msgs(X) -> exit({bad_msgs,X}).
@@ -129,14 +173,12 @@ chk_trc('receive',{Flags,RTPs}) -> {['receive'|Flags],RTPs};
 chk_trc(RTP,{Flags,RTPs}) when is_tuple(RTP) -> {Flags,[chk_rtp(RTP)|RTPs]};
 chk_trc(X,_) -> exit({bad_trc,X}).
 
-chk_proc(Pid) when is_pid(Pid) -> Pid;
-chk_proc(Atom) when is_atom(Atom)-> Atom;
-chk_proc({pid,I1,I2}) when is_integer(I1), is_integer(I2) -> {pid,I1,I2};
-chk_proc(X) -> exit({bad_proc,X}).
-
-chk_rtp({M,F}) when atom(M), atom(F), M/='_' -> {{M,F,'_'},[],[local]};
-chk_rtp({M,F,MS}) when atom(M), atom(F), M/='_' -> {{M,F,'_'},ms(MS),[local]};
-chk_rtp(X) -> exit({bad_rtp,X}).
+chk_rtp({M})                                    -> chk_rtp({M,'_',[]});
+chk_rtp({M,F}) when atom(F)                     -> chk_rtp({M,F,[]});
+chk_rtp({M,L}) when list(L)                     -> chk_rtp({M,'_',L});
+chk_rtp({'_',_,_})                              -> exit(dont_wildcard_module);
+chk_rtp({M,F,MS}) when atom(M),atom(F),list(MS) -> {{M,F,'_'},ms(MS),[local]};
+chk_rtp(X)                                      -> exit({bad_rtp,X}).
 
 ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
 
@@ -148,44 +190,49 @@ msf(X,_) -> exit({bad_match_spec,X}).
 ass_list(L) when is_list(L) -> usort(L);
 ass_list(X) -> [X].
 
-ass_printer() ->
-  Self = self(),
-  spawn_link(fun()->printi(Self) end).
-
-strs([]) -> ok;
-strs([H|T]) -> io:fwrite("~s~n",[H]),strs(T).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-printi(Pid) ->
+printi(Pid,PrintF) ->
   erlang:monitor(process,Pid),
-  printl().
+  printl(PrintF).
 
-printl() ->
+printl(PrintF) ->
   receive
-    {'DOWN',_Ref,process,_Pid,_Reason} -> 
-      io:fwrite("got DOWN from ~p~n",[node(_Pid)]);
-    X -> outer(X), printl()
+    {done,Daddy,R}         -> get_out(PrintF,R), Daddy ! {self(),ok};
+    {'DOWN',_Ref,_,Pid,_R} -> get_out(PrintF,{tracer_down,node(Pid)});
+    X                      -> outer(PrintF,X), printl(PrintF)
   end.
 
-outer([]) -> ok;
-outer([Msg|Msgs]) ->
+get_out(PrintF,R) -> flush(PrintF), io:fwrite("quitting: ~p~n",[R]).
+
+flush(PrintF) ->
+  receive
+    {done,_,_}       -> flush(PrintF);
+    {'DOWN',_,_,_,_} -> flush(PrintF);
+    X                -> outer(PrintF,X), flush(PrintF)
+  after 
+    0-> ok
+  end.
+
+outer(_,[]) -> ok;
+outer(PrintF,[Msg|Msgs]) ->
   case Msg of
     {'call',{MFA,Bin},PI,TS} ->
-      io:fwrite("~s <~p> ~p~n",[ts(TS),PI,MFA]),
-      foreach(fun(L)->io:fwrite("  ~p~n",[L]) end, stak(Bin));
+      PrintF(flat("~s <~p> ~p~n",[ts(TS),PI,MFA])),
+      foreach(fun(L)->PrintF(flat("  ~p~n",[L])) end, stak(Bin));
     {'retn',{MFA,Val},PI,TS} -> 
-      io:fwrite("~s <~p> ~p -> ~p~n",[ts(TS),PI,MFA,Val]);
+      PrintF(flat("~s <~p> ~p -> ~p~n",[ts(TS),PI,MFA,Val]));
     {'send',{MSG,To},PI,TS} -> 
-      io:fwrite("~s <~p> <~p> <<< ~p~n",[ts(TS),PI,To,MSG]);
+      PrintF(flat("~s <~p> <~p> <<< ~p~n",[ts(TS),PI,To,MSG]));
     {'recv',MSG,PI,TS} -> 
-      io:fwrite("~s <~p> <<< ~p~n",[ts(TS),PI,MSG]);
+      PrintF(flat("~s <~p> <<< ~p~n",[ts(TS),PI,MSG]));
     MSG ->
-      io:fwrite("~p~n", [MSG])
+      PrintF(flat("~p~n", [MSG]))
   end,
-  outer(Msgs).
+  outer(PrintF,Msgs).
 
-ts({H,M,S,_Us}) ->
-  flatten(io_lib:fwrite("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S])).
+ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
+
+flat(Form,List) -> flatten(io_lib:fwrite(Form,List)).
 
 %%% call stack handler
 stak(Bin) ->

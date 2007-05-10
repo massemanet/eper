@@ -1,3 +1,14 @@
+2007-05-10  Mats Cronqvist  <locmacr@mwlx084>
+
+	* redbug/redbug.erl: 
+	somewhat more permissive api. 
+	internal changes.
+
+	* prf/prfNet.erl: 
+	turns out inet:gethostbyname hangs 5 secs if the hostname is
+	unknown. prfNet calls this 2 times per sec for every open tcp
+	port. it now memoizes the data...
+  
 2007-04-17  Mats Cronqvist  <locmacr@mwlx084>
 
 	* () this is version 0.33
