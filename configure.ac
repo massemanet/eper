@@ -1,4 +1,4 @@
-AC_INIT(Various Erlang performance related tools, 0.34, 
+AC_INIT(Various Erlang performance related tools, 0.35, 
              mats.cronqvist@ericsson.com, eper)
 dnl Require autoconf version >=2.59c. first one with erlang macros
 AC_PREREQ(2.59c)
@@ -36,12 +36,8 @@ AC_SUBST([GTKDOCLINKS], [$_gtkdoclinks])
 dnl Specify the files to instantiate.
 AC_CONFIG_FILES([ \
 	Makefile \
-	dtop/Makefile \
-	gperf/Makefile \
-	ntop/Makefile \
-	prf/Makefile \
-	redbug/Makefile \
-	sherk/Makefile \
+	src/Makefile \
+	bin/Makefile \
 	])
 
 AC_OUTPUT

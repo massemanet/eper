@@ -1,3 +1,8 @@
+2007-05-17  Mats Cronqvist  <locmacr@mwlx084>
+
+	* src/sherk_ets.erl: 
+	f2t/1 (file2tab) was broken...
+
 2007-05-10  Mats Cronqvist  <locmacr@mwlx084>
 
 	* redbug/redbug.erl: 

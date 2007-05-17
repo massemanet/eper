@@ -59,21 +59,26 @@ lup(Tab, Key) ->
 %% tab2file/2 and file2tab/1 replacements
 %% stores multiple tabs in compressed files
 
+%% file format is;
+%% <<TabInfoSize:32/integer>>,<<TabInfo:TabInfoSize/binary>>,
+%% [<<ObjectSize:32/integer>>,<<Object:ObjectSize/binary>>,...]
+%% <<0:32/integer>>
+
 t2f(Tabs, File) when is_list(Tabs) ->
   case file:open(File,[write,compressed,raw,binary]) of
     {error,R} ->
       exit({error_opening,R,File});
     {ok,FD} ->
       try t2f(Tabs,FD,0)
-          after file:close(FD)
-          end
+      after file:close(FD)
+      end
   end.
 
 t2f([],_FD,N) -> N;
 t2f([Tab|Tabs],FD,N) ->
-  file:write(FD,<<0:32/integer>>),
   t2f_f(make_info(Tab),FD),
   ets:foldl(fun t2f_f/2,FD,Tab),
+  file:write(FD,<<0:32/integer>>),
   t2f(Tabs,FD,N+1).
 
 make_info(Tab) ->
@@ -95,7 +100,7 @@ f2t(File) ->
     {error,R} ->
       exit({error_opening,R,File});
     {ok,FD} ->
-      try f2t_f(FD), do_tabs(f2t_f(FD),FD,[])
+      try do_tabs(get_tab_header(FD),FD,[])
       after file:close(FD)
       end
   end.
@@ -105,26 +110,33 @@ do_tabs(eof,_FD,O) ->
 do_tabs({Name,Opts},FD,O) ->
   new(Name,Opts),
   Cnt = f2t(FD,Name,0),
-  do_tabs(f2t_f(FD),FD,[{Name,Cnt}|O]).
+  do_tabs(get_tab_header(FD),FD,[{Name,Cnt}|O]).
+
+get_tab_header(FD) ->
+  try f2t_f(FD)
+  catch 
+    throw:eof -> eof;
+    _:X -> exit({bad_header,X})
+  end.
+       
 
 f2t(FD,Tab,N) ->
   try 
     ets:insert(Tab,f2t_f(FD)),
     f2t(FD,Tab,N+1)
   catch
-    throw:eof -> N;
-    throw:bot -> N
+    throw:delimiter -> N;
+    throw:eof -> exit({unexpected_eof})
   end.
 
 f2t_f(FD) ->
   case file:read(FD,4) of
-    {ok,<<0:32/integer>>} -> throw(bot);
+    eof -> throw(eof);
+    {ok,<<0:32/integer>>} -> throw(delimiter);
     {ok,<<Size:32/integer>>} -> 
       case file:read(FD,Size) of
         {ok,Bin} -> binary_to_term(Bin);
-        {error,R} -> exit({error_reading,R});
-        eof -> exit({unexpected_eof})
+        R -> exit({error_reading_term,R})
       end;
-    eof -> throw(eof);
-    {error,R} -> exit({error_reading,R})
+    R -> exit({error_reading_size,R})
   end.

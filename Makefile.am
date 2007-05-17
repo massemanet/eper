@@ -1,4 +1,4 @@
-SUBDIRS = dtop gperf ntop prf redbug sherk 
+SUBDIRS = src bin
 
 clean-local:
 	-find . -name "*~" -exec rm {} \;

@@ -61,8 +61,6 @@ start(X) ->
   io:fwrite("bad args: ~p~n",[X]),
   erlang:halt(1).
 
-start(Time,Msgs,Trc) -> start(Time,Msgs,Trc,all).
-
 start(Time,Msgs,Trc) -> go(Time,Msgs,Trc,#cnf{}).
 
 start(Time,Msgs,Trc,Proc) -> go(Time,Msgs,Trc,#cnf{proc=Proc}).
