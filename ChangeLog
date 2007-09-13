@@ -1,3 +1,8 @@
+2007-09-13  Mats Cronqvist;contact=qmarols  <letxmacr@seasc0498.dyn.rnd.as.sw.ericsson.se>
+	
+	* src/sherk.erl (flag_broken/2): probes for 'cpu_timestamp', on
+	failure falls back to 'timestamp'
+
 2007-05-17  Mats Cronqvist  <locmacr@mwlx084>
 
 	* src/sherk_ets.erl: 
