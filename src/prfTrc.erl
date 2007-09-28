@@ -9,12 +9,15 @@
 -module(prfTrc).
 
 -export([collect/1,config/2]).
--export([loop/1]).
+-export([active/1,idle/0,wait_for_local/1]).
 
 -import(lists,[reverse/1,foreach/2,map/2]).
 -import(dict,[new/0,store/3,fetch/2,from_list/1]).
 
--define(LOOP, ?MODULE:loop).
+-define(ACTIVE, ?MODULE:active).
+-define(IDLE, ?MODULE:idle).
+-define(WAIT_FOR_LOCAL, ?MODULE:wait_for_local).
+
 -define(LOG(T), prf:log(process_info(self()),T)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -47,67 +50,70 @@ assert(Reg) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init() ->
   process_flag(trap_exit,true),
-  loop(idle).
+  ?IDLE().
 
-loop(LD) ->
+idle() ->
   receive
-    {start,{HostPid,Conf}} ->
-      ?LOOP(start_trace(HostPid,LD,Conf));
-    {stop,{HostPid,Args}} -> 
-      ?LOOP(stop_trace(HostPid,LD,Args));
-    {timeout,_Timer,{die,HostPid}} -> 
-      ?LOOP(stop_trace(HostPid,LD,{timeout}));
-    {'EXIT',Pid,R} ->
-      ?LOOP(handle_exit(Pid,R,LD))
+    {start,{HostPid,Conf}} -> ?ACTIVE(start_trace(HostPid,Conf));
+    {stop,{HostPid,_}} -> HostPid ! {prfTrc,{not_started,self()}}, ?IDLE();
+    X -> ?LOG({weird_in,X}), ?IDLE()
   end.
 
-handle_exit(_Pid,normal,idle) ->
-  idle;
-handle_exit(Pid,R,LD) ->
-  case {fetch(consumer,LD),fetch(host_pid,LD)} of
-    {_,Pid} -> stop_trace(Pid,LD,{host_died,Pid});
-    {Pid,HostPid} -> stop_trace(HostPid,LD,{consumer_died,R});
-    X -> ?LOG({wierd_exit,X,R}), LD
+active(LD) ->
+  Cons = fetch(consumer,LD),
+  HostPid = fetch(host_pid,LD),
+  receive
+    {start,{Pid,_}}    -> Pid ! {prfTrc,{already_started,self()}}, ?ACTIVE();
+    {stop,_} 	       -> remote_stop(Cons, LD),?WAIT_FOR_LOCAL(Cons);
+    {'EXIT',HostPid,_} -> remote_stop(Cons, LD),?WAIT_FOR_LOCAL(Cons);
+    {local_stop,R}     -> local_stop(HostPid, LD, R),?WAIT_FOR_LOCAL(Cons);
+    {'EXIT',Cons,R}    -> local_stop(HostPid, LD, R),?IDLE();
+    X                  -> ?LOG({weird_in,X}), ?ACTIVE(LD) 
   end.
 
-stop_trace(HostPid,idle,_Args) ->
-  HostPid ! {prfTrc,{not_started,self()}},
-  idle;
-stop_trace(HostPid,LD,Args) ->
-  HostPid ! {prfTrc,{stopping,self(),Args}},
-  unlink(fetch(host_pid,LD)),
-  erlang:cancel_timer(fetch(timer,LD)),
+wait_for_local(Cons) when is_pid(Cons) ->
+  receive 
+    {'EXIT',Cons,_} -> ?IDLE();
+    X               -> ?LOG({weird_in,X}), ?WAIT_FOR_LOCAL() 
+  end;
+wait_for_local(_) -> 
+  ?IDLE().
+
+local_stop(HostPid, LD, R) ->
+  stop_trace(LD),
+  unlink(HostPid),
+  HostPid ! {prfTrc,{stopping,self(),R}}.
+
+remote_stop(Cons, LD) ->
+  stop_trace(LD),
+  consumer_stop(Cons).
+
+stop_trace(LD) ->
   erlang:trace(all,false,fetch(flags,fetch(conf,LD))),
-  unset_tps(),
-  consumer_stop(fetch(consumer,LD)),
-  idle.
+  unset_tps().
 
-start_trace(HostPid,idle,Conf) ->
-  HostPid ! {prfTrc,{starting,self()}},
+start_trace(HostPid,Conf) ->
   link(HostPid),
-  unset_tps(),
-  Cons = consumer(fetch(where,Conf)),
+  Cons = consumer(fetch(where,Conf),fetch(time,Conf)),
+  HostPid ! {prfTrc,{starting,self(),Cons}},
   Procs = mk_prc(fetch(procs,Conf)),
   Flags = [{tracer,Cons}|fetch(flags,Conf)],
+  unset_tps(),
   erlang:trace(Procs,true,Flags),
   set_tps(fetch(rtps,Conf)),
-  Timer = erlang:start_timer(fetch(time,Conf),self(),{die,HostPid}),
-  from_list([{host_pid,HostPid},{timer,Timer},{consumer,Cons},{conf,Conf}]);
-start_trace(HostPid,LD,_Conf) ->
-  HostPid ! {prfTrc,{already_started,self()}},
-  LD.
+  from_list([{host_pid,HostPid},{consumer,Cons},{conf,Conf}]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-consumer({term_buffer,Pid,Count}) -> consumer_pid(Pid,Count,yes);
-consumer({term_stream,Pid,Count}) -> consumer_pid(Pid,Count,no);
-consumer({file,File,Size}) -> consumer_file(File,Size);
-consumer({ip,Port,Queue}) -> consumer_ip(Port,Queue).
+consumer({term_buffer,Pid,Count},Time) -> consumer_pid(Pid,Count,yes,Time);
+consumer({term_stream,Pid,Count},Time) -> consumer_pid(Pid,Count,no,Time);
+consumer({file,File,Size},_) -> consumer_file(File,Size);
+consumer({ip,Port,Queue},_) -> consumer_ip(Port,Queue).
 
 consumer_stop(Pid) when is_pid(Pid) -> Pid ! stop;
 consumer_stop(_Port) when is_port(_Port) -> dbg:flush_trace_port().
 
-consumer_pid(Pid,Cnt,Buf) ->
-  Conf = from_list([{daddy,self()},{count,Cnt},
+consumer_pid(Pid,Cnt,Buf,Time) ->
+  Conf = from_list([{daddy,self()},{count,Cnt},{time,Time},
                     {maxsize,50000},{maxqueue,100},
                     {where,Pid},{buffering,Buf}]),
   spawn_link(fun() -> init_local(Conf) end).
@@ -146,17 +152,21 @@ mk_prc(Reg) when atom(Reg) ->
 %%%  buffers trace messages, and flushes them when;
 %%%    it gets a stop from the controller
 %%%    reaches count=0
-%%%    a stacktrace is too big
+%%%    timeout
+%%%    message queue too long
+%%%    a trace message is too big
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% 
 -record(ld,{daddy,where,count,maxqueue,maxsize}).
 
-init_local(Conf) -> lloop({#ld{daddy=fetch(daddy,Conf),
-                               where=fetch(where,Conf),
-                               maxsize=fetch(maxsize,Conf),
-                               maxqueue=fetch(maxqueue,Conf)},
-                           buffering(fetch(buffering,Conf)),
-                           fetch(count,Conf)}).
+init_local(Conf) -> 
+  erlang:start_timer(fetch(time,Conf),self(),fetch(daddy,Conf)),
+  lloop({#ld{daddy=fetch(daddy,Conf),
+	     where=fetch(where,Conf),
+	     maxsize=fetch(maxsize,Conf),
+	     maxqueue=fetch(maxqueue,Conf)},
+	 buffering(fetch(buffering,Conf)),
+	 fetch(count,Conf)}).
 
 buffering(yes) -> [];
 buffering(no) -> no.
@@ -165,9 +175,11 @@ lloop({LD,Buff,Count}) ->
   maybe_exit(msg_queue,LD),
   maybe_exit(msg_count,{LD,Buff,Count}),
   receive 
-    stop -> flush(LD,Buff);
-    {trace_ts,Pid,Tag,A,TS} -> lloop(msg(LD,Buff,Count,{Tag,Pid,TS,A}));
-    {trace_ts,Pid,Tag,A,B,TS}->lloop(msg(LD,Buff,Count,{Tag,Pid,TS,{A,B}}))
+    {timeout,_,Daddy}        -> Daddy ! {local_stop,timeout},
+				flush(LD,Buff),exit(timeout);
+    stop 		     -> flush(LD,Buff),exit(local_done);
+    {trace_ts,Pid,Tag,A,TS}  -> lloop(msg(LD,Buff,Count,{Tag,Pid,TS,A}));
+    {trace_ts,Pid,Tag,A,B,TS}-> lloop(msg(LD,Buff,Count,{Tag,Pid,TS,{A,B}}))
   end.
 
 msg(LD,Buff,Count,Item) ->
@@ -177,7 +189,9 @@ msg(LD,Buff,Count,Item) ->
 buff(no,LD,Item) -> send_one(LD,Item),no;
 buff(Buff,_LD,Item) -> [Item|Buff].
 
-maybe_exit(msg_count,{LD,Buff,0}) -> flush(LD,Buff), exit({msg_count});
+maybe_exit(msg_count,{LD,Buff,0}) -> 
+  flush(LD,Buff), 
+  exit(msg_count);
 maybe_exit(msg_queue,#ld{maxqueue=MQ}) ->
   case process_info(self(),message_queue_len) of
     {_,Q} when Q > MQ -> exit({msg_queue,Q});
@@ -193,7 +207,7 @@ maybe_exit(_,_) -> ok.
 send_one(LD,Msg) -> LD#ld.where ! [msg(Msg)].
 
 flush(_,no) -> ok;
-flush(#ld{where=Pid},Buffer) -> Pid ! map(fun msg/1, reverse(Buffer)).
+flush(LD,Buffer) -> LD#ld.where ! map(fun msg/1, reverse(Buffer)).
 
 msg({'send',Pid,TS,{Msg,To}}) ->       {'send',{Msg,pi(To)},pi(Pid),ts(TS)};
 msg({'receive',Pid,TS,Msg}) ->         {'recv',Msg,         pi(Pid),ts(TS)};

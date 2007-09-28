@@ -206,6 +206,4 @@ ftime([{time,T}|_]) -> T;
 ftime([_|T]) -> ftime(T).
 
 check_dir(Dir) ->
-    {ok,#file_info{type=directory, access=read_write}} = 
-        file:read_file_info(Dir).
-
+  {ok,#file_info{type=directory, access=read_write}} = file:read_file_info(Dir).

@@ -66,7 +66,6 @@ loop(LD) ->
       do_stop(LD),
       exit({got_EXIT, Pid, normal});
     {'EXIT',Pid,Reason} ->
-      ?LOG({got_EXIT, Pid, Reason}),
       do_stop(LD),
       exit({got_EXIT, Pid, Reason});
     {subscribe, {ok, Pid}}  ->

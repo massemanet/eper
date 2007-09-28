@@ -76,7 +76,7 @@ go(Time,Msgs,Trc,Cnf) ->
         ok
       catch C:R -> {oops,{C,R}}
       end;
-    _ -> already_started
+    _ -> redbug_already_started
   end.
 
 stop() ->
@@ -86,56 +86,61 @@ stop() ->
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% the main redbug process
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 init() ->
   process_flag(trap_exit,true),
   receive 
     {start,Cnf} -> 
       try 
-        PrintPid = ass_printer(Cnf#cnf.printf),
+        PrintPid = spawn_link(fun()->printi(Cnf#cnf.printf) end),
         Conf = pack(Cnf,PrintPid),
         prf:start(prf_redbug,Cnf#cnf.targ,redbugConsumer),
         prf:config(prf_redbug,collectors,{start,{self(),Conf}}),
-        iloop(PrintPid)
+	starting(PrintPid)
       catch 
         C:R -> ?LOG([{C,R},{stack,erlang:get_stacktrace()}])
       end
-  end.
+  end,
+  exit(exiting).
 
-iloop(PrintPid) ->
+starting(PrintPid) ->
   receive
     {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
-    {prfTrc,{starting,TrcPid}}         -> loop(TrcPid,PrintPid);
-    {prfTrc,{already_started,_TrcPid}} -> ?LOG(already_started);
+    {prfTrc,{starting,TrcPid,ConsPid}} -> running(TrcPid,ConsPid,PrintPid);
+    {prfTrc,{already_started,_}}       -> ?LOG(already_started);
     {'EXIT',PrintPid,R}                -> ?LOG([printer_died,{reason,R}]);
     {'EXIT',R}                         -> ?LOG([exited,{reason,R}]);
     X                                  -> ?LOG([{unknown_message,X}])
   end.
 
-loop(TrcPid,PrintPid) ->
+running(TrcPid,ConsPid,PrintPid) ->
+  PrintPid ! {trace_consumer,ConsPid},
   receive
-    {stop,Args}       -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
-    {prfTrc,{stopping,TrcPid,Args}} -> stop_loop(PrintPid,Args);
-    {'EXIT',TrcPid,R}               -> stop_loop(PrintPid,{tracer_died,R});
+    {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
+    {prfTrc,{stopping,_,Args}}      -> stopping(PrintPid,Args);
+    {'EXIT',TrcPid,R}               -> stopping(PrintPid,R);
     {prfTrc,{not_started,TrcPid}}   -> ?LOG(not_started);
-    {'EXIT',PrintPid,R}             -> ?LOG([printer_died,{reason,R}]);
+    {'EXIT',PrintPid,R}             -> maybe_stopping(R);
     X                               -> ?LOG([{unknown_message,X}])
   end.
 
-stop_loop(PrintPid,Args) ->
-  PrintPid ! {done,self(),stop_msg(Args)},
+maybe_stopping(R) ->
+  ?LOG([printer_died,{reason,R},{pi,process_info(self())}]),
   receive
-    {PrintPid,ok}       -> ok;
-    {'EXIT',PrintPid,R} -> ?LOG([printer_died,{reason,R}]);
-    X                   -> ?LOG([{unknown_message,X}])
+    X -> ?LOG({msg,X})
   end.
 
-stop_msg({timeout}) -> timeout;
-stop_msg({consumer_died,{msg_count}}) -> msg_count;
-stop_msg(X) ->  X.
+stopping(PrintPid,R) ->
+  receive
+    {'EXIT',PrintPid,_} -> ok;
+    X                   -> ?LOG([{unknown_message,X},{reason,R}])
+  end.
 
-ass_printer(PrintF) ->
-  Self = self(),
-  spawn_link(fun()->printi(Self,PrintF) end).
+%%%stop_msg({timeout}) -> timeout;
+%%%stop_msg({consumer_died,{msg_count}}) -> msg_count;
+%%%stop_msg(X) ->  X.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Conf = {time,flags,rtps,procs,where}
@@ -189,26 +194,17 @@ ass_list(L) when is_list(L) -> usort(L);
 ass_list(X) -> [X].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-printi(Pid,PrintF) ->
-  erlang:monitor(process,Pid),
-  printl(PrintF).
+printi(PrintF) ->
+  receive 
+    {trace_consumer,TC} -> 
+      erlang:monitor(process,TC),
+      printl(PrintF)
+  end.
 
 printl(PrintF) ->
   receive
-    {done,Daddy,R}         -> get_out(PrintF,R), Daddy ! {self(),ok};
-    {'DOWN',_Ref,_,Pid,_R} -> get_out(PrintF,{tracer_down,node(Pid)});
-    X                      -> outer(PrintF,X), printl(PrintF)
-  end.
-
-get_out(PrintF,R) -> flush(PrintF), io:fwrite("quitting: ~p~n",[R]).
-
-flush(PrintF) ->
-  receive
-    {done,_,_}       -> flush(PrintF);
-    {'DOWN',_,_,_,_} -> flush(PrintF);
-    X                -> outer(PrintF,X), flush(PrintF)
-  after 
-    0-> ok
+    {'DOWN',_,_,_Pid,R}-> io:fwrite("quitting: ~p~n",[R]);
+    X                  -> outer(PrintF,X), printl(PrintF)
   end.
 
 outer(_,[]) -> ok;

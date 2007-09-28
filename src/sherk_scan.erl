@@ -19,6 +19,26 @@
 -record(state, {seq=0, hits=0, cbs, pattern, out, min, max, eof = false}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%  go(FileName, Patt, CBs, Min, Max)
+%%%  scans a trace file for messages. filters on sequence number and
+%%%  a pattern. if the sequence number is between Min and Max, and the 
+%%%  message matches Patt, the massage is passed to the funs in CBs.
+%%%
+%%%  Filename - string()
+%%%  Patt - list(term(P))|term(P) - all terms P must match the message. 
+%%%    funs, ports, refs and pids ar turned into atoms.
+%%%  CBs - list(function()) -  CB|list(CB)
+%%%  CB - fun(F)|atom(M)|{fun(F),term(Init)}|{atom(M),term(Init)}
+%%%  M - if M is '', the default callback is called. it will write the 
+%%%    trace message to a file (if Init is a string) or the screen. 
+%%%    otherwise, M:go(Msg,Seq,State) is called
+%%%  Msg - the trace message
+%%%  Seq - the trace message sequence number
+%%%  State - the callback functions state 
+%%%  Init - the initial value of State. defaults to 'initial'
+%%%  Min - integer() - min sequence number
+%%%  Max - integer() - max sequence number
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 go(FileName, Patt, CBs, '', Max) -> 
   go(FileName, Patt, CBs, 0, Max);
 go(FileName, _Patt, raw, Min, Max) -> 
@@ -28,7 +48,7 @@ go(FileName, _Patt, raw, Min, Max) ->
   file:close(FD);
 go(FileName, Patt, CBs, Min, Max) ->
   sherk_ets:new(?MODULE),
-  {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
+  {ok, FD} = file:open(FileName, [read,raw,binary,compressed]),
   State = #state{pattern=Patt,cbs=cbs(CBs),min=Min,max=Max},
   St = file_action(FD, State, fun do/2),
   file:close(FD),
@@ -67,11 +87,11 @@ cbs([]) -> [];
 cbs([CB|T]) -> [to_cb(CB)|cbs(T)];
 cbs(Term) -> cbs([Term]).
 
-to_cb('') -> {fun write_msg/3,standard_io};
-to_cb(File) when is_list(File) -> {fun write_msg/3,File};
-to_cb(Mod) when is_atom(Mod) -> to_cb({Mod,initial});
-to_cb(Fun) when is_function(Fun) -> to_cb({Fun,initial});
-to_cb({Mod,Init}) when is_atom(Mod) -> is_cb(Mod),{{Mod,go},Init};
+to_cb('') 				-> to_cb({'',standard_io});
+to_cb(Mod) 	  when is_atom(Mod) 	-> to_cb({Mod,initial});
+to_cb(Fun) 	  when is_function(Fun) -> to_cb({Fun,initial});
+to_cb({'',Out})   			-> {fun write_msg/3,Out};
+to_cb({Mod,Init}) when is_atom(Mod) 	-> is_cb(Mod),{{Mod,go},Init};
 to_cb({Fun,Init}) when is_function(Fun) -> is_cb(Fun),{Fun,Init}.
 
 is_cb(M) when is_atom(M) -> true = member({go,3},M:module_info(exports));
@@ -117,11 +137,11 @@ open(File) -> {ok,FD}=file:open(File,[write]),FD.
 
 grep('',_) -> true;
 grep(P,T) when list(P) ->
-  case grp(P, T) of
+  case grp(P,T) of
     [] -> true;
     _ -> false
   end;
-grep(P, T) -> grep([P], T).
+grep(P,T) -> grep([P],T).
 
 grp([], _) -> [];
 grp(P, []) -> P;

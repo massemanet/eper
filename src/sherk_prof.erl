@@ -18,27 +18,26 @@ go(Msg, Seq, State) 	     -> handler(Msg) ! {msg,Seq,Msg}, State.
 
 init() ->
     ?LOG([{starting,?MODULE}]),
-    sherk_ets:new(?MODULE),
     sherk_ets:new(sherk_prof),
     {start,now()}.
 
 terminate(Seq,{start,Start}) -> 
-    ?LOG([{finishing,?MODULE},
+    ?LOG([{finishing,sherk_prof},
 	  {seq,Seq},
 	  {time,timer:now_diff(now(),Start)/1000000},
-	  {procs,ets:info(?MODULE,size)}]),
+	  {procs,length(ets:match(sherk_prof,{{handler,'$1'},'_'}))}]),
     TermFun = fun({{handler,_},Pid},_) -> Pid ! quit; (_,_) -> ok end,
-    ets:foldl(TermFun,[],?MODULE).
+    ets:foldl(TermFun,[],sherk_prof).
 
 handler({spawn,_,{Pid,_},_,_}) -> assert_handler(Pid);
 handler({_,{Pid,_},_,_}) -> assert_handler(Pid).
 
 assert_handler(Pid) ->
-    case sherk_ets:lup(?MODULE,{handler,Pid}) of
+    case sherk_ets:lup(sherk_prof,{handler,Pid}) of
 	[] -> 
 	    P = spawn_link(fun handler/0),
 	    P ! {pid,Pid},
-	    ets:insert(?MODULE,{{handler,Pid},P}),
+	    ets:insert(sherk_prof,{{handler,Pid},P}),
 	    P;
 	HandlerPid -> 
 	    HandlerPid
@@ -59,6 +58,7 @@ hloop(S) ->
     end.
 
 hand(Tag,Info,TS,S) ->
+  io:fwrite("~p ~p~n~p~n",[Tag,Info,S#s.stack]),
     case {Tag,Info} of
         {out,0}               -> (out(Tag,S,TS))#s{fd=yes};
         {in,0}                -> in(Tag,S#s{fd=no},TS);

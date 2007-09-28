@@ -158,9 +158,13 @@ pi(P) when pid(P) ->
     undefined -> dead
   end;
 pi(P) when port(P) -> 
-  {name,N} = erlang:port_info(P,name),
-  [Hd|_] = string:tokens(N," "),
-  reverse(hd(string:tokens(reverse(Hd),"/")));
+  case erlang:port_info(P,name) of
+    {name,N} -> 
+      [Hd|_] = string:tokens(N," "),
+      reverse(hd(string:tokens(reverse(Hd),"/")));
+    undefined -> 
+      "dead"
+  end;
 pi(R) when atom(R) -> R;
 pi({R,Node}) when atom(R), Node == node() -> R;
 pi({R, Node}) when atom(R), atom(Node) -> {R, Node}.
