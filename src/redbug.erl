@@ -119,23 +119,24 @@ running(TrcPid,ConsPid,PrintPid) ->
   PrintPid ! {trace_consumer,ConsPid},
   receive
     {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
-    {prfTrc,{stopping,_,Args}}      -> stopping(PrintPid,Args);
-    {'EXIT',TrcPid,R}               -> stopping(PrintPid,R);
-    {prfTrc,{not_started,TrcPid}}   -> ?LOG(not_started);
-    {'EXIT',PrintPid,R}             -> maybe_stopping(R);
-    X                               -> ?LOG([{unknown_message,X}])
+    {prfTrc,{stopping,_,_}}       -> stopping(PrintPid);
+    {'EXIT',TrcPid,_}             -> stopping(PrintPid);
+    {prfTrc,{not_started,TrcPid}} -> ?LOG(not_started);
+    {'EXIT',PrintPid,_}           -> maybe_stopping(TrcPid);
+    X                             -> ?LOG([{unknown_message,X}])
   end.
 
-maybe_stopping(R) ->
-  ?LOG([printer_died,{reason,R},{pi,process_info(self())}]),
+maybe_stopping(TrcPid) ->
   receive
-    X -> ?LOG({msg,X})
+    {prfTrc,{stopping,_,_}} -> ok;
+    {'EXIT',TrcPid,_}       -> ok;
+    X -> ?LOG({unknown_message,X})
   end.
 
-stopping(PrintPid,R) ->
+stopping(PrintPid) ->
   receive
     {'EXIT',PrintPid,_} -> ok;
-    X                   -> ?LOG([{unknown_message,X},{reason,R}])
+    X                   -> ?LOG([{unknown_message,X}])
   end.
 
 %%%stop_msg({timeout}) -> timeout;
