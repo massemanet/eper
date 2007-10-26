@@ -45,8 +45,10 @@ assert(Reg) ->
 %% trace control process
 %%% LD = idle | {host_pid,timer,consumer,conf}
 %%% Conf = {time,flags,rtps,procs,where}
-%%% Where = {term_buffer,Pid,Count} | {term_stream,Pid,Count} |
-%%%         {file,File,Size} | {ip,Port,Queue}
+%%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} | 
+%%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
+%%%         {file,File,Size} | 
+%%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init() ->
   process_flag(trap_exit,true),
@@ -74,7 +76,7 @@ active(LD) ->
 wait_for_local(Cons) when is_pid(Cons) ->
   receive 
     {'EXIT',Cons,_} -> ?IDLE();
-    X               -> ?LOG({weird_in,X}), ?WAIT_FOR_LOCAL() 
+    X               -> ?LOG({weird_in,X}), ?WAIT_FOR_LOCAL(Cons)
   end;
 wait_for_local(_) -> 
   ?IDLE().
@@ -104,18 +106,22 @@ start_trace(HostPid,Conf) ->
   from_list([{host_pid,HostPid},{consumer,Cons},{conf,Conf}]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-consumer({term_buffer,Pid,Count},Time) -> consumer_pid(Pid,Count,yes,Time);
-consumer({term_stream,Pid,Count},Time) -> consumer_pid(Pid,Count,no,Time);
+consumer({term_buffer,Term},Time) -> consumer_pid(Term,yes,Time);
+consumer({term_stream,Term},Time) -> consumer_pid(Term,no,Time);
 consumer({file,File,Size},_) -> consumer_file(File,Size);
 consumer({ip,Port,Queue},_) -> consumer_ip(Port,Queue).
 
 consumer_stop(Pid) when is_pid(Pid) -> Pid ! stop;
 consumer_stop(_Port) when is_port(_Port) -> dbg:flush_trace_port().
 
-consumer_pid(Pid,Cnt,Buf,Time) ->
-  Conf = from_list([{daddy,self()},{count,Cnt},{time,Time},
-                    {maxsize,50000},{maxqueue,100},
-                    {where,Pid},{buffering,Buf}]),
+consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Time) ->
+  Conf = from_list([{daddy,self()},
+		    {count,Cnt},
+		    {time,Time},
+                    {maxsize,MaxSize},
+		    {maxqueue,MaxQueue},
+                    {where,Pid},
+		    {buffering,Buf}]),
   spawn_link(fun() -> init_local(Conf) end).
 
 consumer_file(File,Size) ->

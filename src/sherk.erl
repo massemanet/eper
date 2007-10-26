@@ -334,7 +334,7 @@ update_targs(Ts,LD) ->
 
 proc_flags(Nodes) ->
   ['procs','running','garbage_collection',
-   'timestamp',timestamp(Nodes),'set_on_spawn'].
+   timestamp(Nodes),'set_on_spawn'].
 
 call_flags(Nodes) ->
   ['call','return_to','arity'|proc_flags(Nodes)].
@@ -346,7 +346,10 @@ timestamp(Nodes) ->
   end.
 
 flag_broken(Node,Flag) ->
-  is_tuple(rpc:call(Node,erlang,trace,[all,false,[Flag]])).
+  case is_tuple(rpc:call(Node,erlang,trace,[all,true,[Flag]])) of
+    true -> true;
+    false-> rpc:call(Node,erlang,trace,[all,false,[Flag]]),false
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 procs(LD) ->

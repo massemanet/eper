@@ -20,10 +20,15 @@
 %% sensible defaults;
 %% Proc = all
 %% Targ = node()
-%% Buffered = yes
+%% Buffered = no
 %% PrintF = print_fun()
 -record(cnf,{time,msgs,trc,
-             proc=all,targ=node(),buffered=yes,printf=print_fun()}).
+             proc=all,
+	     targ=node(),
+	     buffered=no,
+	     printf=print_fun(),
+	     max_queue=5000,
+	     max_msg_size=50000}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -118,7 +123,8 @@ starting(PrintPid) ->
 running(TrcPid,ConsPid,PrintPid) ->
   PrintPid ! {trace_consumer,ConsPid},
   receive
-    {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
+    {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}}),
+		   stopping(PrintPid);
     {prfTrc,{stopping,_,_}}       -> stopping(PrintPid);
     {'EXIT',TrcPid,_}             -> stopping(PrintPid);
     {prfTrc,{not_started,TrcPid}} -> ?LOG(not_started);
@@ -130,7 +136,7 @@ maybe_stopping(TrcPid) ->
   receive
     {prfTrc,{stopping,_,_}} -> ok;
     {'EXIT',TrcPid,_}       -> ok;
-    X -> ?LOG({unknown_message,X})
+    X                       -> ?LOG({unknown_message,X})
   end.
 
 stopping(PrintPid) ->
@@ -139,14 +145,12 @@ stopping(PrintPid) ->
     X                   -> ?LOG([{unknown_message,X}])
   end.
 
-%%%stop_msg({timeout}) -> timeout;
-%%%stop_msg({consumer_died,{msg_count}}) -> msg_count;
-%%%stop_msg(X) ->  X.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Conf = {time,flags,rtps,procs,where}
-%%% Where = {term_buffer,Pid,Count} | {term_stream,Pid,Count} |
-%%%         {file,File,Size} | {ip,Port,Queue}
+%%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} | 
+%%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
+%%%         {file,File,Size} | 
+%%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pack(Cnf,PrintPid) ->
   {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},ass_list(Cnf#cnf.trc)),
@@ -155,8 +159,10 @@ pack(Cnf,PrintPid) ->
                   {rtps,RTPs},
                   {procs,chk_proc(Cnf#cnf.proc)},
                   {where,{chk_buffered(Cnf#cnf.buffered),
-                          PrintPid,
-                          chk_msgs(Cnf#cnf.msgs)}}]).
+                          {PrintPid,
+			   chk_msgs(Cnf#cnf.msgs),
+			   Cnf#cnf.max_queue,
+			   Cnf#cnf.max_msg_size}}}]).
 
 chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> exit({bad_time,X}).
