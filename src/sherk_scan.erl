@@ -173,7 +173,7 @@ raw(Mess,State) ->
 raw_out(Mess, State = #state{seq=Seq}) ->
   case {State#state.min < Seq, Seq < State#state.max} of
     {true,true} ->
-      io:fwrite("~w - ~w~n",[Seq,Mess]),
+      %%io:fwrite("~w - ~w~n",[Seq,Mess]),
       State#state{seq=Seq+1};
     {true,false} ->
       State#state{eof=true};
