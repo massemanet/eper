@@ -69,6 +69,7 @@ loop(LD) ->
       do_stop(LD),
       exit({got_EXIT, Pid, Reason});
     {subscribe, {ok, Pid}}  ->
+      link(Pid),
       [Pid ! {config,Data} || Data <- LD#ld.config],
       ?LOOP(LD#ld{server = Pid,config=[]});
     {subscribe, {failed, R}} ->
@@ -107,7 +108,7 @@ subscribe(Node, Collectors) ->
             %% this runs in its own process since it can block 
             %% nettick_time seconds (if the target is hung)
             try prfTarg:subscribe(Node, Self, Collectors) of
-                {Pid,Tick} -> 
+              {Pid,Tick} -> 
                 net_kernel:set_net_ticktime(Tick),
                 Self ! {subscribe, {ok, Pid}}
             catch
