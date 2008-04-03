@@ -60,6 +60,10 @@ while [ -n "$1" ]
       "-nocookie")
 	  cookie=""
 	  ;;
+      "-pa")
+	   XTRA="-pa $2 $XTRA"
+	   shift
+	   ;;
       "-*")
           echo dollar_one $1
           ;;
@@ -74,4 +78,4 @@ name="gperf_"$$
 FLAGS="$detach -boot start_sasl -sasl errlog_type error +A16"
 DISTR="-hidden -sname $name $cookie $nettick"
 
-$WIN erl $VSN $FLAGS $DISTR $PATHS $START "$XTRA" $HALT
+$WIN erl $VSN $FLAGS $DISTR $PATHS $START $XTRA $HALT
