@@ -15,7 +15,7 @@
 
 -import(lists,[foldl/3,usort/1,reverse/1,foreach/2,flatten/1]).
 
--define(LOG(T), prf:log(process_info(self()),T)).
+-include("log.hrl").
 
 %% sensible defaults;
 %% Proc = all
@@ -105,7 +105,7 @@ init() ->
         prf:config(prf_redbug,collectors,{start,{self(),Conf}}),
 	starting(PrintPid)
       catch 
-        C:R -> ?LOG([{C,R},{stack,erlang:get_stacktrace()}])
+        C:R -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
       end
   end,
   exit(exiting).
@@ -114,10 +114,10 @@ starting(PrintPid) ->
   receive
     {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
     {prfTrc,{starting,TrcPid,ConsPid}} -> running(TrcPid,ConsPid,PrintPid);
-    {prfTrc,{already_started,_}}       -> ?LOG(already_started);
-    {'EXIT',PrintPid,R}                -> ?LOG([printer_died,{reason,R}]);
-    {'EXIT',R}                         -> ?LOG([exited,{reason,R}]);
-    X                                  -> ?LOG([{unknown_message,X}])
+    {prfTrc,{already_started,_}}       -> ?log(already_started);
+    {'EXIT',PrintPid,R}                -> ?log([printer_died,{reason,R}]);
+    {'EXIT',R}                         -> ?log([exited,{reason,R}]);
+    X                                  -> ?log([{unknown_message,X}])
   end.
 
 running(TrcPid,ConsPid,PrintPid) ->
@@ -127,22 +127,22 @@ running(TrcPid,ConsPid,PrintPid) ->
 		   stopping(PrintPid);
     {prfTrc,{stopping,_,_}}       -> stopping(PrintPid);
     {'EXIT',TrcPid,_}             -> stopping(PrintPid);
-    {prfTrc,{not_started,TrcPid}} -> ?LOG(not_started);
+    {prfTrc,{not_started,TrcPid}} -> ?log(not_started);
     {'EXIT',PrintPid,_}           -> maybe_stopping(TrcPid);
-    X                             -> ?LOG([{unknown_message,X}])
+    X                             -> ?log([{unknown_message,X}])
   end.
 
 maybe_stopping(TrcPid) ->
   receive
     {prfTrc,{stopping,_,_}} -> ok;
     {'EXIT',TrcPid,_}       -> ok;
-    X                       -> ?LOG({unknown_message,X})
+    X                       -> ?log({unknown_message,X})
   end.
 
 stopping(PrintPid) ->
   receive
     {'EXIT',PrintPid,_} -> ok;
-    X                   -> ?LOG([{unknown_message,X}])
+    X                   -> ?log([{unknown_message,X}])
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

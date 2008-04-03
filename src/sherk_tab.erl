@@ -22,32 +22,32 @@ assert(File) ->
     {ok,#file_info{mtime=TabMT}} when MT < TabMT -> 
       %% the tab file exists and is up-to-date
       case sherk_ets:lup(sherk_prof, file) of
-        File -> ?LOG({is_cached,TabFile});
+        File -> ?log({is_cached,TabFile});
         _ -> 
-          ?LOG(restoring_tab),
+          ?log(restoring_tab),
           try sherk_ets:f2t(TabFile)
           catch 
             _:X -> 
-              ?LOG({deleting_bad_tab_file,X}),
+              ?log({deleting_bad_tab_file,X}),
               file:delete(TabFile),
               assert(File)
           end
       end;
     _ -> 
       %% make tab and save it
-      ?LOG([creating_tab]),
+      ?log([creating_tab]),
       sherk_scan:go(File,'',sherk_prof,0,''),
       ets:insert(sherk_prof, {file, File}),
       try 
-        ?LOG(storing_tab),
+        ?log(storing_tab),
         sherk_ets:t2f([sherk_prof,sherk_scan],TabFile)
       catch 
-        _:_ -> ?LOG({creation_failed,TabFile})
+        _:_ -> ?log({creation_failed,TabFile})
       end
   end,
-  ?LOG([folding_pids]),
+  ?log([folding_pids]),
   ets:foldl(fun store_pid/2, [], sherk_prof),
-  ?LOG([done]).
+  ?log([done]).
 
 store_pid({{{pid,time},P},_},_) -> ets:insert(sherk_prof,{sherk:to_str(P),P});
 store_pid(_,_) -> ok.

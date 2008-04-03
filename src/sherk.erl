@@ -22,7 +22,8 @@
 -import(lists,[foreach/2,member/2,flatten/1,usort/1,foldl/3]).
 -import(dict,[from_list/1,to_list/1,fetch/2,store/3,new/0,append/3]).
 
--define(LOG(T), sherk:log(process_info(self()),T)).
+-include("log.hrl").
+
 -define(LOOP(X), ?MODULE:loop(X)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -135,11 +136,11 @@ loop(LD) ->
     {'DOWN',TargMon,_,_,Info}            -> ?LOOP(chk_targs(LD,Info));
 
     %% user doing some wierd stuff
-    X                                    -> ?LOG([{received,X}]),?LOOP(LD)
+    X                                    -> ?log([{received,X}]),?LOOP(LD)
   end.
 
 show_ld(LD) ->
-  ?LOG(to_list(LD)),
+  ?log(to_list(LD)),
   LD.
 
 check_file() ->
@@ -204,7 +205,7 @@ aq_go(LD) ->
   Flags = aq_get_flags(Targs),
   RTPs = aq_get_rtps(Flags),
   Dest = {file,aq_get_dest(),0,"/tmp"},
-  ?LOG([{time,Time},
+  ?log([{time,Time},
 	{flags,Flags},
 	{rTPs,RTPs},
 	{procs,Procs},
@@ -223,7 +224,7 @@ aq_stop_wait(Monitor) ->
   end.
 
 do_aq_stop(LD,Reason) -> 
-  ?LOG([{aquire_finshed,Reason}]),
+  ?log([{aquire_finshed,Reason}]),
   g('Gtk_widget_set_sensitive',[aq_radiobutton_call,true]),
   g('Gtk_widget_set_sensitive',[aq_radiobutton_proc,true]),
   g('Gtk_widget_set_sensitive',[aq_filechoose,true]),
@@ -284,7 +285,7 @@ query_targs(Proxy) ->
   sherk_aquire:ass_loaded(Proxy,sherk_target),
   erlang:monitor(process,spawn(Proxy,sherk_target,get_nodes,[])).
 
-chk_targs(LD,Atom) when is_atom(Atom) -> ?LOG({no_proxy,Atom}),LD;
+chk_targs(LD,Atom) when is_atom(Atom) -> ?log({no_proxy,Atom}),LD;
 chk_targs(LD,{Pid,Nodes,EpmdStr}) when is_pid(Pid) ->
   try
     erlang:start_timer(5000,self(),re_query),
@@ -297,7 +298,7 @@ chk_targs(LD,{Pid,Nodes,EpmdStr}) when is_pid(Pid) ->
     Targs = usort(Nodes++EpmdTargs)--[node()],
     foldl(fun new_target/2, LD, (Targs--OldTargs)--BadTargs)
   catch 
-    _:R -> ?LOG([{r,R},{pid,Pid},{nodes,Nodes},{epmd,EpmdStr}]),LD
+    _:R -> ?log([{r,R},{pid,Pid},{nodes,Nodes},{epmd,EpmdStr}]),LD
   end.
 
 downed_target(Node,LD) ->
@@ -326,7 +327,7 @@ new_target(Node,Ts,LD) ->
   update_targs([Node|Ts], LD).
 
 wierd(UpDown,Node,Ts,BTs) ->
-  ?LOG([{node_came,UpDown},{node,Node},{targs,Ts},{bad_targs,BTs}]).
+  ?log([{node_came,UpDown},{node,Node},{targs,Ts},{bad_targs,BTs}]).
 
 update_targs(Ts,LD) ->
   update_treeview_list(aq_treeview,[[to_str(T)]||T<-Ts]),

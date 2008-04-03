@@ -16,7 +16,8 @@
 -record(st, {collectors=new()}).
 -record(collector, {subscribers=[],state=init}).
 
--define(LOG(T), prf:log(process_info(self()),T)).
+-include("log.hrl").
+
 %%% interface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 subscribe(Node, Pid, Collectors) -> 
   {PID,Tick} = assert(Node,Collectors),
@@ -109,7 +110,7 @@ loop(St) ->
       ?MODULE:loop(config(St,Data));
     dbg ->
       F = fun(M,#collector{subscribers=S},A) -> [{mod,M},{subsc,S}|A] end,
-      ?LOG([{pid,self()} | fold(F,[],St#st.collectors)]),
+      ?log([{pid,self()} | fold(F,[],St#st.collectors)]),
       ?MODULE:loop(St);
     stop -> 
       ok

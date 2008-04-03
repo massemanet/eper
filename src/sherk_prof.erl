@@ -17,12 +17,12 @@ go(end_of_trace, Seq, State) -> terminate(Seq,State), State;
 go(Msg, Seq, State) 	     -> handler(Msg) ! {msg,Seq,Msg}, State.
 
 init() ->
-  ?LOG([{starting,?MODULE}]),
+  ?log([{starting,?MODULE}]),
   sherk_ets:new(sherk_prof),
   {start,now()}.
 
 terminate(Seq,{start,Start}) -> 
-  ?LOG([{finishing,sherk_prof},
+  ?log([{finishing,sherk_prof},
 	{seq,Seq},
 	{time,timer:now_diff(now(),Start)/1000000},
 	{procs,length(ets:match(sherk_prof,{{handler,'$1'},'_'}))}]),
@@ -81,12 +81,12 @@ out(Tag,S,TS) ->
   upd({{pid,sched},S#s.pid,Tag}),
   case is_running(S) of
     false ->
-      ?LOG([not_running,{tag,Tag},{state,S}]),
+      ?log([not_running,{tag,Tag},{state,S}]),
       S;
     true -> 
       case S#s.ts of
 	undefined -> 
-	  ?LOG([no_time,{state,S}]);
+	  ?log([no_time,{state,S}]);
 	_ -> 
 	  T = timer:now_diff(TS,S#s.ts),
 	  MFA = hd(S#s.stack),
@@ -104,7 +104,7 @@ in(Tag,S,TS) ->
   upd({{total,sched},Tag}),
   upd({{pid,sched},S#s.pid,Tag}),
   case is_running(S) of
-    false -> ?LOG([not_running,{tag,Tag},{state,S}]),S;
+    false -> ?log([not_running,{tag,Tag},{state,S}]),S;
     true ->  S#s{ts=TS}
   end.
 
@@ -135,7 +135,7 @@ push_stack(MFA,S) ->
 pop_stack(MFA,S) ->
   case member(MFA,S#s.stack) of
     false ->
-      ?LOG([dropped_headless_stack,{mfa,MFA},{state,S}]),
+      ?log([dropped_headless_stack,{mfa,MFA},{state,S}]),
       erase_bad_stack(S),
       S#s{stack=[MFA]};
     true ->

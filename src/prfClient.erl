@@ -10,11 +10,11 @@
 -export([init/1, terminate/1, tick/2, collectors/0,config/2]).
 -record(cld, {node}).
 
--define(LOG(T), prf:log(process_info(self()),T)).
+-include("log.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 collectors() -> [prfPrc].
 init(Node) -> #cld{node = Node}.
 terminate(_LD) -> ok.
 tick(LD, Data) -> io:fwrite("~w~n~p~n",[LD,Data]), LD.
-config(LD,_Data) -> ?LOG({loopdata,LD}), LD.
+config(LD,_Data) -> ?log({loopdata,LD}), LD.

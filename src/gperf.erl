@@ -1,6 +1,5 @@
 -module(gperf).
 -export([ni/1,start/1,start/0,log/2]).
--define(LOG(T), gperf:log(process_info(self()),T)).
 
 ni(Args) -> self() ! {args, Args}, gperfGtk:init().
 

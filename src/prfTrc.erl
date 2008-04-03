@@ -18,7 +18,7 @@
 -define(IDLE, ?MODULE:idle).
 -define(WAIT_FOR_LOCAL, ?MODULE:wait_for_local).
 
--define(LOG(T), prf:log(process_info(self()),T)).
+-include("log.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% prfTarg process
@@ -27,7 +27,7 @@ collect(LD) -> {LD, {?MODULE, {tick,now()}}}.
 
 config(LD,{start,Conf}) -> start(Conf),LD;
 config(LD,{stop,Args}) -> stop(Args),LD;
-config(LD,Data) -> ?LOG([unknown,{data,Data}]), LD.
+config(LD,Data) -> ?log([unknown,{data,Data}]), LD.
 
 start(Conf) ->
   assert(prfTrc) ! {start, Conf}.
@@ -58,7 +58,7 @@ idle() ->
   receive
     {start,{HostPid,Conf}} -> ?ACTIVE(start_trace(HostPid,Conf));
     {stop,{HostPid,_}} -> HostPid ! {prfTrc,{not_started,self()}}, ?IDLE();
-    X -> ?LOG({weird_in,X}), ?IDLE()
+    X -> ?log({weird_in,X}), ?IDLE()
   end.
 
 active(LD) ->
@@ -70,13 +70,13 @@ active(LD) ->
     {'EXIT',HostPid,_} -> remote_stop(Cons, LD),?WAIT_FOR_LOCAL(Cons);
     {local_stop,R}     -> local_stop(HostPid, LD, R),?WAIT_FOR_LOCAL(Cons);
     {'EXIT',Cons,R}    -> local_stop(HostPid, LD, R),?IDLE();
-    X                  -> ?LOG({weird_in,X}), ?ACTIVE(LD) 
+    X                  -> ?log({weird_in,X}), ?ACTIVE(LD) 
   end.
 
 wait_for_local(Cons) when is_pid(Cons) ->
   receive 
     {'EXIT',Cons,_} -> ?IDLE();
-    X               -> ?LOG({weird_in,X}), ?WAIT_FOR_LOCAL(Cons)
+    X               -> ?log({weird_in,X}), ?WAIT_FOR_LOCAL(Cons)
   end;
 wait_for_local(_) -> 
   ?IDLE().

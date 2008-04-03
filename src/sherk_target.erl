@@ -179,7 +179,7 @@ self_register(Name) ->
 send2port(Port, Bin) when port(Port), binary(Bin) ->
   erlang:port_command(Port, Bin);
 send2port(Port, Bin) when binary(Bin) ->
-  ?LOG({bad_port, {Port}});
+  ?log({bad_port, {Port}});
 send2port(Port, Term) ->
   send2port(Port, term_to_binary(Term)).
 

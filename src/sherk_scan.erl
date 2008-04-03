@@ -218,7 +218,7 @@ mass({trace, A, B, C}) -> mass(A, B, C, no_time);
 mass({trace, A, B, C, D}) -> mass(A, B, {C, D}, no_time);
 mass({trace_ts, A, B, C, TS}) -> mass(A ,B, C, TS);
 mass({trace_ts, A, B, C, D, TS}) -> mass(A, B, {C, D}, TS);
-mass(X) -> ?LOG({unrec_msg, X}), [].
+mass(X) -> ?log({unrec_msg, X}), [].
 
 mass(Pid, T=send, X, TS) ->                         mass_send(Pid,T,X,TS);
 mass(Pid, T=send_to_non_existing_process, X,TS) ->  mass_send(Pid,T,X,TS);
@@ -285,7 +285,7 @@ ins({Pid,{M,F,A}}) when is_integer(A) -> ets_ins({Pid,{M,F,A}});
 ins({Pid,Fun}) when is_function(Fun) -> ets_ins({Pid,funi(Fun)});
 ins({Pid,{M,F,As}}) when is_list(As) -> ets_ins({Pid,mangle_ic({M,F,As})}).
 
-del(Reg) when is_atom(Reg) -> ?LOG({unregistered,Reg}),ets_del(Reg).
+del(Reg) when is_atom(Reg) -> ?log({unregistered,Reg}),ets_del(Reg).
 
 mangle_ic(MFA) ->
   case MFA of

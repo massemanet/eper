@@ -13,11 +13,10 @@
 -export([ass_loaded/2]).
 
 -include_lib("kernel/include/file.hrl").
+-include("log.hrl").
 
 -import(dict,[from_list/1,fetch/2,store/3]).
 -import(lists,[foldl/3,map/2,member/2]).
-
--define(LOG(T), sherk:log(process_info(self()),T)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% the API
@@ -118,14 +117,14 @@ init() ->
 loop(LD) ->
     receive
 	{timeout,_,{die}} -> 
-	    ?LOG({timed_out}),
+	    ?log({timed_out}),
 	    stop(LD);
 	stop -> 
 	    stop(LD);
 	{'EXIT',P,R} -> 
-	    ?LOG([got_exit,{from,node(P)},{reason,R}]),
+	    ?log([got_exit,{from,node(P)},{reason,R}]),
 	    case fetch(pids,LD) of
-		[P] -> ?LOG(all_clients_dead);
+		[P] -> ?log(all_clients_dead);
 		Ps -> loop(store(pids,Ps--[P],LD))
 	    end
     end.
@@ -140,7 +139,7 @@ recv(Pids,{file,{Dir,_,_}},FDs) -> recv(Pids,Dir,FDs);
 recv([],_,FDs) -> 
     case dict:fold(fun(P,_,A)->[node(P)|A] end,[],FDs) of
 	[] -> ok;
-	X -> ?LOG({fds_still_open,X})
+	X -> ?log({fds_still_open,X})
     end;
 recv(Pids,Dir,FDs) ->
     receive
@@ -160,7 +159,7 @@ stuff(P,B,Dir,FDs) ->
 	    File = filename:join(Dir,node(P))++".trz",
 	    filelib:ensure_dir(File),
 	    {ok,FD} = file:open(File,[raw,write,compressed]),
-	    ?LOG({opened,File}),
+	    ?log({opened,File}),
 	    stuff(P,B,Dir,store(P,FD,FDs))
     end.
 
@@ -174,7 +173,7 @@ close(P,FDs) ->
     end.
 
 bye(P,R,Pids) ->
-    ?LOG([{client_finished,node(P)},{reason,R}]),
+    ?log([{client_finished,node(P)},{reason,R}]),
     Pids--[P].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

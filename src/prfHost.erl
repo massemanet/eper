@@ -14,7 +14,9 @@
              consumer, consumer_data, data=[]}).
 
 -define(LOOP, ?MODULE:loop).
--define(LOG(T), prf:log(process_info(self()),T)).
+
+-include("log.hrl").
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 start(Name, Node, Consumer) when atom(Name), atom(Node), atom(Consumer) -> 
@@ -46,7 +48,7 @@ init(Node, Consumer) ->
 loop(LD) ->
   receive
     {Stopper,stop} -> 
-      ?LOG(stopping),
+      ?log(stopping),
       do_stop(LD),
       Stopper ! stopped;
     {timeout, _, {tick}} when LD#ld.server == [] -> 
@@ -60,7 +62,7 @@ loop(LD) ->
       Cdata = (NLD#ld.consumer):tick(NLD#ld.consumer_data, Data),
       ?LOOP(NLD#ld{consumer_data = Cdata});
     {'EXIT',Pid,Reason} when Pid == LD#ld.server ->
-      ?LOG({lost_target, Reason}),
+      ?log({lost_target, Reason}),
       ?LOOP(LD#ld{server=[]});
     {'EXIT',Pid,normal} ->
       do_stop(LD),
@@ -73,7 +75,7 @@ loop(LD) ->
       [Pid ! {config,Data} || Data <- LD#ld.config],
       ?LOOP(LD#ld{server = Pid,config=[]});
     {subscribe, {failed, R}} ->
-      ?LOG({subscribe, {failed, R}}),
+      ?log({subscribe, {failed, R}}),
       ?LOOP(LD);
     {config,{consumer, Data}} ->
       Cdata = (LD#ld.consumer):config(LD#ld.consumer_data, Data),

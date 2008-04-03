@@ -1,11 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% File    : gperfFoo.erl
+%%% File    : gperfGtk.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
 %%% Description : 
 %%%
 %%% Created : 12 Sep 2005 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
 -module(gperfGtk).
+
+-include("log.hrl").
 
 -export([start/0,stop/0,init/0]).
 -export([loop/1]).				%internal export
@@ -26,8 +28,6 @@
 		 {drawingarea2,[black,blue,red,yellow]},
 		 {drawingarea3,[red,green]}]).
 
--define(LOG(T), gperf:log(process_info(self()),T)).
-
 -record(dArea, {win,px_fg,px_bg,gc_fg,gc_bg,gcs,layout}).
 -record(conf, {widget, val, type}).
 -record(ld, {conf=conf(),minute,x=?XHALF,dAreas=[],state=disc,stat_ctxt}).
@@ -44,7 +44,7 @@ init() ->
     try loop(do_init(#ld{}))
     catch
         _:dying -> ok;
-          _:R -> ?LOG([{error,R},{stack,erlang:get_stacktrace()}])
+          _:R -> ?log([{error,R},{stack,erlang:get_stacktrace()}])
     end.
 
 glade_file() -> join([code:priv_dir(eper),glade,"gperf.glade"]).
