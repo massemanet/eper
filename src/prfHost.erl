@@ -111,10 +111,13 @@ subscribe(Node, Collectors) ->
             %% nettick_time seconds (if the target is hung)
             try prfTarg:subscribe(Node, Self, Collectors) of
               {Pid,Tick} -> 
-                net_kernel:set_net_ticktime(Tick),
+		maybe_change_ticktime(Tick),
                 Self ! {subscribe, {ok, Pid}}
             catch
               _:R -> Self ! {subscribe, {failed,R}}
             end 
         end),
   Collectors.
+
+maybe_change_ticktime(ignored) -> ok;
+maybe_change_ticktime(Tick) -> net_kernel:set_net_ticktime(Tick).

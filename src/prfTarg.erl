@@ -1,8 +1,5 @@
+%% -*- erlang-indent-level: 2 -*-
 %%%-------------------------------------------------------------------
-%%% File    : prfTarg.erl
-%%% Author  : Mats Cronqvist <qthmacr@duna283>
-%%% Description : 
-%%%
 %%% Created :  1 Dec 2003 by Mats Cronqvist <qthmacr@duna283>
 %%%-------------------------------------------------------------------
 -module(prfTarg).
@@ -35,6 +32,7 @@ assert(Node,Collectors) ->
 assert_loaded(Node, Collectors) ->
   lists:foreach(fun(M) -> ass_loaded(Node,M) end, [prf,?MODULE|Collectors]).
 
+ass_loaded(nonode@nohost, Mod) -> {module,Mod}=c:l(Mod);
 ass_loaded(Node, Mod) ->
   case rpc:call(Node,Mod,module_info,[compile]) of
     {badrpc,{'EXIT',{undef,_}}} -> 		%no code
@@ -62,18 +60,22 @@ ftime([]) -> interpreted;
 ftime([{time,T}|_]) -> T;
 ftime([_|T]) -> ftime(T).
 
+assert_started(nonode@nohost) -> 
+  starter(spawn(?MODULE, init, []));
 assert_started(Node) ->
   case net_adm:ping(Node) of
     pang->
       exit(node_down);
     pong ->
-      Pid = spawn(Node, ?MODULE, init, []),
-      Ref = erlang:monitor(process,Pid),
-      Pid ! {start,self()},
-      receive 
-	{ack, Pid, Tick} -> erlang:demonitor(Ref), {Pid,Tick};
-	{'DOWN', Ref, process, Pid, {use_me, PID,Tick}} -> {PID,Tick}
-      end
+      starter(spawn(Node, ?MODULE, init, []))
+  end.
+
+starter(Pid) ->
+  Ref = erlang:monitor(process,Pid),
+  Pid ! {start,self()},
+  receive 
+    {ack, Pid, Tick} -> erlang:demonitor(Ref), {Pid,Tick};
+    {'DOWN', Ref, process, Pid, {use_me, PID,Tick}} -> {PID,Tick}
   end.
 
 %%% runs on target %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
