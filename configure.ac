@@ -1,5 +1,5 @@
-AC_INIT(Various Erlang performance related tools, 0.38, 
-             mats.cronqvist@ericsson.com, eper)
+AC_INIT(Various Erlang performance related tools, 0.40, 
+             mats(at)cronqvi.st, eper)
 dnl Require autoconf version >=2.59c. first one with erlang macros
 AC_PREREQ(2.59c)
 AC_COPYRIGHT(Copyright (C) 2006 Mats Cronqvist)
