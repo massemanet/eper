@@ -13,7 +13,7 @@
 -import(dict,[fetch/2,store/3]).
 -import(lists,[foreach/2,reverse/1]).
 
--define(LOG(T), sherk:log(process_info(self()),T)).
+-include("log.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%  the control process

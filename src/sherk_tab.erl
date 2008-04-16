@@ -13,7 +13,7 @@
 
 -include_lib("kernel/include/file.hrl").
 
--define(LOG(T), sherk:log(process_info(self()),T)).
+-include("log.hrl").
 
 assert(File) ->
   TabFile = dirname(File)++"/."++basename(File,".trz")++".etz",

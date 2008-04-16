@@ -10,7 +10,7 @@
 -export([go/3]).
 -import(lists,[dropwhile/2,member/2,prefix/2]).
 
--define(LOG(T), sherk:log(process_info(self()),T)).
+-include("log.hrl").
 
 go(Msg, Seq, initial) 	     -> go(Msg, Seq, init());
 go(end_of_trace, Seq, State) -> terminate(Seq,State), State;

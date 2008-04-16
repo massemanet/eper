@@ -39,19 +39,19 @@ callgraph(Pid) ->
 sortpf(L) -> 
     sort(fun({_,[_,_,_,T1],_},{_,[_,_,_,T2],_}) -> T2<T1 end,L).
 
-procsf(Tot,Pid,[Garb,Time],[]) when is_pid(Pid) -> 
+procsf(_Tot,Pid,[Garb,Time],[]) when is_pid(Pid) -> 
     [to_str(Pid),1,Garb,Time];
-procsf(Tot,_Rg,[Garb,Time],[Tag,N,G,T]) -> 
+procsf(_Tot,_Rg,[Garb,Time],[Tag,N,G,T]) -> 
     [Tag,N+1,G+Garb,T+Time];
-procsf(Tot,Reg,[Garb,Time],[]) -> 
+procsf(_Tot,Reg,[Garb,Time],[]) -> 
     [to_str(Reg),1,Garb,Time].
 
 sortgf(L) -> 
     sort(fun({_,[_,_,_,CT1],_},{_,[_,_,_,CT2],_}) -> CT2<CT1 end, L).
 
-graphf(Tot,MFA,{Time,Calls},[]) -> 
+graphf(_Tot,MFA,{Time,Calls},[]) -> 
     [to_str(MFA),Calls,Time,Time];
-graphf(Tot,_,{Time,_},[Tag,Calls,T,CT]) -> 
+graphf(_Tot,_,{Time,_},[Tag,Calls,T,CT]) -> 
     [Tag,Calls,T,CT+Time].
 
 called(Pid,Stak) ->

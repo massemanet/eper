@@ -14,7 +14,7 @@
 
 -import(lists,[member/2,reverse/1,keysearch/3,map/2,foreach/2]).
 
--define(LOG(T), sherk:log(process_info(self()),T)).
+-include("log.hrl").
 
 -record(state, {seq=0, hits=0, cbs, pattern, out, min, max, eof = false}).
 
@@ -170,7 +170,7 @@ raw(Mess,State) ->
     _ -> State
   end.
 
-raw_out(Mess, State = #state{seq=Seq}) ->
+raw_out(_Mess, State = #state{seq=Seq}) ->
   case {State#state.min < Seq, Seq < State#state.max} of
     {true,true} ->
       %%io:fwrite("~w - ~w~n",[Seq,Mess]),
