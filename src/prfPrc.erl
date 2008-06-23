@@ -1,3 +1,4 @@
+%%% -*- erlang-indent-level: 2 -*-
 %%%-------------------------------------------------------------------
 %%% File    : prfPrc.erl
 %%% Author  : Mats Cronqvist <qthmacr@duna283>
@@ -9,69 +10,79 @@
 
 -export([collect/1,config/2]).
 
--import(gb_trees,[empty/0,smallest/1,lookup/2,insert/3,delete/2,to_list/1]).
+-record(cst,{now=now(),items=19}).
 
--record(cst,{info = empty(),items=19}).
+%%% reductions,message_queue_len,memory
+%%% current_function,initial_call,registered_name
+%%% N.B. 'reductions' is reductions/sec
 
-%%%reductions,message_queue_len,memory
-%%%current_function,initial_call,registered_name
-
+-define(SORT_ITEMS,[reductions,memory,message_queue_len]).
+-define(INFO_ITEMS,[current_function,initial_call,registered_name]).
 config(State,_ConfigData) -> State.
 
 %%% returns {State, Data}
 collect(init) -> 
+  catch ets:delete(?MODULE),
+  ets:new(?MODULE,[ordered_set,named_table]),
   collect(#cst{});
 collect(Cst) -> 
-  {I,Red,Mem,Msg} = collect(processes(),Cst#cst.info,Cst#cst.items,
-                            empty(),empty(),empty(),empty()),
-  {Cst#cst{info=I},{?MODULE,{post(I),post(Red,I),post(Mem,I),post(Msg,I)}}}.
+  Now = now(),
+  NowDiff = timer:now_diff(Now,Cst#cst.now)/1000000,
+  T0 = empty_toplists(Cst#cst.items),
+  TopLists = lists:foldl(fun(P,A) -> topl(P,A,NowDiff) end, T0, processes()),
+  {Cst#cst{now=Now},{?MODULE,out(Now,TopLists)}}.
 
-collect([],_,_Items,NewInfo,Red,Mem,Msg) -> {NewInfo,Red,Mem,Msg};
-collect([P|Ps],OldInfo,Items,NewInfo,Red,Mem,Msg) ->
-  try [pinf(P,T) || T <- [reductions,memory,message_queue_len]] of
-      [Vred,Vmem,Vmsg] ->
-      {Reds,NNewInfo} = redder(P,Vred,Vmem,Vmsg,OldInfo,NewInfo),
-      NMem = tree_it(Mem,P,Vmem,Items),
-      NMsg = tree_it(Msg,P,Vmsg,Items),
-      NRed = tree_it(Red,P,Reds,Items),
-      collect(Ps,OldInfo,Items,NNewInfo,NRed,NMem,NMsg)
+topl(P,TopLists,NowDiff) ->
+  try [pinf(P,T) || T <- ?SORT_ITEMS] of
+    [Vred,Vmem,Vmsg] ->
+      RedDiff = red_diff(P,Vred,NowDiff),
+      update_toplists(P,TopLists,RedDiff,Vmem,Vmsg)
   catch 
-    _:_ -> collect(Ps,OldInfo,Items,NewInfo,Red,Mem,Msg)
+    _:_ -> 
+      catch ets:delete(?MODULE,P), TopLists
   end.
 
-redder(P,Red,Mem,Msg,OldInfo,NewInfo) ->
-  case lookup(P,OldInfo) of
-    {value,{OldRed,_,_,_}} -> 
-      Dred = Red-OldRed,
-      {Dred,insert(P,{Red,Dred,Mem,Msg},NewInfo)};
-    none -> 
-      {Red,insert(P,{Red,Red,Mem,Msg},NewInfo)}
+empty_toplists(Items) ->
+  Dummies = lists:duplicate(Items,{}),
+  {Dummies,Dummies,Dummies}.
+
+red_diff(P,Reds,NowDiff) ->
+  try ets:lookup(?MODULE,P) of
+    [] -> 0;
+    [{P,OReds}] -> (Reds-OReds)/NowDiff
+  after 
+    ets:insert(?MODULE,{P,Reds})
   end.
 
-tree_it(Tree,_Key,0,_Items) -> Tree;
-tree_it(Tree,Key,Val,Items) ->
-  case gb_trees:size(Tree) of
-    X when X < Items -> insert({Val,Key},[],Tree);
-    _ -> 
-      case smallest(Tree) of
-        {K,_} when K < {Val,Key} -> insert({Val,Key},[],delete(K,Tree));
-        _ -> Tree
-      end
+update_toplists(P,{TopRed,TopMem,TopMsg},Vred,Vmem,Vmsg) ->
+  {update_toplist({Vred,[P,Vred,Vmem,Vmsg]},TopRed),
+   update_toplist({Vmem,[P,Vred,Vmem,Vmsg]},TopMem),
+   update_toplist({Vmsg,[P,Vred,Vmem,Vmsg]},TopMsg)}.
+
+update_toplist(El,Top) ->
+  case El < hd(Top) of
+    true -> Top;
+    false-> tl(lists:sort([El|Top]))
   end.
 
-post(Info) -> [{now,now()},{process_count,gb_trees:size(Info)}].
+out(Now,{RedList,MemList,MsgList}) -> 
+  [{now,Now},
+   {process_count,erlang:system_info(process_count)},
+   {reds,complete(RedList)},
+   {mem,complete(MemList)},
+   {msg,complete(MsgList)}].
 
-post(Tree,Info) -> 
-  lists:foldl(fun({{_,P},[]},Acc)->postf(P,Acc,Info) end,[],to_list(Tree)).
+complete(List) ->
+  lists:foldl(fun({_,El},Acc)->postf(El,Acc) end,[],List).
 
--define(PINFS,[current_function,initial_call,registered_name]).
-postf(P,Acc,Info) ->
-  try [pst(lookup(P,Info))++[{pid,P}|[{T,pinf(P,T)} || T <- ?PINFS]]|Acc]
-  catch _:_ -> Acc
+postf(El,Acc) ->
+  try 
+    P = hd(El),
+    InfoItems = [{I,pinf(P,I)} || I <- ?INFO_ITEMS],
+    [lists:zip([pid|?SORT_ITEMS],El)++InfoItems|Acc]
+  catch 
+    _:_ -> Acc
   end.
-
-pst({value,{Red,Dred,Mem,Msg}}) -> 
-  [{reductions,Red},{diff_reds,Dred},{message_queue_len,Msg},{memory,Mem}].
 
 pinf(Pid, Type = registered_name) ->
   case process_info(Pid, Type) of

@@ -12,8 +12,6 @@
 -import(sherk,[to_str/1]).
 -import(sherk_ets,[lup/2]).
 
--compile(export_all).
-
 -define(LOG(T), sherk:log(process_info(self()),T)).
 
 go(procs) ->
@@ -75,9 +73,6 @@ garb(Pid) ->
 
 %%%subtree(TP,T) ->
 %%%    [{[pct(Ti,T),garb(Pid),to_str(Pid)],[]} || {Ti,Pid} <- TP].
-
-pct(_,0) -> 0;
-pct(A,B) -> round(A*100/B).
 
 make_tree(L,DataF,SortF) ->
     F = fun({Key,Data},A) -> tree_ins(Key,Data,DataF,SortF,A) end,
