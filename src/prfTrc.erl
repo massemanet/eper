@@ -21,7 +21,7 @@
 -include("log.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% prfTarg process
+%% runs in the prfTarg process
 
 collect(LD) -> {LD, {?MODULE, {tick,now()}}}.
 
@@ -38,7 +38,7 @@ stop(Args) ->
 assert(Reg) ->
   case whereis(Reg) of
     Pid when is_pid(Pid) -> Pid;
-    undefined -> register(Reg,Pid=spawn(fun init/0)),Pid
+    undefined -> register(Reg,Pid=spawn_link(fun init/0)),Pid
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -102,6 +102,7 @@ start_trace(HostPid,Conf) ->
   Flags = [{tracer,Cons}|fetch(flags,Conf)],
   unset_tps(),
   erlang:trace(Procs,true,Flags),
+  erlang:trace(self(),false,Flags),
   set_tps(fetch(rtps,Conf)),
   from_list([{host_pid,HostPid},{consumer,Cons},{conf,Conf}]).
 

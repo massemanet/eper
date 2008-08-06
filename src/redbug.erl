@@ -265,7 +265,9 @@ mfaf(I) ->
       catch _:_ -> C
       end;
     ["unknown","function"] ->
-      unknown_function
+      unknown_function;
+    _ ->
+      C
   end.
 
 to_int(L) -> list_to_integer(L).
