@@ -102,9 +102,17 @@ start_trace(HostPid,Conf) ->
   Flags = [{tracer,Cons}|fetch(flags,Conf)],
   unset_tps(),
   erlang:trace(Procs,true,Flags),
-  erlang:trace(self(),false,Flags),
+  untrace(family(redbug)++family(prfTarg),Flags),
   set_tps(fetch(rtps,Conf)),
   from_list([{host_pid,HostPid},{consumer,Cons},{conf,Conf}]).
+
+family(Daddy) ->
+  try D = whereis(Daddy), [D|element(2,process_info(D,links))] 
+  catch _:_->[] 
+  end.
+
+untrace(Pids,Flags) ->
+  [erlang:trace(P,false,Flags) || P <- Pids].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 consumer({term_buffer,Term},Time) -> consumer_pid(Term,yes,Time);
