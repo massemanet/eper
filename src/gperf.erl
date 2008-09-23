@@ -1,6 +1,7 @@
 -module(gperf).
--export([ni/1,start/1,start/0,log/2]).
+-export([ni/0,ni/1,start/1,start/0,log/2]).
 
+ni() -> ni([]).
 ni(Args) -> self() ! {args, Args}, gperfGtk:init().
 
 start() -> start(['']).
