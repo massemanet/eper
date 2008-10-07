@@ -17,8 +17,12 @@
 %%     - call memsup:get_memory_data/0 and cpu_sup:cpu_sup:util([detailed])
 %%   else if OS is unix
 %%     - run the ps command in a port
+%%   else
+%%     - return an empty list
 %%
-%% returns a list of tagged tuples with these tags;
+%% returns a list of tagged tuples 
+%%
+%% tag                  [unit]    source
 %% node                 [atom()]  erlang:node()
 %% now			[now()]   erlang:now()
 %% procs	        [count]   erlang:system_info(process_count)
@@ -148,9 +152,14 @@ strategy() ->
     _                                  -> {none,[]}
   end.
 
+%% OS info
+%% only the 'linux' (i.e. linux 2.6 or higher) strategy implemented
 -record(fds,{proc_stat,proc_self_stat}).
+
 os_info({linux,#fds{proc_stat=FDs,proc_self_stat=FDss}}) ->
-  proc_stat(FDs)++proc_self_stat(FDss).
+  proc_stat(FDs)++proc_self_stat(FDss);
+os_info(_) ->
+  [].
 
 proc_stat(FDs) ->
 %%user nice kernel idle iowait irq softirq steal
