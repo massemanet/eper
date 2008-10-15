@@ -107,12 +107,13 @@ start_trace(HostPid,Conf) ->
   from_list([{host_pid,HostPid},{consumer,Cons},{conf,Conf}]).
 
 family(Daddy) ->
-  try D = whereis(Daddy), [D|element(2,process_info(D,links))] 
+  try D = whereis(Daddy), 
+      [D|element(2,process_info(D,links))] 
   catch _:_->[] 
   end.
 
 untrace(Pids,Flags) ->
-  [erlang:trace(P,false,Flags) || P <- Pids].
+  [erlang:trace(P,false,Flags) || P <- Pids,node(P)==node()].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 consumer({term_buffer,Term},Time) -> consumer_pid(Term,yes,Time);
