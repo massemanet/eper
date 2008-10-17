@@ -10,22 +10,20 @@
 -export([print_state/0]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% boiler plate
+%% boilerplate
 -behaviour(gen_server).
 -export([handle_call/3, handle_cast/2, handle_info/2, 
          init/1, terminate/2, code_change/3]).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% boiler plate
-init(X) -> {ok,do_init(X)}.
-terminate(Reason,LD) -> do_terminate(Reason,LD).
-code_change(_,LD,_) -> {ok,LD}.
-handle_cast(In,LD) -> gen_safe(fun(Ld)->noreply(do_cast(In,Ld))end,LD).
+init(X) -> ok(do_init(X)).
+terminate(Reason,LD) -> do_terminate(LD,Reason).
+code_change(_,LD,X) -> gen_safe(fun(Ld)->ok(do_code_change(Ld,X))end,LD).
+handle_cast(In,LD) -> gen_safe(fun(Ld)->noreply(do_cast(Ld,In))end,LD).
 handle_info(print_state,LD) -> print_term(expand_recs(LD)),noreply(LD);
-handle_info(In,LD) -> gen_safe(fun(Ld)->noreply(do_info(In,Ld))end,LD).
+handle_info(In,LD) -> gen_safe(fun(Ld)->noreply(do_info(Ld,In))end,LD).
 handle_call(stop,_From,LD) -> {stop,shutdown,stopped,LD};
 handle_call(print_state,_,LD) -> print_term(expand_recs(LD)),reply({ok,LD});
-handle_call(In,_,LD) -> gen_safe(fun(Ld)->reply(do_call(Ld,In))end,LD).
+handle_call(In,_,LD) -> gen_safe(fun(Ld)->reply(do_call(In,Ld))end,LD).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% API
@@ -49,6 +47,7 @@ gen_safe(F, LD) ->
   catch _:R -> {stop,{R,erlang:get_stacktrace()},LD}
   end.
 
+ok(X) -> {ok,X}.
 noreply(LD) -> {noreply,LD}.
 reply({Reply,LD}) -> {reply,Reply,LD}.
 
@@ -74,33 +73,46 @@ expand_recs(Term) -> Term.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% the state
--record(ld,{args,acceptor}).
+-record(ld,{args,acceptor,socket,subscribers=[],cookie="I'm a Cookie"}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% this should be put in here by the compiler. or a parse_transform...
+%% needs a new clause for each record definition
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ri(ld) ->record_info(fields,ld);
 ri(_) -> [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% constants
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+sock_opts() -> [binary, {reuseaddr,true}, {active,false}, {packet,4}].
 
-sock_opts() -> [binary, {reuseaddr,true}, {active,false}].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% user code
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-do_init(Args) -> #ld{args=Args, acceptor=accept(producer,56669,sock_opts())}.
+do_init(Args) -> 
+  #ld{args=Args, acceptor=accept(producer,56669,sock_opts())}.
 
-do_terminate(_Reason,_LD) -> ok.
+do_terminate(_LD,_Reason) -> ok.
 
-do_call(Msg,LD) -> print_term(Msg),{ok,LD}.
+do_code_change(LD,_Xtra) -> LD.
 
-do_cast(Msg,LD) -> print_term(Msg),LD.
+do_call(LD,Msg) -> print_term(Msg),{ok,LD}.
 
-do_info({new_socket,producer,Sock},LD) ->
+do_cast(LD,Msg) -> print_term(Msg),LD.
+
+do_info(LD,{new_socket,producer,Sock}) ->
   %% we got a socket from a producer.
   inet:setopts(Sock,[{active,once}]),
-  LD;
-do_info(Msg,LD) -> print_term(Msg),LD.
+  LD#ld{socket=Sock};
+do_info(LD,{tcp,Sock,Bin}) when LD#ld.socket==Sock -> 
+  gen_tcp:close(Sock),
+  Msg = prf_crypto:decrypt(LD#ld.cookie,Bin),
+  lists:foreach(fun(S)->S!Msg end, LD#ld.subscribers),
+  LD#ld{socket=[]};
+do_info(LD,Msg) -> 
+  print_term(Msg),
+  LD.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
