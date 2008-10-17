@@ -11,27 +11,29 @@
 
 -import(error_logger,[info_report/1,error_report/1]).
 
--record(ld, {jailed=[]				%jailed pids
-	     ,subscribers=[out()]	        %where to send our reports
-	     ,triggers=default_triggers()       %{atom(Tag), fun/1->no|fun/1}
-	     ,prfState				%prfTarg:subscribe return val
-	     ,prfData				%last prf data
-	     ,monData				%last system_monitor data
-	     ,lines=5				%# of displayed procs
-	    }).
-%% 	     gc_trig=500,			%gc time [ms]
-%% 	     heap_trig=1024*256,		%heap size [words]
-%% 	     mem_hw_trig=200,			%beam proc size [MB]
-%%	     cpu_trig=0.95}).			%cpu load [frac]
+-record(ld, 
+	{jailed=[]			    %jailed pids
+	 ,subscribers=default_subs()        %where to send our reports
+	 ,triggers=default_triggers()       %{atom(Tag), fun/1->no|fun/1}
+	 ,prfState			    %prfTarg:subscribe return val
+	 ,prfData			    %last prf data
+	 ,monData			    %last system_monitor data
+	 ,lines=5			    %# of displayed procs
+	}).
 
 %% constants
 
-default_triggers() -> [{sysMon,long_gc,500}	      %gc time [ms]
-		       ,{sysMon,large_heap,1024*256} %heap size [words]
-		       ,{prfSys,user,fun(X)->true=(X<0.95) end}
-		       ,{prfSys,kernel,fun(X)->true=(X<0.5) end}
-		       ,{prfSys,iowait,fun(X)->true=(X<0.3) end}
-		      ].
+default_subs() -> 
+  [send("streamserver.kreditor.se",56669,"I'm a Cookie"),
+   send("sterlett",56669,"I'm a Cookie"),
+   out(group_leader())].
+default_triggers() -> 
+   [{[sysMon,long_gc],500}	      %gc time [ms]
+   ,{[sysMon,large_heap],1024*256} %heap size [words]
+   ,{[prfSys,user],fun(X)->true=(0.95<X) end}
+   ,{[prfSys,kernel],fun(X)->true=(0.5<X) end}
+   ,{[prfSys,iowait],fun(X)->true=(0.3<X) end}
+  ].
 
 timeout(restart) -> 5000;			%  5 sec
 timeout(release) -> 3000.			%  3 sec
@@ -50,7 +52,7 @@ start() ->
 
 stop() -> 
   try ?MODULE ! stop
-  after ok
+  catch _:_ -> ok
   end.
   
 init(Daddy) ->
@@ -83,10 +85,16 @@ loop(LD) ->
       loop(LD#ld{triggers=new_triggers(LD#ld.triggers,ID,Fun)});
     %% data from prfTarg
     {{data,_},Data} ->
-      loop(check_triggers(LD#ld{prfData=Data}));
+      NLD = LD#ld{prfData=Data},
+      try loop(do_triggers(check_jailed(NLD,prfData)))
+      catch _:_ ->loop(NLD)
+      end;
     %% data from system_monitor
     {monitor,Pid,Tag,Data} ->
-      loop(check_jailed(LD,Pid,Tag,Data));
+      NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}]},
+      try loop(do_mon(check_jailed(NLD,Pid)))
+      catch _:_ -> loop(NLD)
+      end;
     %% restarting after timeout
     {timeout, _, restart} -> 
       start_monitor(LD),
@@ -103,33 +111,35 @@ start_monitor(Triggers) ->
   erlang:system_monitor(self(), sysmons(Triggers)),Triggers.
 
 sysmons(Triggers) ->
-  [{Tag,Val} || {sysMon,Tag,Val} <- Triggers] ++
-    [busy_port,busy_dist_port].
+  [{Tag,Val} || {[sysMon,Tag],Val} <- Triggers] ++ [busy_port,busy_dist_port].
 
 stop_monitor() ->
   erlang:system_monitor(undefined).
 
+%% trigger() :: {ID,Val} 
+%% Val :: number() | function()
+%% ID :: list(Tag) 
+%% Tag :: atom() - tags into the data structure. i.e. [prfSys,iowait]
 new_triggers(Triggers,ID,Fun) -> 
-  maybe_restart(ID,[{ID,Fun}|clean_triggers(Triggers,[ID])]).
+  maybe_restart(hd(ID),[{ID,Fun}|clean_triggers(Triggers,[ID])]).
 
-maybe_restart({sysMon,_},Triggers) -> stop_monitor(),start_monitor(Triggers);
+maybe_restart(sysMon,Triggers) -> stop_monitor(),start_monitor(Triggers);
 maybe_restart(_,Triggers) -> Triggers.
 
 clean_triggers(Triggers,IDs) ->
   lists:dropwhile(fun({ID,_})->lists:member(ID,IDs) end, Triggers).
 
-check_jailed(LD,Pid,Tag,Data) ->
-  case lists:member(Pid, LD#ld.jailed) of
-    true -> LD;
-    false->
-      erlang:start_timer(timeout(release), self(), {release, Pid}),
-      NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}],
-	    jailed=[Pid|LD#ld.jailed]},
-      report(NLD,{sysMon,Tag}),
-      NLD
-  end.
+%%exit if What is jailed
+check_jailed(LD,What) ->
+  false = lists:member(What, LD#ld.jailed),
+  erlang:start_timer(timeout(release), self(), {release, What}),
+  LD#ld{jailed=[What|LD#ld.jailed]}.
 
-check_triggers(LD) ->
+do_mon(LD) ->
+  report(LD,[sysMon]),
+  LD.
+
+do_triggers(LD) ->
   {Triggered, NewTriggers} = check_triggers(LD#ld.triggers,LD#ld.prfData),
   [report(LD,Trig) || Trig <- Triggered],
   LD#ld{triggers=NewTriggers}.
@@ -147,81 +157,58 @@ check_triggers([T|Ts],Data,O) ->
   catch _:_ -> check_triggers(Ts,Data,O)
   end.
 
-check_trigger({{Section,Tag},T},Data) -> 
-  {{Section,Tag},T(get_measurement([Section,Tag],Data))}.
+check_trigger({ID,T},Data) -> 
+  case T(get_measurement(ID,Data)) of
+    true -> {ID,T};
+    F when is_function(F)  -> {ID,F}
+  end.
 
 report(LD,Trigger) ->
   Report = make_report(Trigger,LD),
   [Sub(Report) || Sub <- LD#ld.subscribers].
 
-make_report({sysMon,_Tag},LD) ->
-  expand_pids(get_measurement([sysMon],LD));
+make_report([sysMon|_],LD) ->
+  expand_ps(LD#ld.monData);
 make_report(Trigger,LD) ->
-  [{?MODULE,Trigger}|maybe_procs(LD)++generic_report(LD)].
+  [{?MODULE,Trigger}|maybe_procs(LD)++generic_report(LD#ld.prfData)].
 
 generic_report(LD) ->
   get_measurement([prfSys],LD).
 
 maybe_procs(#ld{lines = 0}) -> [];
 maybe_procs(LD) -> 
-  lists:sublist(get_measurement([prfPrc,reds],LD),LD#ld.lines).
+  lists:sublist(get_measurement([prfPrc,reds],LD#ld.prfData),LD#ld.lines).
 
-get_measurement([sysMon|Tags],#ld{monData=Data}) -> get_measurement(Tags,Data);
-get_measurement(Tags,#ld{prfData=Data}) -> get_measurement(Tags,Data);
 get_measurement([T|Tags],Data) -> get_measurement(Tags,lks(T,Data));
 get_measurement([],Data) -> Data.
 
-info(Info) -> [].
+expand_ps([]) -> [];
+expand_ps([{T,P}|Es]) when is_pid(P)-> pii({T,P})++expand_ps(Es);
+expand_ps([{T,P}|Es]) when is_port(P)-> poi({T,P})++expand_ps(Es);
+expand_ps([E|Es]) -> [E|expand_ps(Es)].
 
-data(Port) when port(Port) -> porti(Port);
-data(Data) when list(Data) -> mnorm(Data).
-
-mnorm([]) -> [];
-mnorm([{T=heap_block_size,N}|R]) -> [{T,N/16#40000}|mnorm(R)];
-mnorm([{T=mbuf_size,N}|R]) -> [{T,N/16#40000}|mnorm(R)];
-mnorm([{T=stack_size,N}|R]) -> [{T,N/16#40000}|mnorm(R)];
-mnorm([{T=heap_size,N}|R]) -> [{T,N/16#40000}|mnorm(R)];
-mnorm([H|R]) -> [H|mnorm(R)].
-
-
-expand_pids([]) -> [];
-expand_pids([{pid,Pid}|Es]) when is_pid(Pid)-> pi(Pid)++expand_pids(Es);
-expand_pids([E|Es]) -> [E|expand_pids(Es)].
-
-p_info() -> [message_queue_len,current_function,initial_call,registered_name].
-pi(Pid) -> lists:reverse(pi(Pid, p_info(), [{pid,Pid}])).
-pi(_Pid, [], O) -> O;
-pi(Pid, [Tag|Tags], O) ->
+pi_info() -> [message_queue_len,current_function,initial_call,registered_name].
+pii({T,Pid}) -> [{T,Pid} | pii(Pid, pi_info())].
+pii(_Pid, []) -> [];
+pii(Pid, [Tag|Tags]) ->
   case process_info(Pid, Tag) of
-    undefined -> pi(Pid, Tags, O);
-    [] -> pi(Pid, Tags, O);
-    Val -> pi(Pid, Tags, [Val|O])
+    undefined -> pii(Pid, Tags);
+    [] -> pii(Pid, Tags);
+    Val -> [Val|pii(Pid, Tags)]
+  end.
+
+po_info() -> [name,id,connected,input,output].
+poi({T,Port}) -> [{T,Port}|poi(Port, po_info())].
+poi(_Port,[]) -> [];
+poi(Port,[Porti|Portis]) ->
+  case erlang:port_info(Port,Porti) of
+    undefined -> poi(Port,Portis);
+    X -> [X|poi(Port,Portis)]
   end.
 
 flush() ->    
   receive {monitor,_,_,_} -> flush()
   after 0 -> ok
-  end.
-
-norm([], _) -> [];
-norm(L, Max) when Max =< 0 -> L;
-norm([{Tag,X}|T], Max) when number(X) -> [{Tag,X/Max}|norm(T,Max)];
-norm([{X,Tag}|T], Max) when number(X) -> [{X/Max,Tag}|norm(T,Max)].
-
--define(PORTIS,[name,id,connected,input,output]).
-porti(Port) -> 
-  [{port,Port}|porti(Port, ?PORTIS)].
-
-porti(_Port,[]) -> [];
-porti(Port,[Porti|Portis]) ->
-  case erlang:port_info(Port,Porti) of
-    undefined -> porti(Port,Portis);
-    X -> [X|porti(Port,Portis)]
-  end.
-
-lks(Tag,List,Def) ->
-  try lks(Tag,List)
-  catch _ -> Def
   end.
 
 lks(Tag,List) -> 
@@ -230,10 +217,30 @@ lks(Tag,List) ->
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-out() -> fun(E)->print_term(group_leader(),E) end.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+send(Name,Port,Cookie) ->
+  fun(Chunk)->
+      try {ok,Sck} = gen_tcp:connect(Name,Port,conn_opts(),conn_timeout()),
+	  try gen_tcp:send(Sck,prf_crypto:encrypt(Cookie,expand_recs(Chunk)))
+	  after gen_tcp:close(Sck)
+	  end
+      catch _:_ -> ok
+      end
+  end.
+conn_opts() -> [{send_timeout,1000},{active,false},{packet,4},binary].
+conn_timeout() -> 1000.
 
-print_term(FD,Term) -> io:fwrite(FD," ~p~n",[expand_recs(Term)]).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+out(FD) -> fun(E)-> print_term(FD,expand_recs(E)) end.
 
+print_term(FD,Term) -> 
+  case node(FD) == node() of
+    true -> error_logger:info_report(Term);
+    false-> io:fwrite(FD," ~p~n",[Term])
+  end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 expand_recs(List) when is_list(List) -> [expand_recs(L)||L<-List];
 expand_recs(Tup) when is_tuple(Tup) -> 
   case tuple_size(Tup) of
