@@ -96,6 +96,10 @@ do_call(Msg,LD) -> print_term(Msg),{ok,LD}.
 
 do_cast(Msg,LD) -> print_term(Msg),LD.
 
+do_info({new_socket,producer,Sock},LD) ->
+  %% we got a socket from a producer.
+  inet:setopts(Sock,[{active,once}]),
+  LD;
 do_info(Msg,LD) -> print_term(Msg),LD.
 
 
