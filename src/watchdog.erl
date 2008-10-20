@@ -1,5 +1,5 @@
 %%%-------------------------------------------------------------------
-%%% File    : sysWatchdog.erl
+%%% File    : watchdog.erl
 %%% Author  : Mats Cronqvist <etxmacr@mwux005>
 %%% Description : 
 %%%
@@ -83,6 +83,10 @@ loop(LD) ->
       loop(LD#ld{lines = N});		        %number of displayed processes
     {set_trigger,{ID,Fun}} ->
       loop(LD#ld{triggers=new_triggers(LD#ld.triggers,ID,Fun)});
+    %% fake trigger for debugging
+    trigger ->
+      report(LD,[test]),
+      loop(LD);
     %% data from prfTarg
     {{data,_},Data} ->
       NLD = LD#ld{prfData=Data},

@@ -108,6 +108,7 @@ do_info(LD,{new_socket,producer,Sock}) ->
 do_info(LD,{tcp,Sock,Bin}) when LD#ld.socket==Sock -> 
   gen_tcp:close(Sock),
   Msg = prf_crypto:decrypt(LD#ld.cookie,Bin),
+  print_term(Msg),
   lists:foreach(fun(S)->S!Msg end, LD#ld.subscribers),
   LD#ld{socket=[]};
 do_info(LD,Msg) -> 

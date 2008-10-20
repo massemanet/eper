@@ -19,7 +19,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-start(Name, Node, Consumer) when atom(Name), atom(Node), atom(Consumer) -> 
+start(Name, Node, Consumer) when atom(Name), atom(Consumer) -> 
   case whereis(Name) of
     undefined -> register(Name, spawn_link(fun()->init(Node,Consumer)end));
     Pid -> Pid
