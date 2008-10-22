@@ -239,7 +239,7 @@ aq_check() ->
     Dir = g('Gtk_file_chooser_get_filename',[aq_filechoose]),
     sherk_aquire:check_dir(Dir),
     [_|_] = get_selected_data(aq_treeview,0),
-    list_to_integer(g('Gtk_entry_get_text',[aq_time_entry])),
+    _ = list_to_integer(g('Gtk_entry_get_text',[aq_time_entry])),
     g('Gtk_widget_set_sensitive',[aq_go_button,true])
   catch 
     _:_ -> g('Gtk_widget_set_sensitive',[aq_go_button,false])

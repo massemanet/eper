@@ -4,11 +4,15 @@
 %% @doc
 %% @end
 
--module('watchdog_proxy').
+-module(prfDog).
 -author('Mats Cronqvist').
 -export([start/0,start/1,stop/0]).
 -export([print_state/0]).
 
+%% prf callbacks
+-export([collect/1,config/2]).
+
+-include("log.hrl").
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% boilerplate
 -behaviour(gen_server).
@@ -31,7 +35,7 @@ handle_call(In,_,LD) -> gen_safe(fun(Ld)->reply(do_call(In,Ld))end,LD).
 
 start() -> start([]).
 
-start(Args) -> gen_server:start({local, ?MODULE}, ?MODULE, Args, []).
+start(Args) -> gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
 
 stop() -> try gen_server:call(?MODULE,stop) 
 	  catch exit:{noproc,_} -> not_started
@@ -39,6 +43,17 @@ stop() -> try gen_server:call(?MODULE,stop)
 
 print_state() -> gen_server:call(?MODULE,print_state).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% prf callbacks, runs in the prfTarg process
+
+collect(LD) ->
+  case whereis(?MODULE) of
+    undefined -> start();
+    _ -> ok
+  end,
+  {LD,gen_server:call(?MODULE,get_data)}.
+
+config(LD,Data) -> ?log([unknown,{data,Data}]), LD.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utilities
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -73,7 +88,7 @@ expand_recs(Term) -> Term.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% the state
--record(ld,{args,acceptor,socket,subscribers=[],cookie="I'm a Cookie"}).
+-record(ld,{args,acceptor,socket,msg=[],cookie="I'm a Cookie"}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% this should be put in here by the compiler. or a parse_transform...
@@ -108,13 +123,10 @@ do_info(LD,{new_socket,producer,Sock}) ->
 do_info(LD,{tcp,Sock,Bin}) when LD#ld.socket==Sock -> 
   gen_tcp:close(Sock),
   Msg = prf_crypto:decrypt(LD#ld.cookie,Bin),
-  print_term(Msg),
-  lists:foreach(fun(S)->S!Msg end, LD#ld.subscribers),
-  LD#ld{socket=[]};
+  LD#ld{socket=[],msg=Msg};
 do_info(LD,Msg) -> 
   print_term(Msg),
   LD.
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% accept is blocking, so it runs in its own process

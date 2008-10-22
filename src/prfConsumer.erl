@@ -1,11 +1,13 @@
 %%%-------------------------------------------------------------------
-%%% File    : prfClient.erl
+%%% File    : prfConsumer.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
-%%%
+%%% Description : an example consumer
+%%%             : try e.g. 
+%%              : prf:start(foo,node(),prfConsumer).
+%%              : prf:stop(foo).
 %%% Created : 17 May 2005 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
--module(prfClient).
+-module(prfConsumer).
 
 -export([init/1, terminate/1, tick/2, collectors/0,config/2]).
 -record(cld, {node}).

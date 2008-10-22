@@ -9,11 +9,13 @@
 -module(prfTrc).
 
 -export([collect/1,config/2]).
+%% internal
 -export([active/1,idle/0,wait_for_local/1]).
 
 -import(lists,[reverse/1,foreach/2,map/2]).
 -import(dict,[new/0,store/3,fetch/2,from_list/1]).
 
+%% states
 -define(ACTIVE, ?MODULE:active).
 -define(IDLE, ?MODULE:idle).
 -define(WAIT_FOR_LOCAL, ?MODULE:wait_for_local).

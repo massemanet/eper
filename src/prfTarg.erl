@@ -16,6 +16,8 @@
 -include("log.hrl").
 
 %%% interface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+subscribe({watchdog,Node}, Pid, _Collectors) -> 
+  subscribe(Node,Pid,[prfDog]);
 subscribe(Node, Pid, Collectors) -> 
   {PID,Tick} = assert(Node,Collectors),
   PID ! {subscribe, {Pid,Collectors}}, 
