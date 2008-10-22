@@ -27,7 +27,7 @@ handle_info(print_state,LD) -> print_term(expand_recs(LD)),noreply(LD);
 handle_info(In,LD) -> gen_safe(fun(Ld)->noreply(do_info(Ld,In))end,LD).
 handle_call(stop,_From,LD) -> {stop,shutdown,stopped,LD};
 handle_call(print_state,_,LD) -> print_term(expand_recs(LD)),reply({ok,LD});
-handle_call(In,_,LD) -> gen_safe(fun(Ld)->reply(do_call(In,Ld))end,LD).
+handle_call(In,_,LD) -> gen_safe(fun(Ld)->reply(do_call(Ld,In))end,LD).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% API
@@ -50,7 +50,9 @@ collect(LD) ->
   assert(),
   {LD,gen_server:call(?MODULE,get_data)}.
 
-config(LD,Data) -> ?log([unknown,{data,Data}]), LD.
+config(LD,Data) -> 
+  ?log([unknown,{data,Data}]),
+  LD.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utilities
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -115,6 +117,7 @@ do_terminate(_LD,_Reason) -> ok.
 
 do_code_change(LD,_Xtra) -> LD.
 
+do_call(LD,get_data) -> {LD#ld.msg,LD};
 do_call(LD,Msg) -> print_term(Msg),{ok,LD}.
 
 do_cast(LD,Msg) -> print_term(Msg),LD.
