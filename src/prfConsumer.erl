@@ -18,5 +18,5 @@
 collectors() -> [prfPrc].
 init(Node) -> #cld{node = Node}.
 terminate(_LD) -> ok.
-tick(LD, Data) -> io:fwrite("~w~n~p~n",[LD,Data]), LD.
+tick(LD, Data) -> io:fwrite("** ~w **~n~w~n~p~n",[?MODULE,LD,Data]), LD.
 config(LD,_Data) -> ?log({loopdata,LD}), LD.

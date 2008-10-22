@@ -47,16 +47,19 @@ print_state() -> gen_server:call(?MODULE,print_state).
 %% prf callbacks, runs in the prfTarg process
 
 collect(LD) ->
-  case whereis(?MODULE) of
-    undefined -> start();
-    _ -> ok
-  end,
+  assert(),
   {LD,gen_server:call(?MODULE,get_data)}.
 
 config(LD,Data) -> ?log([unknown,{data,Data}]), LD.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utilities
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+assert() ->
+  case whereis(?MODULE) of
+    undefined -> start();
+    _ -> ok
+  end.
+
 gen_safe(F, LD) ->
   try F(LD)
   catch _:R -> {stop,{R,erlang:get_stacktrace()},LD}

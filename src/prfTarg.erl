@@ -23,6 +23,8 @@ subscribe(Node, Pid, Collectors) ->
   PID ! {subscribe, {Pid,Collectors}}, 
   {PID,Tick}.
 
+unsubscribe({watchdog,Node}, Pid) -> 
+  unsubscribe(Node, Pid);
 unsubscribe(Node, Pid) -> 
   {Node,?MODULE} ! {unsubscribe, {Pid}}.
 

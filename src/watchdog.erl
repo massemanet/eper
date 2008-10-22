@@ -8,6 +8,7 @@
 -module(watchdog).
 
 -export([start/0,stop/0]).
+-export([send/3,out/1]).
 
 -import(error_logger,[info_report/1,error_report/1]).
 
@@ -24,9 +25,12 @@
 %% constants
 
 default_subs() -> 
-  [send("streamserver.kreditor.se",56669,"I'm a Cookie"),
-   send("sterlett",56669,"I'm a Cookie"),
-   out(group_leader())].
+  [
+%   ,send("streamserver.kreditor.se",56669,"I'm a Cookie")
+   send("sterlett",56669,"I'm a Cookie")
+%   ,out(group_leader())
+  ].
+
 default_triggers() -> 
    [{[sysMon,long_gc],500}	      %gc time [ms]
    ,{[sysMon,large_heap],1024*256} %heap size [words]
