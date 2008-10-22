@@ -102,7 +102,7 @@ init() ->
         PrintPid = spawn_link(fun()->printi(Cnf#cnf.printf) end),
         Conf = pack(Cnf,PrintPid),
         prf:start(prf_redbug,Cnf#cnf.targ,redbugConsumer),
-        prf:config(prf_redbug,collectors,{start,{self(),Conf}}),
+        prf:config(prf_redbug,prfTrc,{start,{self(),Conf}}),
 	starting(PrintPid)
       catch 
         C:R -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
@@ -112,7 +112,7 @@ init() ->
 
 starting(PrintPid) ->
   receive
-    {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}});
+    {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}});
     {prfTrc,{starting,TrcPid,ConsPid}} -> running(TrcPid,ConsPid,PrintPid);
     {prfTrc,{already_started,_}}       -> ?log(already_started);
     {'EXIT',PrintPid,R}                -> ?log([printer_died,{reason,R}]);
@@ -123,7 +123,7 @@ starting(PrintPid) ->
 running(TrcPid,ConsPid,PrintPid) ->
   PrintPid ! {trace_consumer,ConsPid},
   receive
-    {stop,Args} -> prf:config(prf_redbug,collectors,{stop,{self(),Args}}),
+    {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}}),
 		   stopping(PrintPid);
     {prfTrc,{stopping,_,_}}       -> stopping(PrintPid);
     {'EXIT',TrcPid,_}             -> stopping(PrintPid);

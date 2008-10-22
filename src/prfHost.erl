@@ -72,18 +72,18 @@ loop(LD) ->
       exit({got_EXIT, Pid, Reason});
     {subscribe, {ok, Pid}}  ->
       link(Pid),
-      [Pid ! {config,Data} || Data <- LD#ld.config],
+      [Pid ! {config,CollData} || CollData <- LD#ld.config],
       ?LOOP(LD#ld{server = Pid,config=[]});
     {subscribe, {failed, R}} ->
       ?log({subscribe, {failed, R}}),
       ?LOOP(LD);
-    {config,{consumer, Data}} ->
+    {config,{consumer,Data}} ->
       Cdata = (LD#ld.consumer):config(LD#ld.consumer_data, Data),
       ?LOOP(LD#ld{consumer_data = Cdata});
-    {config,{collectors,Data}} ->
+    {config,CollData} ->
       case LD#ld.server of
-        [] -> ?LOOP(LD#ld{config=[Data|LD#ld.config]});
-        Pid-> Pid ! {config,Data}, ?LOOP(LD)
+        [] -> ?LOOP(LD#ld{config=[CollData|LD#ld.config]});
+        Pid-> Pid ! {config,CollData}, ?LOOP(LD)
       end
   end.
 

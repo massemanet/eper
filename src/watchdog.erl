@@ -232,7 +232,7 @@ send(Name,Port,Cookie) ->
 	  try gen_tcp:send(Sck,prf_crypto:encrypt(Cookie,expand_recs(Chunk)))
 	  after gen_tcp:close(Sck)
 	  end
-      catch _:R -> print_term({failed_sending,R,Name,Port})
+      catch _:_ -> ok
       end
   end.
 conn_opts() -> [{send_timeout,1000},{active,false},{packet,4},binary].
@@ -242,7 +242,7 @@ conn_timeout() -> 1000.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 out(FD) -> fun(E)-> print_term(FD,expand_recs(E)) end.
 
-print_term(Term) -> print_term(group_leader(),Term).
+%%print_term(Term) -> print_term(group_leader(),Term).
 print_term(FD,Term) -> 
   case node(FD) == node() of
     true -> error_logger:info_report(Term);

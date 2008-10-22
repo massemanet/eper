@@ -29,7 +29,8 @@ stop(Name) -> prfHost:stop(Name).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Name - atom() the name of this session
-%%% Type - atom() collectors|consumer
+%%% Type - atom() consumer|Collector
+%%% Collector - atom() module name of collector
 %%% Data - term() the consumer callbacks config function is called with this
 
 config(Name,Type,Data) -> prfHost:config(Name,Type,Data).

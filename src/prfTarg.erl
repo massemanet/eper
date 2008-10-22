@@ -112,8 +112,8 @@ loop(St) ->
       ?MODULE:loop(unsubscr(St, Pid));
     {'EXIT', Pid, _} ->
       ?MODULE:loop(unsubscr(St, Pid));
-    {config,Data} ->
-      ?MODULE:loop(config(St,Data));
+    {config,CollData} ->
+      ?MODULE:loop(config(St,CollData));
     dbg ->
       F = fun(M,#collector{subscribers=S},A) -> [{mod,M},{subsc,S}|A] end,
       ?log([{pid,self()} | fold(F,[],St#st.collectors)]),
@@ -122,12 +122,14 @@ loop(St) ->
       ok
   end.
 
-config(St,Data) ->
-  St#st{collectors=map(fun(K,V)->conf(K,V,Data) end,St#st.collectors)}.
+config(St,CollData) ->
+  St#st{collectors=map(fun(K,V)->conf(K,V,CollData) end,St#st.collectors)}.
 
-conf(C,Collector,Data) ->
+conf(C,Collector,{C,Data}) ->
   State = C:config(Collector#collector.state,Data),
-  Collector#collector{state=State}.
+  Collector#collector{state=State};
+conf(_,Collector,_) ->
+  Collector.
 
 subscr(St, Pid, Cs) ->
   link(Pid),
