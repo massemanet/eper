@@ -49,15 +49,15 @@ sysI(Sys) ->
   [to_list(lks(node, Sys)),
    io_lib:fwrite("~w(~w)", [round(lks(beam_vss, Sys)/1048576),
 			    round(lks(total, Sys)/1048576)]),
-   to_list(lks(beam_user,Sys)+lks(beam_kernel,Sys)),
+   to_list((lks(beam_user,Sys)+lks(beam_kernel,Sys))),
    to_list(lks(procs,Sys)),
    to_list(lks(run_queue, Sys)),
    H, M, S,
-   to_list(round(lks(processes, Sys)/1024)),
-   to_list(round(lks(atom, Sys)/1024)),
-   to_list(round(lks(binary, Sys)/1024)),
-   to_list(round(lks(code, Sys)/1024)),
-   to_list(round(lks(ets, Sys)/1024))].
+   to_list(lks(processes, Sys)/1024),
+   to_list(lks(atom, Sys)/1024),
+   to_list(lks(binary, Sys)/1024),
+   to_list(lks(code, Sys)/1024),
+   to_list(lks(ets, Sys)/1024)].
 
 print_del() -> io:fwrite("~s~n", [lists:duplicate(79, $-)]).
 
@@ -90,7 +90,7 @@ procsI(PP,CpuPerRed) ->
 		      funf(reg(PP)), 
 		      funf(lks(current_function, PP)), 
 		      to_list(lks(message_queue_len, PP)),
-		      to_list(round(lks(memory,PP)/1024)), 
+		      to_list(lks(memory,PP)/1024), 
 		      to_list(lks(reductions,PP)*CpuPerRed)]).
 
 reg(PP) ->    
@@ -108,7 +108,7 @@ funf(Term) -> io_lib:fwrite("~p", [Term]).
 
 to_list(A) when pid(A) -> pid_to_list(A);
 to_list(A) when atom(A) -> atom_to_list(A);
-to_list(A) when float(A) -> float_to_list(A);
+to_list(A) when float(A) -> to_list(round(A));
 to_list(A) when tuple(A) -> tuple_to_list(A);
 to_list(A) when integer(A) -> integer_to_list(A).
 

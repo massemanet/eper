@@ -94,15 +94,11 @@ loop(LD) ->
     %% data from prfTarg
     {{data,_},Data} ->
       NLD = LD#ld{prfData=Data},
-      try loop(do_triggers(check_jailed(NLD,prfData)))
-      catch _:_ ->loop(NLD)
-      end;
+      loop(try do_triggers(check_jailed(NLD,prfData)) catch _:_ -> NLD end);
     %% data from system_monitor
     {monitor,Pid,Tag,Data} ->
       NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}]},
-      try loop(do_mon(check_jailed(NLD,Pid)))
-      catch _:_ -> loop(NLD)
-      end;
+      loop(try do_mon(check_jailed(NLD,Pid)) catch _:_ -> NLD end);
     %% restarting after timeout
     {timeout, _, restart} -> 
       start_monitor(LD),
@@ -161,9 +157,10 @@ check_triggers(Triggers,Data) ->
 
 check_triggers([],_,O) -> O;
 check_triggers([T|Ts],Data,O) ->
-  try check_triggers(Ts,Data,[check_trigger(T,Data)|O])
-  catch _:_ -> check_triggers(Ts,Data,O)
-  end.
+  check_triggers(Ts,Data,try [check_trigger(T,Data)|O] catch _:_->O end).
+%%   try check_triggers(Ts,Data,[check_trigger(T,Data)|O])
+%%   catch _:_ -> check_triggers(Ts,Data,O)
+%%   end.
 
 check_trigger({ID,T},Data) -> 
   case T(get_measurement(ID,Data)) of
