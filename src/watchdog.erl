@@ -32,8 +32,9 @@ default_subs() ->
   ].
 
 default_triggers() -> 
-   [{[sysMon,long_gc],500}	      %gc time [ms]
+  [ {[sysMon,long_gc],500}	      %gc time [ms]
    ,{[sysMon,large_heap],1024*256} %heap size [words]
+   ,{[ticker],true}
    ,{[prfSys,user],fun(X)->true=(0.95<X) end}
    ,{[prfSys,kernel],fun(X)->true=(0.5<X) end}
    ,{[prfSys,iowait],fun(X)->true=(0.3<X) end}
@@ -157,11 +158,9 @@ check_triggers(Triggers,Data) ->
 
 check_triggers([],_,O) -> O;
 check_triggers([T|Ts],Data,O) ->
-  check_triggers(Ts,Data,try [check_trigger(T,Data)|O] catch _:_->O end).
-%%   try check_triggers(Ts,Data,[check_trigger(T,Data)|O])
-%%   catch _:_ -> check_triggers(Ts,Data,O)
-%%   end.
+  check_triggers(Ts,Data,try [check_trigger(T,Data)|O] catch _:_-> O end).
 
+check_trigger({ID,true},_Data) -> {ID,true};
 check_trigger({ID,T},Data) -> 
   case T(get_measurement(ID,Data)) of
     true -> {ID,T};
@@ -173,7 +172,7 @@ report(LD,Trigger) ->
   [Sub(Report) || Sub <- LD#ld.subscribers].
 
 make_report([sysMon|_],LD) ->
-  expand_ps(LD#ld.monData);
+  [{?MODULE,sysMon}|expand_ps(LD#ld.monData)];
 make_report(Trigger,LD) ->
   [{?MODULE,Trigger}|maybe_procs(LD)++generic_report(LD#ld.prfData)].
 

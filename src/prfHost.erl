@@ -8,7 +8,7 @@
 -module(prfHost).
 
 -export([start/3, stop/1,config/3]).
--export([init/2,loop/1]).				%internal
+-export([loop/1]).				%internal
 
 -record(ld, {node, server=[], collectors, config=[], 
              consumer, consumer_data, data=[]}).
@@ -19,9 +19,13 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-start(Name, Node, Consumer) when atom(Name), atom(Consumer) -> 
+start(Name,{watchdog,Node},Consumer) -> start(Name,Node,Consumer,[prfDog]);
+start(Name,Node,Consumer) -> start(Name,Node,Consumer,Consumer:collectors()).
+
+start(Name, Node, Consumer, Colls) when atom(Name),atom(Node),atom(Consumer) -> 
+  SpawnFun = fun()->init(Node,Consumer,Colls) end,
   case whereis(Name) of
-    undefined -> register(Name, spawn_link(fun()->init(Node,Consumer)end));
+    undefined -> register(Name, spawn_link(SpawnFun));
     Pid -> Pid
   end.
 
@@ -37,12 +41,12 @@ config(Name,Type,Data) ->
     _ -> {Name,not_running}
   end.
 
-init(Node, Consumer) ->
+init(Node, Consumer, Collectors) ->
   process_flag(trap_exit,true),
   prf:ticker_even(),
   loop(#ld{node = Node, 
            consumer = Consumer, 
-           collectors = subscribe(Node,Consumer:collectors()),
+           collectors = subscribe(Node,Collectors),
            consumer_data = Consumer:init(Node)}).
 
 loop(LD) ->
@@ -81,10 +85,13 @@ loop(LD) ->
       Cdata = (LD#ld.consumer):config(LD#ld.consumer_data, Data),
       ?LOOP(LD#ld{consumer_data = Cdata});
     {config,CollData} ->
-      case LD#ld.server of
-        [] -> ?LOOP(LD#ld{config=[CollData|LD#ld.config]});
-        Pid-> Pid ! {config,CollData}, ?LOOP(LD)
-      end
+      ?LOOP(do_config(CollData, LD))
+  end.
+
+do_config(CollData, LD) ->
+  case LD#ld.server of
+    [] -> LD#ld{config=[CollData|LD#ld.config]};
+    Pid-> Pid ! {config,CollData},LD
   end.
 
 do_stop(LD) ->
