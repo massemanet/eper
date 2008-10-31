@@ -9,6 +9,7 @@
 
 -export([start/0,stop/0]).
 -export([send/3,out/1]).
+-export([loop/1]).
 
 -import(error_logger,[info_report/1,error_report/1]).
 
@@ -27,7 +28,7 @@
 default_subs() -> 
   [
 %   ,send("streamserver.kreditor.se",56669,"I'm a Cookie")
-   send("sterlett",56669,"I'm a Cookie")
+   send("localhost",56669,"I'm a Cookie")
 %   ,out(group_leader())
   ].
 
@@ -80,6 +81,8 @@ loop(LD) ->
     %% quit
     stop -> 
       ok;
+    reload ->
+      ?MODULE:load(LD);
     print_state ->
       print_term(group_leader(),LD),
       loop(LD);
@@ -88,6 +91,8 @@ loop(LD) ->
       loop(LD#ld{lines = N});		        %number of displayed processes
     {set_trigger,{ID,Fun}} ->
       loop(LD#ld{triggers=new_triggers(LD#ld.triggers,ID,Fun)});
+    {add_subscriber,Sub} ->
+      loop(LD#ld{subscribers=[Sub|LD#ld.subscribers]});
     %% fake trigger for debugging
     trigger ->
       report(LD,[test]),
