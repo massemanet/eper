@@ -82,7 +82,7 @@ t2f([Tab|Tabs],FD,N) ->
   t2f(Tabs,FD,N+1).
 
 make_info(Tab) ->
-  [exit({no_such_table,Tab}) || undefined==ets:info(Tab)], %woohoo
+  undefined==ets:info(Tab,size) andalso exit({no_such_table,Tab}),
   {ets:info(Tab,name),
    [ets:info(Tab,type),
     ets:info(Tab,protection),
