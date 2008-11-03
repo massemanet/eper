@@ -123,7 +123,7 @@ do_call(LD,Msg) -> print_term(Msg),{ok,LD}.
 do_cast(LD,Msg) -> print_term(Msg),LD.
 
 do_info(LD,{new_socket,producer,Sock}) ->
-  %% we got a socket from a producer.
+  %% we accepted a socket towards a producer.
   ?log({new_socket,Sock}),
   inet:setopts(Sock,[{active,once}]),
   LD#ld{socket=Sock};
@@ -136,7 +136,7 @@ do_info(LD,{tcp,Sock,Bin}) when is_binary(Bin) ->
   ?log({odd_tcp,Sock,byte_size(Bin)}),
   LD;
 do_info(LD,Msg) -> 
-  print_term(Msg),
+  ?log([{unrec,Msg}|expand_recs(LD)]),
   LD.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
