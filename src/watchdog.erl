@@ -11,6 +11,8 @@
 -export([send/3,out/1]).
 -export([loop/1]).
 
+-include("log.hrl").
+
 -import(error_logger,[info_report/1,error_report/1]).
 
 -record(ld, 
@@ -99,10 +101,12 @@ loop(LD) ->
       loop(LD);
     %% data from prfTarg
     {{data,_},Data} ->
+      ?log(got_prf_data),
       NLD = LD#ld{prfData=Data},
       loop(try do_triggers(check_jailed(NLD,prfData)) catch _:_ -> NLD end);
     %% data from system_monitor
     {monitor,Pid,Tag,Data} ->
+      ?log(got_mon_data),
       NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}]},
       loop(try do_mon(check_jailed(NLD,Pid)) catch _:_ -> NLD end);
     %% restarting after timeout
@@ -137,7 +141,7 @@ maybe_restart(sysMon,Triggers) -> stop_monitor(),start_monitor(Triggers);
 maybe_restart(_,Triggers) -> Triggers.
 
 clean_triggers(Triggers,IDs) ->
-  lists:dropwhile(fun({ID,_})->lists:member(ID,IDs) end, Triggers).
+  lists:filter(fun({ID,_})->not lists:member(ID,IDs) end, Triggers).
 
 %%exit if What is jailed
 check_jailed(LD,What) ->
@@ -151,6 +155,7 @@ do_mon(LD) ->
 
 do_triggers(LD) ->
   {Triggered, NewTriggers} = check_triggers(LD#ld.triggers,LD#ld.prfData),
+  ?log([{triggers,NewTriggers},{triggered,Triggered}]),
   [report(LD,Trig) || Trig <- Triggered],
   LD#ld{triggers=NewTriggers}.
 
@@ -236,8 +241,8 @@ send(Name,Port,Cookie) ->
       catch _:_ -> ok
       end
   end.
-conn_opts() -> [{send_timeout,1000},{active,false},{packet,4},binary].
-conn_timeout() -> 1000.
+conn_opts() -> [{send_timeout,100},{active,false},{packet,4},binary].
+conn_timeout() -> 100.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
