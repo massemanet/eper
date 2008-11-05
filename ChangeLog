@@ -1,3 +1,308 @@
+------------------------------------------------------------------------
+r125 | mats.cronqvist | 2008-11-03 11:35:55 +0100 (Mon, 03 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfDog.erl
+
+  cosmetic
+
+------------------------------------------------------------------------
+r124 | mats.cronqvist | 2008-11-03 04:22:01 +0100 (Mon, 03 Nov 2008) | 3 lines
+Changed paths:
+   M /trunk/configure.ac
+   M /trunk/src/prfDog.erl
+   M /trunk/src/watchdog.erl
+
+  found pesky bug in watvhdog subscriber handling
+  many debug printouts still in
+
+------------------------------------------------------------------------
+r123 | mats.cronqvist | 2008-11-01 14:22:40 +0100 (Sat, 01 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/sherk_ets.erl
+
+  cosmetic
+
+------------------------------------------------------------------------
+r122 | mats.cronqvist | 2008-10-31 22:39:22 +0100 (Fri, 31 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/watchdog.erl
+
+  basically cosmetic
+
+------------------------------------------------------------------------
+r121 | mats.cronqvist | 2008-10-24 00:21:57 +0200 (Fri, 24 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfHost.erl
+   M /trunk/src/prfTarg.erl
+   M /trunk/src/watchdog.erl
+
+  watchdog/prfDog mostly works
+
+------------------------------------------------------------------------
+r120 | mats.cronqvist | 2008-10-23 23:22:57 +0200 (Thu, 23 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/dtop.erl
+   M /trunk/src/dtopConsumer.erl
+   M /trunk/src/watchdog.erl
+
+  using tail calls in the loop is, for some reason, recommended practice.
+
+------------------------------------------------------------------------
+r119 | mats.cronqvist | 2008-10-22 16:44:44 +0200 (Wed, 22 Oct 2008) | 4 lines
+Changed paths:
+   M /trunk/src/prf.erl
+   M /trunk/src/prfHost.erl
+   M /trunk/src/prfTarg.erl
+   M /trunk/src/redbug.erl
+   M /trunk/src/watchdog.erl
+
+
+  config was propagated to all collectors, instead of just the one
+  that was to be config'd
+
+------------------------------------------------------------------------
+r118 | mats.cronqvist | 2008-10-22 16:02:06 +0200 (Wed, 22 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfDog.erl
+
+  had left the main method unimplemented...
+
+------------------------------------------------------------------------
+r117 | mats.cronqvist | 2008-10-22 14:50:46 +0200 (Wed, 22 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfConsumer.erl
+   M /trunk/src/prfDog.erl
+   M /trunk/src/prfTarg.erl
+   M /trunk/src/watchdog.erl
+
+  watchdog integration
+
+------------------------------------------------------------------------
+r116 | mats.cronqvist | 2008-10-22 12:32:04 +0200 (Wed, 22 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/Makefile.am
+   D /trunk/src/prfClient.erl
+   A /trunk/src/prfConsumer.erl (from /trunk/src/prfClient.erl:109)
+   A /trunk/src/prfDog.erl (from /trunk/src/watchdog_proxy.erl:115)
+   M /trunk/src/prfTarg.erl
+   M /trunk/src/prfTrc.erl
+   M /trunk/src/sherk.erl
+   M /trunk/src/sherk_list.erl
+   D /trunk/src/watchdog_proxy.erl
+
+  watchdog integegration
+
+------------------------------------------------------------------------
+r115 | mats.cronqvist | 2008-10-20 21:52:19 +0200 (Mon, 20 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfHost.erl
+   M /trunk/src/watchdog.erl
+   M /trunk/src/watchdog_proxy.erl
+
+  preparing for integration of prfTarg and watchdog_proxy
+
+------------------------------------------------------------------------
+r114 | mats.cronqvist | 2008-10-17 21:20:13 +0200 (Fri, 17 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/watchdog_proxy.erl
+
+  crypto buggy
+
+------------------------------------------------------------------------
+r113 | mats.cronqvist | 2008-10-17 16:38:33 +0200 (Fri, 17 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/watchdog.erl
+   M /trunk/src/watchdog_proxy.erl
+
+  proxying not yet finished.
+
+------------------------------------------------------------------------
+r112 | mats.cronqvist | 2008-10-17 16:26:25 +0200 (Fri, 17 Oct 2008) | 2 lines
+Changed paths:
+   A /trunk/src/prf_crypto.erl
+   A /trunk/src/watchdog_proxy.erl
+
+  added some files.
+
+------------------------------------------------------------------------
+r111 | mats.cronqvist | 2008-10-17 16:25:37 +0200 (Fri, 17 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/src/Makefile.am
+   M /trunk/src/prfTrc.erl
+   M /trunk/src/watchdog.erl
+
+  added some files. self-tracing avoidance mechanism fixed.
+
+------------------------------------------------------------------------
+r110 | mats.cronqvist | 2008-10-15 10:03:39 +0200 (Wed, 15 Oct 2008) | 3 lines
+Changed paths:
+   M /trunk/src/prfTrc.erl
+   M /trunk/src/watchdog.erl
+
+  bug in prfTrace: tried to untrace Pids even if they werer on another node
+  watchdog; mostly works
+
+------------------------------------------------------------------------
+r109 | mats.cronqvist | 2008-10-07 23:31:20 +0200 (Tue, 07 Oct 2008) | 2 lines
+Changed paths:
+   M /trunk/bin/gperf
+   M /trunk/src/Makefile.am
+   M /trunk/src/prfSys.erl
+   A /trunk/src/watchdog.erl
+
+  added watchdog. not tested, probably broken...
+
+------------------------------------------------------------------------
+r108 | mats.cronqvist | 2008-09-23 23:36:27 +0200 (Tue, 23 Sep 2008) | 2 lines
+Changed paths:
+   M /trunk/src/gperf.erl
+
+ bash script error
+
+------------------------------------------------------------------------
+r107 | mats.cronqvist | 2008-09-23 23:25:55 +0200 (Tue, 23 Sep 2008) | 2 lines
+Changed paths:
+   M /trunk/src/gperf.glade
+
+ doc error
+
+------------------------------------------------------------------------
+r106 | mats.cronqvist | 2008-08-06 16:43:37 +0200 (Wed, 06 Aug 2008) | 2 lines
+Changed paths:
+   M /trunk/ebin
+
+  new eper
+
+------------------------------------------------------------------------
+r105 | mats.cronqvist | 2008-08-06 16:40:18 +0200 (Wed, 06 Aug 2008) | 2 lines
+Changed paths:
+   A /trunk/ebin
+
+  new eper
+
+------------------------------------------------------------------------
+r103 | mats.cronqvist | 2008-08-06 15:13:35 +0200 (Wed, 06 Aug 2008) | 2 lines
+Changed paths:
+   M /trunk/configure.ac
+
+ v 0.44
+
+------------------------------------------------------------------------
+r102 | mats.cronqvist | 2008-08-06 15:06:33 +0200 (Wed, 06 Aug 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfTrc.erl
+
+ don't trace on redbug
+
+------------------------------------------------------------------------
+r101 | mats.cronqvist | 2008-08-06 10:46:46 +0200 (Wed, 06 Aug 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfTrc.erl
+   M /trunk/src/redbug.erl
+
+ don't trace on self()
+
+------------------------------------------------------------------------
+r100 | mats.cronqvist | 2008-07-31 16:37:15 +0200 (Thu, 31 Jul 2008) | 2 lines
+Changed paths:
+   M /trunk/configure.ac
+   M /trunk/src/Makefile.am
+
+  autoconf stuff was all messed up...
+
+------------------------------------------------------------------------
+r99 | mats.cronqvist | 2008-07-31 15:02:01 +0200 (Thu, 31 Jul 2008) | 2 lines
+Changed paths:
+   M /trunk/COPYING
+   M /trunk/configure.ac
+
+  changed copyriight to 2008
+
+------------------------------------------------------------------------
+r97 | mats.cronqvist | 2008-06-23 15:29:32 +0200 (Mon, 23 Jun 2008) | 2 lines
+Changed paths:
+   M /trunk/configure.ac
+
+  vers 0.41
+
+------------------------------------------------------------------------
+r96 | mats.cronqvist | 2008-06-23 15:26:14 +0200 (Mon, 23 Jun 2008) | 2 lines
+Changed paths:
+   M /trunk/src/dtopConsumer.erl
+   M /trunk/src/gperfConsumer.erl
+   M /trunk/src/prfPrc.erl
+   M /trunk/src/prfSys.erl
+   M /trunk/src/sherk_tree.erl
+
+  cosmetic
+
+------------------------------------------------------------------------
+r94 | mats.cronqvist | 2008-04-16 18:24:47 +0200 (Wed, 16 Apr 2008) | 2 lines
+Changed paths:
+   M /trunk/AUTHORS
+   M /trunk/configure.ac
+
+ new mail address
+
+------------------------------------------------------------------------
+r93 | mats.cronqvist | 2008-04-16 18:20:46 +0200 (Wed, 16 Apr 2008) | 2 lines
+Changed paths:
+   M /trunk/AUTHORS
+   M /trunk/src/sherk_prof.erl
+   M /trunk/src/sherk_scan.erl
+   M /trunk/src/sherk_tab.erl
+   M /trunk/src/sherk_target.erl
+   M /trunk/src/sherk_tree.erl
+
+ new and improved logging macro
+
+------------------------------------------------------------------------
+r92 | mats.cronqvist | 2008-04-15 23:48:37 +0200 (Tue, 15 Apr 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfHost.erl
+   M /trunk/src/prfTarg.erl
+
+ failed if running on local node w/o distribution
+
+------------------------------------------------------------------------
+r91 | mats.cronqvist | 2008-04-03 11:01:44 +0200 (Thu, 03 Apr 2008) | 2 lines
+Changed paths:
+   M /trunk/bin/gperf
+
+  honors -pa
+
+------------------------------------------------------------------------
+r90 | mats.cronqvist | 2008-04-03 11:01:07 +0200 (Thu, 03 Apr 2008) | 2 lines
+Changed paths:
+   M /trunk/src/gperf.erl
+   M /trunk/src/gperfGtk.erl
+   A /trunk/src/log.hrl
+   M /trunk/src/prfClient.erl
+   M /trunk/src/prfHost.erl
+   M /trunk/src/prfTarg.erl
+   M /trunk/src/prfTrc.erl
+   M /trunk/src/redbug.erl
+   M /trunk/src/redbugConsumer.erl
+   M /trunk/src/sherk.erl
+   M /trunk/src/sherk_aquire.erl
+   M /trunk/src/sherk_prof.erl
+   M /trunk/src/sherk_scan.erl
+   M /trunk/src/sherk_tab.erl
+   M /trunk/src/sherk_target.erl
+
+  new logger macro
+
+------------------------------------------------------------------------
+r89 | mats.cronqvist | 2007-12-12 16:28:17 +0100 (Wed, 12 Dec 2007) | 2 lines
+Changed paths:
+   M /trunk/src/prfSys.erl
+
+  use /proc on linux
+
+2007-11-05 Mats Cronqvist
+
+	* : changed to svn log format
+	
 2007-11-05 Mats Cronqvist
 
 	* src/prfTarg.erl:

@@ -29,7 +29,6 @@
 
 default_subs() -> 
   [
-%   ,send("streamserver.kreditor.se",56669,"I'm a Cookie")
    send("localhost",56669,"I'm a Cookie")
 %   ,out(group_leader())
   ].

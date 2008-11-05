@@ -93,7 +93,7 @@ expand_recs(Term) -> Term.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% the state
--record(ld,{args,acceptor,socket,msg=[],cookie="I'm a Cookie"}).
+-record(ld,{args,acceptor,socket=[],msg=[],cookie="I'm a Cookie"}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% this should be put in here by the compiler. or a parse_transform...
@@ -122,18 +122,22 @@ do_call(LD,Msg) -> print_term(Msg),{ok,LD}.
 
 do_cast(LD,Msg) -> print_term(Msg),LD.
 
-do_info(LD,{new_socket,producer,Sock}) ->
+do_info(LD,{new_socket,producer,Sock}) when LD#ld.socket==[] ->
   %% we accepted a socket towards a producer.
-  ?log({new_socket,Sock}),
   inet:setopts(Sock,[{active,once}]),
   LD#ld{socket=Sock};
+do_info(LD,{new_socket,producer,Sock}) when LD#ld.socket=/=[] ->
+  %% accepted a socket, but already had one
+  ?log([{rejected_new_socket,Sock},{had_old_one,LD#ld.socket}]),
+  gen_tcp:close(Sock),
+  LD;
 do_info(LD,{tcp,Sock,Bin}) when LD#ld.socket==Sock -> 
   ?log({sock_data,Sock}),
   gen_tcp:close(Sock),
   Msg = prf_crypto:decrypt(LD#ld.cookie,Bin),
   LD#ld{socket=[],msg=Msg};
 do_info(LD,{tcp,Sock,Bin}) when is_binary(Bin) -> 
-  ?log({odd_tcp,Sock,byte_size(Bin)}),
+  ?log([{odd_tcp,Sock},{expected_socket,LD#ld.socket},{bytes,byte_size(Bin)}]),
   LD;
 do_info(LD,Msg) -> 
   ?log([{unrec,Msg}|expand_recs(LD)]),
