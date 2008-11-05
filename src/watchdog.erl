@@ -13,8 +13,6 @@
 
 -include("log.hrl").
 
--import(error_logger,[info_report/1,error_report/1]).
-
 -record(ld, 
 	{jailed=[]			    %jailed pids
 	 ,subscribers=default_subs()        %where to send our reports
@@ -100,12 +98,10 @@ loop(LD) ->
       loop(LD);
     %% data from prfTarg
     {{data,_},Data} ->
-      ?log(got_prf_data),
       NLD = LD#ld{prfData=Data},
       loop(try do_triggers(check_jailed(NLD,prfData)) catch _:_ -> NLD end);
     %% data from system_monitor
     {monitor,Pid,Tag,Data} ->
-      ?log(got_mon_data),
       NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}]},
       loop(try do_mon(check_jailed(NLD,Pid)) catch _:_ -> NLD end);
     %% restarting after timeout
@@ -116,7 +112,7 @@ loop(LD) ->
     {timeout, _, {release, Pid}} ->
       loop(LD#ld{jailed = LD#ld.jailed--[Pid]});
     X ->
-      error_report([{?MODULE,unexpected},X]),
+      ?log({unexpected,X}),
       loop(LD)
   end.
 
@@ -154,7 +150,6 @@ do_mon(LD) ->
 
 do_triggers(LD) ->
   {Triggered, NewTriggers} = check_triggers(LD#ld.triggers,LD#ld.prfData),
-  ?log([{triggers,NewTriggers},{triggered,Triggered}]),
   [report(LD,Trig) || Trig <- Triggered],
   LD#ld{triggers=NewTriggers}.
 
@@ -250,7 +245,7 @@ out(FD) -> fun(E)-> print_term(FD,expand_recs(E)) end.
 %%print_term(Term) -> print_term(group_leader(),Term).
 print_term(FD,Term) -> 
   case node(FD) == node() of
-    true -> error_logger:info_report(Term);
+    true -> ?log(Term);
     false-> io:fwrite(FD," ~p~n",[Term])
   end.
 

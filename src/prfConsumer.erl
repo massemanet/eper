@@ -14,9 +14,27 @@
 
 -include("log.hrl").
 
+%% example usage;
+%% watchdog:start(),prf:start(prf1,{watchdog,node()},prfConsumer).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 collectors() -> [prfPrc].
 init(Node) -> #cld{node = Node}.
 terminate(_LD) -> ok.
-tick(LD, Data) -> io:fwrite("** ~w **~n~w~n~p~n",[?MODULE,LD,Data]), LD.
 config(LD,_Data) -> ?log({loopdata,LD}), LD.
+tick(LD, [Data|_]) -> 
+  ?log(digger([watchdog,node,now,user],Data)),
+  LD.
+%%io:fwrite("** ~w **~n~w~n~p~n",[?MODULE,LD,Data]), LD.
+
+digger(Tags,Data) ->
+  try [dig([T],Data) || T <- Tags]
+  catch _:_ -> empty
+  end.
+
+dig([T|Tags],Data) -> dig(Tags,lks(T,Data));
+dig([],Data) -> Data.
+
+lks(Tag,List) -> 
+  try {value,{Tag,Val}} = lists:keysearch(Tag,1,List), Val
+  catch _:_ -> throw({no_such_key,Tag,List})
+  end.

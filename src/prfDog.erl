@@ -132,7 +132,6 @@ do_info(LD,{new_socket,producer,Sock}) when LD#ld.socket=/=[] ->
   gen_tcp:close(Sock),
   LD;
 do_info(LD,{tcp,Sock,Bin}) when LD#ld.socket==Sock -> 
-  ?log({sock_data,Sock}),
   gen_tcp:close(Sock),
   Msg = prf_crypto:decrypt(LD#ld.cookie,Bin),
   LD#ld{socket=[],msg=Msg};
