@@ -27,7 +27,7 @@ tick(LD, [Data|_]) ->
 %%io:fwrite("** ~w **~n~w~n~p~n",[?MODULE,LD,Data]), LD.
 
 digger(Tags,Data) ->
-  try [dig([T],Data) || T <- Tags]
+  try [{T,dig([T],Data)} || T <- Tags]
   catch _:_ -> empty
   end.
 
