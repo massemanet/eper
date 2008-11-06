@@ -67,7 +67,7 @@ active(LD) ->
   Cons = fetch(consumer,LD),
   HostPid = fetch(host_pid,LD),
   receive
-    {start,{Pid,_}}    -> Pid ! {prfTrc,{already_started,self()}}, ?ACTIVE();
+    {start,{Pid,_}}    -> Pid ! {prfTrc,{already_started,self()}}, ?ACTIVE(LD);
     {stop,_} 	       -> remote_stop(Cons, LD),?WAIT_FOR_LOCAL(Cons);
     {'EXIT',HostPid,_} -> remote_stop(Cons, LD),?WAIT_FOR_LOCAL(Cons);
     {local_stop,R}     -> local_stop(HostPid, LD, R),?WAIT_FOR_LOCAL(Cons);

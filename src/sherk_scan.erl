@@ -130,7 +130,7 @@ do_safe_cbs([CB|CBs], Msg, Seq, O) ->
 safe_cb({{M,F},State},Msg,Seq) -> {{M,F},M:F(Msg,Seq,State)};
 safe_cb({Fun,State},Msg,Seq) -> {Fun,Fun(Msg,Seq,State)}.
 
-write_msg(Msg,Seq,F) when is_list(F) -> write_msg(Msg,Seq,[open(F)]);
+write_msg(Msg,Seq,F) when is_list(F) -> write_msg(Msg,Seq,open(F));
 write_msg(Msg,Seq,FD) -> io:fwrite(FD,"~.9.0w ~w~n",[Seq,Msg]),FD.
 
 open(File) -> {ok,FD}=file:open(File,[write]),FD.
