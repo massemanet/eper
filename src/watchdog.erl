@@ -112,7 +112,7 @@ loop(LD) ->
     {timeout, _, {release, Pid}} ->
       loop(LD#ld{jailed = LD#ld.jailed--[Pid]});
     X ->
-      ?log({unexpected,X}),
+      ?log({unexpected_msg,X}),
       loop(LD)
   end.
 
