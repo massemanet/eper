@@ -21,6 +21,10 @@ collectors() -> [prfPrc].
 init(Node) -> #cld{node = Node}.
 terminate(_LD) -> ok.
 config(LD,_Data) -> ?log({loopdata,LD}), LD.
+
+tick(LD, []) -> 
+  ?log(empty),
+  LD;
 tick(LD, [Data|_]) -> 
   ?log(digger([watchdog,node,now,user],Data)),
   LD.
