@@ -164,10 +164,7 @@ pi(P) when port(P) ->
       reverse(hd(string:tokens(reverse(Hd),"/")));
     undefined -> 
       "dead"
-  end;
-pi(R) when atom(R) -> R;
-pi({R,Node}) when atom(R), Node == node() -> R;
-pi({R, Node}) when atom(R), atom(Node) -> {R, Node}.
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 self_register(Name) ->
