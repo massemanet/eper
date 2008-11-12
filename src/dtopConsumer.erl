@@ -38,10 +38,8 @@ print(#cld{sort=Sort,items=Items},PrfSys,PrfPrc) ->
 -define(SYSEMPTY, ["","","","","",0,0,0,"","","","",""]).
 
 print_sys(Sys) ->
-  try 
-    io:fwrite(?SYSFORMAT, sysI(Sys))
-  catch 
-    _:_ -> io:fwrite(?SYSFORMAT, ?SYSEMPTY)
+  try io:fwrite(?SYSFORMAT, sysI(Sys))
+  catch _:_ -> io:fwrite(?SYSFORMAT, ?SYSEMPTY)
   end.
 
 sysI(Sys) ->
@@ -49,7 +47,7 @@ sysI(Sys) ->
   [to_list(lks(node, Sys)),
    io_lib:fwrite("~w(~w)", [round(lks(beam_vss, Sys)/1048576),
 			    round(lks(total, Sys)/1048576)]),
-   to_list((lks(beam_user,Sys)+lks(beam_kernel,Sys))),
+   to_list(100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))),
    to_list(lks(procs,Sys)),
    to_list(lks(run_queue, Sys)),
    H, M, S,
@@ -82,7 +80,7 @@ resize(Items,Prcs) ->
 cpu_per_red(Sys) ->
   case lks(reductions,Sys) of
     0 -> 0;
-    Reds -> (lks(beam_user,Sys)+lks(beam_kernel,Sys))/Reds
+    Reds -> 100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))/Reds
   end.
 
 procsI(PP,CpuPerRed) ->
