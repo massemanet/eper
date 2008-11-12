@@ -7,13 +7,13 @@ erlsrc_DATA = \
 	dtop.erl dtopConsumer.erl \
 	gperf.erl gperfConsumer.erl gperfGtk.erl \
 	ntop.erl ntopConsumer.erl \
-	prfNet.erl prfSys.erl prfPrc.erl prfTrc.erl \
+	prfNet.erl prfSys.erl prfPrc.erl prfTrc.erl prfDog.erl \
 	prf.erl prfHost.erl prfTarg.erl prfConsumer.erl prf_crypto.erl \
 	redbug.erl redbugConsumer.erl \
 	sherk.erl sherk_tab.erl sherk_prof.erl \
 	sherk_tree.erl sherk_list.erl sherk_scan.erl sherk_aquire.erl \
 	sherk_target.erl sherk_ets.erl \
-	watchdog.erl prfDog.erl
+	watchdog.erl
 
 erlinc_DATA = \
 	log.hrl gen_serv.hrl
