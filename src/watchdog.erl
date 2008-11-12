@@ -36,7 +36,8 @@ default_subs() ->
 default_triggers() -> 
   [ {[sysMon,long_gc],500}	      %gc time [ms]
    ,{[sysMon,large_heap],1024*256} %heap size [words]
-   ,{[ticker],true}
+   ,{user,true}
+   ,{ticker,true}
    ,{[prfSys,user],fun(X)->true=(0.95<X) end}
    ,{[prfSys,kernel],fun(X)->true=(0.5<X) end}
    ,{[prfSys,iowait],fun(X)->true=(0.3<X) end}

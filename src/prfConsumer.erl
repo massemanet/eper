@@ -25,14 +25,23 @@ config(LD,_Data) -> ?log({loopdata,LD}), LD.
 tick(LD, []) -> 
   ?log(empty),
   LD;
-tick(LD, [Data|_]) -> 
-  ?log(digger([watchdog,node,now,user],Data)),
+tick(LD, [[]]) -> 
+  ?log(double_empty),
+  LD;
+tick(LD, [[{watchdog,user}|Data]|_]) -> 
+  ?log([{userData,Data}]),
+  LD;
+tick(LD, [[{watchdog,ticker}|Data]|_]) -> 
+  ?log([ticker|digger([node,now,user],Data)]),
+  LD;
+tick(LD, [[{watchdog,Trigger}|Data]|_]) -> 
+  ?log([{trigger,Trigger}|digger([node,now,user],Data)]),
   LD.
 %%io:fwrite("** ~w **~n~w~n~p~n",[?MODULE,LD,Data]), LD.
 
 digger(Tags,Data) ->
   try [{T,dig([T],Data)} || T <- Tags]
-  catch _:_ -> empty
+  catch _:_ -> no_data
   end.
 
 dig([T|Tags],Data) -> dig(Tags,lks(T,Data));
