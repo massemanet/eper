@@ -6,11 +6,38 @@
 -author('Mats Cronqvist').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% boilerplate
+%% gen_server boilerplate
 -behaviour(gen_server).
 -export([handle_call/3, handle_cast/2, handle_info/2, 
          init/1, terminate/2, code_change/3]).
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% gen_serv API
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+-export([start/0,start/1,stop/0]).
+-export([print_state/0]).
+
+-define(log(T),	log(process_info(self(),current_function),{line,?LINE},T)).
+
+ri(ld) -> record_info(fields,ld);
+ri(_) -> [].
+
+log(CF,Line,T) ->
+  error_logger:info_report([CF,Line|try  _=(not is_integer(hd(T))),T
+				    catch error:_ -> [T]
+				    end]).
+
+start() -> start([]).
+
+start(Args) -> gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
+
+stop() -> try gen_server:call(?MODULE,stop) 
+	  catch exit:{noproc,_} -> not_started
+	  end.
+
+print_state() -> gen_server:call(?MODULE,print_state).
+
+%% gen_server callbacks
 init(X) -> ok(do_init(X)).
 terminate(Reason,LD) -> do_terminate(LD,Reason).
 code_change(_,LD,X) -> gen_safe(fun(Ld)->ok(do_code_change(Ld,X))end,LD).
@@ -52,4 +79,3 @@ expand_recs(Tup) when is_tuple(Tup) ->
       end
   end;
 expand_recs(Term) -> Term.
-

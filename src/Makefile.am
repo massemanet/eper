@@ -16,7 +16,7 @@ erlsrc_DATA = \
 	watchdog.erl prfDog.erl
 
 erlinc_DATA = \
-	log.hrl
+	log.hrl gen_serv.hrl
 
 glade_DATA = \
 	gperf.gladep gperf.glade \

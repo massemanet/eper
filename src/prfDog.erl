@@ -6,27 +6,12 @@
 
 -module(prfDog).
 -author('Mats Cronqvist').
--export([start/0,start/1,stop/0]).
--export([print_state/0]).
 
 %% prf callbacks
 -export([collect/1,config/2]).
 
--include("log.hrl").
--include("gen_server.hrl").
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% API
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-start() -> start([]).
-
-start(Args) -> gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
-
-stop() -> try gen_server:call(?MODULE,stop) 
-	  catch exit:{noproc,_} -> not_started
-	  end.
-
-print_state() -> gen_server:call(?MODULE,print_state).
+-record(ld,{args,acceptor,socket=[],msg=[],cookie="I'm a Cookie"}).
+-include("gen_serv.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% prf callbacks, runs in the prfTarg process
@@ -45,26 +30,14 @@ assert() ->
     _ -> ok
   end.
 
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% the state
--record(ld,{args,acceptor,socket=[],msg=[],cookie="I'm a Cookie"}).
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% this should be put in here by the compiler. or a parse_transform...
-%% needs a new clause for each record definition
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-ri(ld) ->record_info(fields,ld);
-ri(_) -> [].
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% constants
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 sock_opts() -> [binary, {reuseaddr,true}, {active,false}, {packet,4}].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% user code
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 do_init(Args) -> 
   #ld{args=Args, acceptor=accept(producer,56669,sock_opts())}.
 
