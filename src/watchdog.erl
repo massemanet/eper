@@ -9,6 +9,7 @@
 
 -export([start/0,stop/0]).
 -export([send/3,out/1]).
+-export([message/1]).
 -export([loop/1]).
 
 -include("log.hrl").
@@ -18,6 +19,7 @@
 	 ,subscribers=default_subs()        %where to send our reports
 	 ,triggers=default_triggers()       %{atom(Tag), fun/1->no|fun/1}
 	 ,prfState			    %prfTarg:subscribe return val
+	 ,userData			    %last user data
 	 ,prfData			    %last prf data
 	 ,monData			    %last system_monitor data
 	 ,lines=5			    %# of displayed procs
@@ -59,7 +61,13 @@ stop() ->
   try ?MODULE ! stop
   catch _:_ -> ok
   end.
-  
+
+message(Term) ->
+  try ?MODULE ! {user,Term}, ok
+  catch C:R -> {C,R}
+  end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init(Daddy) ->
   try register(?MODULE,self()), 
       Daddy ! {self(),ok}
@@ -81,7 +89,7 @@ loop(LD) ->
     stop -> 
       ok;
     reload ->
-      ?MODULE:load(LD);
+      ?MODULE:loop(LD);
     print_state ->
       print_term(group_leader(),LD),
       loop(LD);
@@ -94,8 +102,12 @@ loop(LD) ->
       loop(LD#ld{subscribers=[Sub|LD#ld.subscribers]});
     %% fake trigger for debugging
     trigger ->
-      report(LD,[test]),
+      send_report(LD,test),
       loop(LD);
+    %% data from user
+    {user,Data} -> 
+      NLD = LD#ld{userData=Data},
+      loop(try do_user(check_jailed(NLD,userData)) catch _:_ -> NLD end);
     %% data from prfTarg
     {{data,_},Data} ->
       NLD = LD#ld{prfData=Data},
@@ -106,7 +118,7 @@ loop(LD) ->
       loop(try do_mon(check_jailed(NLD,Pid)) catch _:_ -> NLD end);
     %% restarting after timeout
     {timeout, _, restart} -> 
-      start_monitor(LD),
+      start_monitor(LD#ld.triggers),
       loop(LD#ld{jailed=[]});
     %% release a pid from jail
     {timeout, _, {release, Pid}} ->
@@ -145,12 +157,16 @@ check_jailed(LD,What) ->
   LD#ld{jailed=[What|LD#ld.jailed]}.
 
 do_mon(LD) ->
-  report(LD,[sysMon]),
+  send_report(LD,sysMon),
+  LD.
+
+do_user(LD) ->
+  send_report(LD,user),
   LD.
 
 do_triggers(LD) ->
   {Triggered, NewTriggers} = check_triggers(LD#ld.triggers,LD#ld.prfData),
-  [report(LD,Trig) || Trig <- Triggered],
+  [send_report(LD,Trig) || Trig <- Triggered],
   LD#ld{triggers=NewTriggers}.
 
 check_triggers(Triggers,Data) -> 
@@ -171,11 +187,13 @@ check_trigger({ID,T},Data) ->
     F when is_function(F)  -> {ID,F}
   end.
 
-report(LD,Trigger) ->
+send_report(LD,Trigger) ->
   Report = make_report(Trigger,LD),
   [Sub(Report) || Sub <- LD#ld.subscribers].
 
-make_report([sysMon|_],LD) ->
+make_report(user,LD) ->
+  [{?MODULE,user},{userData,LD#ld.userData}];
+make_report(sysMon,LD) ->
   [{?MODULE,sysMon}|expand_ps(LD#ld.monData)];
 make_report(Trigger,LD) ->
   [{?MODULE,Trigger}|maybe_procs(LD)++generic_report(LD#ld.prfData)].
