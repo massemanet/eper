@@ -64,8 +64,6 @@
 -record(cst,{strategy=strategy(), node=node(), total_ram=0,
 	     cache=[], now=now()}).
 
--include("log.hrl").
-
 -define(RATES,[context_switches,gcs,gc_reclaimed,io_in,io_out,reductions,
 	       user,nice,kernel,idle,iowait,
 	       beam_user,beam_kernel,beam_minflt,beam_majflt]).

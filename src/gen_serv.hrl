@@ -17,15 +17,10 @@
 -export([start/0,start/1,stop/0]).
 -export([print_state/0]).
 
--define(log(T),	log(process_info(self(),current_function),{line,?LINE},T)).
+-include("log.hrl").
 
 ri(ld) -> record_info(fields,ld);
 ri(_) -> [].
-
-log(CF,Line,T) ->
-  error_logger:info_report([CF,Line|try  _=(not is_integer(hd(T))),T
-				    catch error:_ -> [T]
-				    end]).
 
 start() -> start([]).
 

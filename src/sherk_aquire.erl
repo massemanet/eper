@@ -12,11 +12,11 @@
 -export([check_dir/1]).
 -export([ass_loaded/2]).
 
--include_lib("kernel/include/file.hrl").
--include("log.hrl").
-
 -import(dict,[from_list/1,fetch/2,store/3]).
 -import(lists,[foldl/3,map/2,member/2]).
+
+-include_lib("kernel/include/file.hrl").
+-include("log.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% the API
