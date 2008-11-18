@@ -91,10 +91,17 @@ pinf(Pid, Type = registered_name) ->
   end;
 pinf(Pid, Type = initial_call) ->
   case process_info(Pid, Type) of
-    {Type,{proc_lib,init_p,5}} -> proc_lib:translate_initial_call(Pid);
-    {Type,{dets, do_open_file, 11}}->{dets, element(2, dets:pid2name(Pid))};
+    {Type,{proc_lib,init_p,5}} -> 
+      case proc_lib:translate_initial_call(Pid) of
+	{dets,init,2}->{dets, element(2, dets:pid2name(Pid))};
+	IC -> IC
+      end;
+    {Type,{dets, do_open_file, 11}}->pinf_dets(Pid);%gone in R12
     {Type, Val} -> Val
   end;
 pinf(Pid, Type) -> 
   {Type, Val} = process_info(Pid, Type),
   Val.
+
+pinf_dets(Pid) ->
+  {dets, element(2, dets:pid2name(Pid))}.
