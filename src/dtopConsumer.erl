@@ -38,24 +38,47 @@ print(#cld{sort=Sort,items=Items},PrfSys,PrfPrc) ->
 -define(SYSEMPTY, ["","","","","",0,0,0,"","","","",""]).
 
 print_sys(Sys) ->
-  try io:fwrite(?SYSFORMAT, sysI(Sys))
-  catch _:_ -> io:fwrite(?SYSFORMAT, ?SYSEMPTY)
+  io:fwrite("~s~n",[sys_str(Sys)]),
+  io:fwrite(memf(),memi(Sys)).
+memf() -> "memory[kB]:  proc~8s, atom~8s, bin~8s, code~8s, ets~8s~n".
+
+sys_str(Sys) ->
+  {_, Time} = calendar:now_to_local_time(lks(now, Sys)),
+  H		= pad(element(1,Time),2,$0,left),
+  M		= pad(element(2,Time),2,$0,left),
+  S		= pad(element(3,Time),2,$0,left),
+  Node		= to_list(lks(node, Sys)),
+  MEMbeam	= to_list(round(lks(beam_vss, Sys)/1048576)),
+  MEM		= to_list(round(lks(total, Sys)/1048576)),
+  CPUbeam	= to_list(100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))),
+  CPU    	= to_list(100*(lks(user,Sys)+lks(kernel,Sys))),
+  Procs		= to_list(lks(procs,Sys)),
+  RunQ		= to_list(lks(run_queue, Sys)),
+
+  SYS = lists:sublist(lists:append(["size: "    ,MEM,
+				    "("         ,MEMbeam,
+				    ")M, cpu%: ",CPUbeam,
+				    "("         ,CPU,
+				    "), procs: ",Procs,
+				    ", runq: "  ,RunQ,
+				    ", ",H,":",M,":",S]),79),
+  pad(Node,79-length(SYS),$ , right)++SYS.
+
+pad(Item,Len,Pad,LeftRight) ->
+  I = to_list(Item),
+  case length(I) of
+    L when L=:=Len -> I;
+    L when L<Len -> case LeftRight of 
+		      left -> lists:duplicate(Len-L,Pad)++I;
+		      right-> I++lists:duplicate(Len-L,Pad)
+		    end;
+    _ -> lists:sublist(I,Len)
   end.
 
-sysI(Sys) ->
-  {_, {H,M,S}} = calendar:now_to_local_time(lks(now, Sys)),
-  [to_list(lks(node, Sys)),
-   io_lib:fwrite("~w(~w)", [round(lks(beam_vss, Sys)/1048576),
-			    round(lks(total, Sys)/1048576)]),
-   to_list(100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))),
-   to_list(lks(procs,Sys)),
-   to_list(lks(run_queue, Sys)),
-   H, M, S,
-   to_list(lks(processes, Sys)/1024),
-   to_list(lks(atom, Sys)/1024),
-   to_list(lks(binary, Sys)/1024),
-   to_list(lks(code, Sys)/1024),
-   to_list(lks(ets, Sys)/1024)].
+memi(Sys) ->
+  try [to_list(lks(T,Sys)/1024) || T <- [processes,atom,binary,code,ets]]
+  catch _:_ -> ["","","","",""]
+  end.
 
 print_del() -> io:fwrite("~s~n", [lists:duplicate(79, $-)]).
 
@@ -104,11 +127,12 @@ pidf(Pid) ->
 funf({M, F, A}) -> "("++to_list(M)++":"++to_list(F)++"/"++to_list(A)++")";
 funf(Term) -> io_lib:fwrite("~p", [Term]).
 
-to_list(A) when pid(A) -> pid_to_list(A);
-to_list(A) when atom(A) -> atom_to_list(A);
-to_list(A) when float(A) -> to_list(round(A));
-to_list(A) when tuple(A) -> tuple_to_list(A);
-to_list(A) when integer(A) -> integer_to_list(A).
+to_list(A) when is_list(A) -> A;
+to_list(A) when is_pid(A) -> pid_to_list(A);
+to_list(A) when is_atom(A) -> atom_to_list(A);
+to_list(A) when is_float(A) -> to_list(round(A));
+to_list(A) when is_tuple(A) -> tuple_to_list(A);
+to_list(A) when is_integer(A) -> integer_to_list(A).
 
 lks(Tag, [{Tag,Val}|_]) -> Val;
 lks(Tag, [_|List]) -> lks(Tag, List).
