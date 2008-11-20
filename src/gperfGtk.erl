@@ -47,7 +47,7 @@ init() ->
     _:R -> ?log([{error,R},{stack,erlang:get_stacktrace()}])
   end.
 
-glade_file() -> join([code:priv_dir(eper),glade,"gperf.glade"]).
+glade_file() -> join([code:priv_dir(eper),"glade","gperf.glade"]).
 
 loop(LD) ->
   receive
@@ -141,6 +141,7 @@ to_str(A) when is_atom(A) -> atom_to_list(A);
 to_str(F) when is_float(F) ->float_to_list(F);
 to_str(I) when is_integer(I) ->integer_to_list(I).
 
+-spec die(_) -> no_return().
 die(_LD) ->
   io:fwrite("~w - terminating~n", [?MODULE]),
   exit(dying).
