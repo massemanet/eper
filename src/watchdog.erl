@@ -8,34 +8,28 @@
 -module(watchdog).
 
 -export([start/0,stop/0]).
--export([send/3,out/1]).
+-export([add_send_subscriber/3,add_log_subscriber/0,clear_subscribers/0]).
 -export([message/1]).
 -export([loop/1]).
 
 -include("log.hrl").
 
 -record(ld, 
-	{jailed=[]			    %jailed pids
-	 ,subscribers=default_subs()        %where to send our reports
-	 ,triggers=default_triggers()       %{atom(Tag), fun/1->no|fun/1}
-	 ,prfState			    %prfTarg:subscribe return val
-	 ,userData			    %last user data
-	 ,prfData			    %last prf data
-	 ,monData			    %last system_monitor data
-	 ,lines=5			    %# of displayed procs
+	{jailed=[]			 %jailed pids
+	 ,subscribers=[]		 %where to send our reports
+	 ,triggers=default_triggers()	 %{atom(Tag), fun/1->no|fun/1}
+	 ,prfState			 %prfTarg:subscribe return val
+	 ,userData			 %last user data
+	 ,prfData			 %last prf data
+	 ,monData			 %last system_monitor data
+	 ,lines=5			 %# of displayed procs
 	}).
 
 %% constants
 
-default_subs() -> 
-  [
-   send("localhost",56669,"I'm a Cookie")
-%   ,out(group_leader())
-  ].
-
 default_triggers() -> 
   [ {[sysMon,long_gc],500}	      %gc time [ms]
-   ,{[sysMon,large_heap],1024*256} %heap size [words]
+   ,{[sysMon,large_heap],1024*1024}    %heap size [words]
    ,{user,true}
    ,{ticker,true}
    ,{[prfSys,user],fun(X)->true=(0.95<X) end}
@@ -61,6 +55,26 @@ start() ->
 stop() -> 
   try ?MODULE ! stop
   catch _:_ -> ok
+  end.
+
+%% E.g:  add_send_subscriber("localhost",56669,"I'm a Cookie").
+add_send_subscriber(Host,Port,PassPhrase) ->
+  try {ok,{hostent,Host,[],inet,4,_}} = inet:gethostbyname(Host),
+      ?MODULE ! {add_subscriber,mk_send(Host,Port,PassPhrase)},
+      ok
+  catch 
+    error:{badmatch,{ok,{hostent,G,[W],inet,4,_}}} -> {error,{badhost,W,G}};
+    _:R -> {error,R}
+  end.
+
+add_log_subscriber() ->
+  try ?MODULE ! {add_subscriber,mk_log(group_leader())}, ok
+  catch _:R -> {error,R}
+  end.
+
+clear_subscribers() ->
+  try ?MODULE ! clear_subscribers, ok
+  catch _:R -> {error,R}
   end.
 
 message(Term) ->
@@ -97,8 +111,18 @@ loop(LD) ->
     %% set configs
     {set_lines,N} when integer(N) -> 
       loop(LD#ld{lines = N});		        %number of displayed processes
-    {set_trigger,{ID,Fun}} ->
-      loop(LD#ld{triggers=new_triggers(LD#ld.triggers,ID,Fun)});
+    list_triggers ->
+      print_term(group_leader(),LD#ld.triggers),
+      loop(LD);
+    {del_trigger,ID} ->
+      loop(LD#ld{triggers=del_trigger(LD#ld.triggers,ID)});
+    {add_trigger,{ID,Fun}} ->
+      loop(LD#ld{triggers=add_trigger(LD#ld.triggers,ID,Fun)});
+    list_subscribers ->
+      print_term(group_leader(),LD#ld.subscribers),
+      loop(LD);
+    clear_subscribers ->
+      loop(LD#ld{subscribers=[]});
     {add_subscriber,Sub} ->
       loop(LD#ld{subscribers=[Sub|LD#ld.subscribers]});
     %% fake trigger for debugging
@@ -130,7 +154,7 @@ loop(LD) ->
   end.
 
 start_monitor(Triggers) ->
-  erlang:system_monitor(self(), sysmons(Triggers)),Triggers.
+  erlang:system_monitor(self(), sysmons(Triggers)).
 
 sysmons(Triggers) ->
   [{Tag,Val} || {[sysMon,Tag],Val} <- Triggers] ++ [busy_port,busy_dist_port].
@@ -142,11 +166,18 @@ stop_monitor() ->
 %% Val :: number() | function()
 %% ID :: list(Tag) 
 %% Tag :: atom() - tags into the data structure. i.e. [prfSys,iowait]
-new_triggers(Triggers,ID,Fun) -> 
-  maybe_restart(hd(ID),[{ID,Fun}|clean_triggers(Triggers,[ID])]).
+add_trigger(Triggers,ID,Fun) -> 
+  maybe_restart(ID,[{ID,Fun}|clean_triggers(Triggers,[ID])]).
 
-maybe_restart(sysMon,Triggers) -> stop_monitor(),start_monitor(Triggers);
-maybe_restart(_,Triggers) -> Triggers.
+del_trigger(Triggers,ID) ->
+  maybe_restart(ID,clean_triggers(Triggers,[ID])).
+
+maybe_restart(Trig,Triggers) -> 
+  case Trig of 
+    [sysMon|_] -> stop_monitor(), start_monitor(Triggers);
+    _ -> ok
+  end,
+  Triggers.
 
 clean_triggers(Triggers,IDs) ->
   lists:filter(fun({ID,_})->not lists:member(ID,IDs) end, Triggers).
@@ -181,11 +212,11 @@ check_triggers([],_,O) -> O;
 check_triggers([T|Ts],Data,O) ->
   check_triggers(Ts,Data,try [check_trigger(T,Data)|O] catch _:_-> O end).
 
-check_trigger({ID,true},_Data) -> {ID,true};
-check_trigger({ID,T},Data) -> 
+check_trigger({ticker,true},_Data) -> {ticker,true};
+check_trigger({ID,T},Data) when is_function(T) -> 
   case T(get_measurement(ID,Data)) of
     true -> {ID,T};
-    F when is_function(F)  -> {ID,F}
+    NewT when is_function(NewT)  -> {ID,NewT}
   end.
 
 send_report(LD,Trigger) ->
@@ -245,7 +276,7 @@ lks(Tag,List) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-send(Name,Port,Cookie) ->
+mk_send(Name,Port,Cookie) ->
   fun(Chunk)->
       try {ok,Sck} = gen_tcp:connect(Name,Port,conn_opts(),conn_timeout()),
 	  try gen_tcp:send(Sck,prf_crypto:encrypt(Cookie,expand_recs(Chunk)))
@@ -259,9 +290,8 @@ conn_timeout() -> 100.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-out(FD) -> fun(E)-> print_term(FD,expand_recs(E)) end.
+mk_log(FD) -> fun(E)-> print_term(FD,expand_recs(E)) end.
 
-%%print_term(Term) -> print_term(group_leader(),Term).
 print_term(FD,Term) -> 
   case node(FD) == node() of
     true -> ?log(Term);
