@@ -15,7 +15,7 @@
 -include("log.hrl").
 
 %% example usage;
-%% watchdog:start(),prf:start(prf1,{watchdog,node()},prfConsumer).
+%% prf:start(prf1,node(),prfConsumer).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 collectors() -> [prfPrc].
 init(Node) -> #cld{node = Node}.
@@ -26,28 +26,8 @@ tick(LD, []) ->
   ?log(empty),
   LD;
 tick(LD, [[]]) -> 
-  ?log(double_empty),
+  ?log(empty_d),
   LD;
-tick(LD, [[{watchdog,user}|Data]|_]) -> 
-  ?log([{userData,Data}]),
-  LD;
-tick(LD, [[{watchdog,ticker}|Data]|_]) -> 
-  ?log([ticker|digger([node,now,user],Data)]),
-  LD;
-tick(LD, [[{watchdog,Trigger}|Data]|_]) -> 
-  ?log([{trigger,Trigger}|digger([node,now,user],Data)]),
+tick(LD, [Data|_]) -> 
+  ?log({data,Data}),
   LD.
-%%io:fwrite("** ~w **~n~w~n~p~n",[?MODULE,LD,Data]), LD.
-
-digger(Tags,Data) ->
-  try [{T,dig([T],Data)} || T <- Tags]
-  catch _:_ -> no_data
-  end.
-
-dig([T|Tags],Data) -> dig(Tags,lks(T,Data));
-dig([],Data) -> Data.
-
-lks(Tag,List) -> 
-  try {value,{Tag,Val}} = lists:keysearch(Tag,1,List), Val
-  catch _:_ -> throw({no_such_key,Tag,List})
-  end.
