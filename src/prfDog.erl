@@ -45,7 +45,7 @@ do_terminate(_LD,_Reason) -> ok.
 
 do_code_change(LD,_Xtra) -> LD.
 
-do_call(LD,get_data) -> {LD#ld.msg,LD};
+do_call(LD,get_data) -> {LD#ld.msg,LD#ld{msg=[]}};
 do_call(LD,Msg) -> print_term(Msg),{ok,LD}.
 
 do_cast(LD,Msg) -> print_term(Msg),LD.
