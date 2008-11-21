@@ -156,7 +156,7 @@ stuff(P,B,Dir,FDs) ->
 	    FDs
     catch
 	_:_ -> 
-	    File = filename:join(Dir,node(P))++".trz",
+	    File = filename:join(Dir,atom_to_list(node(P)))++".trz",
 	    filelib:ensure_dir(File),
 	    {ok,FD} = file:open(File,[raw,write,compressed]),
 	    ?log({opened,File}),

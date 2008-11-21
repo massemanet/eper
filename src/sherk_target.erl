@@ -84,7 +84,7 @@ mk_dest({file,{_,0,Tmp}}) -> {file,{0,mk_file(Tmp)}};
 mk_dest({file,{_,_Sz,_Tmp}}) -> exit({many_files,not_yet_implemented}).
 
 mk_file(Dir) ->
-  File = filename:join(Dir,sherk)++".trc",
+  File = filename:join(Dir,"sherk")++".trc",
   filelib:ensure_dir(File),
   File.
 

@@ -42,7 +42,7 @@ init() ->
 
   %% start the GUI and load the glade file
   gtknode:start(sherk),
-  g('GN_glade_init',[join([code:priv_dir(eper),glade,"sherk.glade"])]),
+  g('GN_glade_init',[join([code:priv_dir(eper),"glade","sherk.glade"])]),
 
   %% check the trc source
   check_file(),
