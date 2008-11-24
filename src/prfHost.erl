@@ -22,7 +22,8 @@
 start(Name,{watchdog,Node},Consumer) -> start(Name,Node,Consumer,[prfDog]);
 start(Name,Node,Consumer) -> start(Name,Node,Consumer,Consumer:collectors()).
 
-start(Name, Node, Consumer, Colls) when atom(Name),atom(Node),atom(Consumer) -> 
+start(Name, Node, Consumer, Colls) 
+  when is_atom(Name),is_atom(Node),is_atom(Consumer) -> 
   SpawnFun = fun()->init(Node,Consumer,Colls) end,
   case whereis(Name) of
     undefined -> register(Name, spawn_link(SpawnFun));

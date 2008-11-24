@@ -13,7 +13,7 @@
 -export([active/1,idle/0,wait_for_local/1]).
 
 -import(lists,[reverse/1,foreach/2,map/2]).
--import(dict,[new/0,store/3,fetch/2,from_list/1]).
+-import(dict,[fetch/2]).
 
 %% states
 -define(ACTIVE, ?MODULE:active).
@@ -106,7 +106,7 @@ start_trace(HostPid,Conf) ->
   erlang:trace(Procs,true,Flags),
   untrace(family(redbug)++family(prfTrc),Flags),
   set_tps(fetch(rtps,Conf)),
-  from_list([{host_pid,HostPid},{consumer,Cons},{conf,Conf}]).
+  dict:from_list([{host_pid,HostPid},{consumer,Cons},{conf,Conf}]).
 
 family(Daddy) ->
   try D = whereis(Daddy), 
@@ -131,13 +131,13 @@ consumer_stop(Pid) when is_pid(Pid) -> Pid ! stop;
 consumer_stop(_Port) when is_port(_Port) -> dbg:flush_trace_port().
 
 consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Time) ->
-  Conf = from_list([{daddy,self()},
-		    {count,Cnt},
-		    {time,Time},
-                    {maxsize,MaxSize},
-		    {maxqueue,MaxQueue},
-                    {where,Pid},
-		    {buffering,Buf}]),
+  Conf = dict:from_list([{daddy,self()},
+			 {count,Cnt},
+			 {time,Time},
+			 {maxsize,MaxSize},
+			 {maxqueue,MaxQueue},
+			 {where,Pid},
+			 {buffering,Buf}]),
   spawn_link(fun() -> init_local(Conf) end).
 
 consumer_file(File,Size) ->
@@ -161,12 +161,12 @@ set_tps(TPs) -> foreach(fun set_tps_f/1,TPs).
 set_tps_f({MFA,MS,Fs}) -> erlang:trace_pattern(MFA,MS,Fs).
 
 mk_prc(all) -> all;
-mk_prc(Pid) when pid(Pid) -> Pid;
-mk_prc({pid,P1,P2}) when integer(P1), integer(P2) -> c:pid(0,P1,P2);
-mk_prc(Reg) when atom(Reg) -> 
+mk_prc(Pid) when is_pid(Pid) -> Pid;
+mk_prc({pid,P1,P2}) when is_integer(P1), is_integer(P2) -> c:pid(0,P1,P2);
+mk_prc(Reg) when is_atom(Reg) -> 
   case whereis(Reg) of 
     undefined -> exit({no_such_process, Reg});
-    Pid when pid(Pid) -> Pid
+    Pid when is_pid(Pid) -> Pid
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -237,7 +237,7 @@ msg({'return_from',Pid,TS,{MFA,V}}) -> {'retn',{MFA,V},     pi(Pid),ts(TS)};
 msg({'call',Pid,TS,{MFA,B}}) ->        {'call',{MFA,B},     pi(Pid),ts(TS)};
 msg({'call',Pid,TS,MFA}) ->            {'call',{MFA,<<>>},  pi(Pid),ts(TS)}.
 
-pi(P) when pid(P) ->
+pi(P) when is_pid(P) ->
   try process_info(P, registered_name) of
       [] -> case process_info(P, initial_call) of
               {_, {proc_lib,init_p,5}} -> proc_lib:translate_initial_call(P);
@@ -249,13 +249,13 @@ pi(P) when pid(P) ->
   catch 
     error:badarg -> node(P)
   end;
-pi(P) when port(P) -> 
+pi(P) when is_port(P) -> 
   {name,N} = erlang:port_info(P,name),
   [Hd|_] = string:tokens(N," "),
   reverse(hd(string:tokens(reverse(Hd),"/")));
-pi(R) when atom(R) -> R;
-pi({R,Node}) when atom(R), Node == node() -> R;
-pi({R, Node}) when atom(R), atom(Node) -> {R, Node}.
+pi(R) when is_atom(R) -> R;
+pi({R,Node}) when is_atom(R), Node == node() -> R;
+pi({R, Node}) when is_atom(R), is_atom(Node) -> {R, Node}.
 
 ts(Nw) ->
   {_,{H,M,S}} = calendar:now_to_local_time(Nw),

@@ -9,14 +9,12 @@
 
 -export([assert/1,check_file/1]).
 
--import(filename,[dirname/1,join/1,basename/2]).
-
 -include_lib("kernel/include/file.hrl").
 
 -include("log.hrl").
 
 assert(File) ->
-  TabFile = dirname(File)++"/."++basename(File,".trz")++".etz",
+  TabFile = filename:dirname(File)++"/."++filename:basename(File,".trz")++".etz",
   {ok,#file_info{mtime=MT}} = file:read_file_info(File),
   case file:read_file_info(TabFile) of
     {ok,#file_info{mtime=TabMT}} when MT < TabMT -> 

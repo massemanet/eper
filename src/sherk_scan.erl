@@ -12,7 +12,7 @@
 
 -export([go/5]).
 
--import(lists,[member/2,reverse/1,keysearch/3,map/2,foreach/2]).
+-import(lists,[member/2,reverse/1,foreach/2]).
 
 -include("log.hrl").
 
@@ -136,7 +136,7 @@ write_msg(Msg,Seq,FD) -> io:fwrite(FD,"~.9.0w ~w~n",[Seq,Msg]),FD.
 open(File) -> {ok,FD}=file:open(File,[write]),FD.
 
 grep('',_) -> true;
-grep(P,T) when list(P) ->
+grep(P,T) when is_list(P) ->
   case grp(P,T) of
     [] -> true;
     _ -> false
@@ -145,16 +145,22 @@ grep(P,T) -> grep([P],T).
 
 grp([], _) -> [];
 grp(P, []) -> P;
-grp(P, Fun) when function(Fun) -> grp(P, list_to_atom(erlang:fun_to_list(Fun)));
-grp(P, Port) when port(Port) -> grp(P, list_to_atom(erlang:port_to_list(Port)));
-grp(P, Rf) when reference(Rf) -> grp(P, list_to_atom(erlang:ref_to_list(Rf)));
-grp(P, Pid) when pid(Pid) -> grp(P, list_to_atom(pid_to_list(Pid)));
-grp(P, T) when tuple(T) -> 
+grp(P, Fun) 
+  when is_function(Fun) -> grp(P, list_to_atom(erlang:fun_to_list(Fun)));
+grp(P, Port) 
+  when is_port(Port) -> grp(P, list_to_atom(erlang:port_to_list(Port)));
+grp(P, Rf) 
+  when is_reference(Rf) -> grp(P, list_to_atom(erlang:ref_to_list(Rf)));
+grp(P, Pid) 
+  when is_pid(Pid) -> grp(P, list_to_atom(pid_to_list(Pid)));
+grp(P, T) 
+  when is_tuple(T) -> 
   case lists:member(T,P) of
     true -> grp(P--[T], []);
     false -> grp(P,tuple_to_list(T))
   end;
-grp(P, L) when list(L) -> 
+grp(P, L) 
+  when is_list(L) -> 
   case lists:member(L, P) of
     true -> grp(P--[L], []);
     false -> grp(grp(P, hd(L)), tl(L))
@@ -229,7 +235,7 @@ mass(Pid, T=return_from, {MFA,R}, TS) ->            {T,pi(Pid),{MFA,R},TS};
 mass(Pid, T=spawn, {P2, MFA}, TS) ->  ins({P2,MFA}),{T,pi(Pid),{pi(P2),MFA},TS};
 mass(Pid, T=exit, Reason, TS) ->                    {T,pi(Pid),Reason,TS};
 mass(Pid, T=link, Pd, TS) ->                        {T,pi(Pid),pi(Pd),TS};
-mass(Pid, T=unlink, Pd, TS) when pid(Pd) ->         {T,pi(Pid),pi(Pd),TS};
+mass(Pid, T=unlink, Pd, TS) when is_pid(Pd) ->      {T,pi(Pid),pi(Pd),TS};
 mass(Pid, T=unlink, _Crap, TS) ->                   {T,pi(Pid),unknown,TS};
 mass(Pid, T=getting_linked, Pd, TS) ->              {T,pi(Pid),pi(Pd),TS};
 mass(Pid, T=getting_unlinked, Pd, TS) ->            {T,pi(Pid),pi(Pd),TS};
@@ -240,13 +246,13 @@ mass(Pid, T=out, MFA, TS) ->                        {T,pi(Pid),MFA,TS};
 mass(Pid, T=gc_start, Info, TS) ->                  {T,pi(Pid),Info,TS};
 mass(Pid, T=gc_end, Info, TS) ->                    {T,pi(Pid),Info,TS}.
 
-mass_send(Pid, T, {Msg, To}, TS) when pid(To); port(To) -> 
+mass_send(Pid, T, {Msg, To}, TS) when is_pid(To); is_port(To) -> 
   {T,pi(Pid),{pi(To), Msg},TS};
-mass_send(Pid, T, {Msg, To}, TS) when atom(To) -> 
+mass_send(Pid, T, {Msg, To}, TS) when is_atom(To) -> 
   {T,pi(Pid),{{find_pid(To),To}, Msg},TS};
-mass_send(Pid, T, {Msg, {To,Node}}, TS) when atom(To), Node==node(Pid) -> 
+mass_send(Pid, T, {Msg, {To,Node}}, TS) when is_atom(To), Node==node(Pid) -> 
   {T,pi(Pid),{{find_pid(To),To}, Msg},TS};
-mass_send(Pid, T, {Msg, {To,Node}}, TS) when atom(To), atom(Node) -> 
+mass_send(Pid, T, {Msg, {To,Node}}, TS) when is_atom(To), is_atom(Node) -> 
   {T,pi(Pid),{{remote,{To,Node}}, Msg},TS}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

@@ -108,12 +108,12 @@ tracer_info(Tracer) when is_pid(Tracer) ->  process_info(Tracer);
 tracer_info(Tracer) when is_port(Tracer) -> erlang:port_info(Tracer).
 
 mk_prc(all) -> all;
-mk_prc(Pid) when pid(Pid) -> Pid;
-mk_prc({pid,P1,P2}) when integer(P1), integer(P2) -> c:pid(0,P1,P2);
-mk_prc(Reg) when atom(Reg) -> 
+mk_prc(Pid) when is_pid(Pid) -> Pid;
+mk_prc({pid,P1,P2}) when is_integer(P1), is_integer(P2) -> c:pid(0,P1,P2);
+mk_prc(Reg) when is_atom(Reg) -> 
   case whereis(Reg) of 
     undefined -> exit({no_such_process, Reg});
-    Pid when pid(Pid) -> Pid
+    Pid when is_pid(Pid) -> Pid
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -146,7 +146,7 @@ rm(File) ->
   file:delete(File).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pi(P) when pid(P) ->
+pi(P) when is_pid(P) ->
   case process_info(P, registered_name) of
     [] -> 
       case process_info(P, initial_call) of
@@ -157,7 +157,7 @@ pi(P) when pid(P) ->
     {_,Nam} -> Nam;
     undefined -> dead
   end;
-pi(P) when port(P) -> 
+pi(P) when is_port(P) -> 
   case erlang:port_info(P,name) of
     {name,N} -> 
       [Hd|_] = string:tokens(N," "),
@@ -173,9 +173,9 @@ self_register(Name) ->
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-send2port(Port, Bin) when port(Port), binary(Bin) ->
+send2port(Port, Bin) when is_port(Port), is_binary(Bin) ->
   erlang:port_command(Port, Bin);
-send2port(Port, Bin) when binary(Bin) ->
+send2port(Port, Bin) when is_binary(Bin) ->
   ?log({bad_port, {Port}});
 send2port(Port, Term) ->
   send2port(Port, term_to_binary(Term)).

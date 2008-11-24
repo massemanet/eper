@@ -41,7 +41,7 @@ ass_loaded(Node, Mod) ->
       ass_loaded(Node, Mod);
     {badrpc,_} ->
       ok;
-    CompInfo when list(CompInfo) ->
+    CompInfo when is_list(CompInfo) ->
       case {ftime(CompInfo), ftime(Mod:module_info(compile))} of
 	{interpreted,_} ->
 	  ok;

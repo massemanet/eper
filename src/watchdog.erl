@@ -109,7 +109,7 @@ loop(LD) ->
       print_term(group_leader(),LD),
       loop(LD);
     %% set configs
-    {set_lines,N} when integer(N) -> 
+    {set_lines,N} when is_integer(N) -> 
       loop(LD#ld{lines = N});		        %number of displayed processes
     list_triggers ->
       print_term(group_leader(),LD#ld.triggers),

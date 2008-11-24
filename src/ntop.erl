@@ -9,7 +9,7 @@
 
 -export([start/1,stop/0]).
 
-start(Node) when atom(Node) -> start([Node]);
+start(Node) when is_atom(Node) -> start([Node]);
 start([Node]) -> prf:start(ntop,Node,ntopConsumer).
 
 stop() -> prf:stop(ntop).

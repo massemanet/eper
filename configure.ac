@@ -1,4 +1,4 @@
-AC_INIT(Various Erlang performance related tools, 0.47,
+AC_INIT(Various Erlang performance related tools, 0.48,
              mats.cronqvist()gmail.com, eper)
 
 dnl Require autoconf version >=2.59c. first one with erlang macros
@@ -14,7 +14,7 @@ AC_ERLANG_SUBST_ROOT_DIR
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB(erl_interface)
 AC_ERLANG_SUBST_INSTALL_LIB_SUBDIR(AC_PACKAGE_TARNAME, AC_PACKAGE_VERSION)
-erlcflags="+debug_info"
+erlcflags="+warn_unused_import +warn_obsolete_guard +debug_info"
 AC_SUBST([ERLCFLAGS], [$erlcflags])
 
 dnl Specify the files to instantiate.

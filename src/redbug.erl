@@ -183,18 +183,19 @@ chk_trc('receive',{Flags,RTPs}) -> {['receive'|Flags],RTPs};
 chk_trc(RTP,{Flags,RTPs}) when is_tuple(RTP) -> {Flags,[chk_rtp(RTP)|RTPs]};
 chk_trc(X,_) -> exit({bad_trc,X}).
 
-chk_rtp({M})                                    -> chk_rtp({M,'_',[]});
-chk_rtp({M,F}) when atom(F)                     -> chk_rtp({M,F,[]});
-chk_rtp({M,L}) when list(L)                     -> chk_rtp({M,'_',L});
-chk_rtp({'_',_,_})                              -> exit(dont_wildcard_module);
-chk_rtp({M,F,MS}) when atom(M),atom(F),list(MS) -> {{M,F,'_'},ms(MS),[local]};
-chk_rtp(X)                                      -> exit({bad_rtp,X}).
+chk_rtp({M})                             -> chk_rtp({M,'_',[]});
+chk_rtp({M,F}) when is_atom(F)           -> chk_rtp({M,F,[]});
+chk_rtp({M,L}) when is_list(L)           -> chk_rtp({M,'_',L});
+chk_rtp({'_',_,_})                       -> exit(dont_wildcard_module);
+chk_rtp({M,F,MS}) 
+  when is_atom(M),is_atom(F),is_list(MS) -> {{M,F,'_'},ms(MS),[local]};
+chk_rtp(X)                               -> exit({bad_rtp,X}).
 
 ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
 
 msf(stack, [{Head,Cond,Body}]) -> [{Head,Cond,[{message,{process_dump}}|Body]}];
 msf(return, [{Head,Cond,Body}]) -> [{Head,Cond,[{return_trace}|Body]}];
-msf(Head, [{_,Cond,Body}]) when tuple(Head)-> [{Head,Cond,Body}];
+msf(Head, [{_,Cond,Body}]) when is_tuple(Head)-> [{Head,Cond,Body}];
 msf(X,_) -> exit({bad_match_spec,X}).
 
 ass_list(L) when is_list(L) -> usort(L);
@@ -277,5 +278,5 @@ to_term(Str) ->
   {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "["++Str++"]. ", 1),
   case erl_parse:parse_term(Toks) of
     {ok, [Term]} -> Term;
-    {ok, L} when list(L) -> L
+    {ok, L} when is_list(L) -> L
   end.

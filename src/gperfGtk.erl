@@ -10,8 +10,6 @@
 -export([start/0,stop/0,init/0]).
 -export([loop/1]).				%internal export
 
--import(filename,[join/1,dirname/1]).
--import(random,[uniform/1]).
 -import(lists,[foreach/2,flatten/1,keysearch/3,nth/2,reverse/1,seq/2,sort/1]).
 -import(orddict,[fold/3,update/3,map/2,fetch/2,from_list/1]).
 
@@ -47,7 +45,7 @@ init() ->
     _:R -> ?log([{error,R},{stack,erlang:get_stacktrace()}])
   end.
 
-glade_file() -> join([code:priv_dir(eper),"glade","gperf.glade"]).
+glade_file() -> filename:join([code:priv_dir(eper),"glade","gperf.glade"]).
 
 loop(LD) ->
   receive

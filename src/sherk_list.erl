@@ -8,7 +8,7 @@
 -module(sherk_list).
 
 -export([go/1]).
--import(lists,[sublist/2,reverse/1,sort/1,flatten/1,sort/1]).
+-import(lists,[reverse/1,sort/1,flatten/1,sort/1]).
 -define(LOG(T), sherk:log(process_info(self()),T)).
 
 go({call,PidStr}) ->

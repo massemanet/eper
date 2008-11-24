@@ -18,9 +18,8 @@
 -export([log/2]).
 -export([loop/1]).
 
--import(filename,[dirname/1,join/1]).
--import(lists,[foreach/2,member/2,flatten/1,usort/1,foldl/3]).
--import(dict,[from_list/1,to_list/1,fetch/2,store/3,new/0,append/3]).
+-import(lists,[member/2,flatten/1,usort/1,foldl/3]).
+-import(dict,[from_list/1,to_list/1,fetch/2,store/3,append/3]).
 
 -include("log.hrl").
 
@@ -42,7 +41,8 @@ init() ->
 
   %% start the GUI and load the glade file
   gtknode:start(sherk),
-  g('GN_glade_init',[join([code:priv_dir(eper),"glade","sherk.glade"])]),
+  g('GN_glade_init',
+    [filename:join([code:priv_dir(eper),"glade","sherk.glade"])]),
 
   %% check the trc source
   check_file(),
@@ -537,7 +537,7 @@ to_str(X) -> flatten(io_lib:fwrite("~p",[X])).
 
 is_string(X) when not is_list(X) -> false;
 is_string([]) -> true;
-is_string([H|T]) when integer(H), H >= $ , H =< $~ -> is_string(T);
+is_string([H|T]) when is_integer(H), H >= $ , H =< $~ -> is_string(T);
 is_string(_) -> false.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
