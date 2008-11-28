@@ -17,7 +17,7 @@
 %% example usage;
 %% prf:start(prf1,node(),prfConsumer).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-collectors() -> [prfPrc].
+collectors() -> [prfSys].
 init(Node) -> #cld{node = Node}.
 terminate(_LD) -> ok.
 config(LD,_Data) -> ?log({loopdata,LD}), LD.

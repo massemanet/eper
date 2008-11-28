@@ -86,13 +86,16 @@ print_del() -> io:fwrite("~s~n", [lists:duplicate(79, $-)]).
 -define(TAGS, ["pid","name","current","msgq","mem","cpu"]).
 print_tags() -> io:fwrite(?FORMAT, ?TAGS).
 
-which_sort( cpu,PrfPrc) -> lks(reds,PrfPrc);
-which_sort(msgq,PrfPrc) -> lks(msg,PrfPrc);
-which_sort( mem,PrfPrc) -> lks(mem,PrfPrc).
+which_sort( cpu,PrfPrc) -> expand(lks(dreds,PrfPrc),lks(info,PrfPrc));
+which_sort(msgq,PrfPrc) -> expand(lks(msgq,PrfPrc),lks(info,PrfPrc));
+which_sort(dmem,PrfPrc) -> expand(lks(dmem,PrfPrc),lks(info,PrfPrc));
+which_sort( mem,PrfPrc) -> expand(lks(mem,PrfPrc),lks(info,PrfPrc)).
+
+expand(Pids,Infos) -> [[{pid,Pid}|lks(Pid,Infos)] || Pid <- Pids].
 
 print_procs(Items,PrfSys,Prcs) -> 
   CpuPerRed = cpu_per_red(PrfSys),
-  lists:foreach(fun(P) -> procsI(P,CpuPerRed) end, resize(Items,Prcs)).
+  [procsI(P,CpuPerRed) || P <- resize(Items,Prcs)].
 
 resize(Items,Prcs) ->
   case Items < length(Prcs) of
@@ -106,13 +109,14 @@ cpu_per_red(Sys) ->
     Reds -> 100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))/Reds
   end.
 
+procsI(dummy,_) -> io:fwrite("~n",[]);
 procsI(PP,CpuPerRed) ->
   io:fwrite(?FORMAT, [pidf(to_list(lks(pid,PP))),
 		      funf(reg(PP)), 
 		      funf(lks(current_function, PP)), 
 		      to_list(lks(message_queue_len, PP)),
 		      to_list(lks(memory,PP)/1024), 
-		      to_list(lks(reductions,PP)*CpuPerRed)]).
+		      to_list(lks(dreductions,PP)*CpuPerRed)]).
 
 reg(PP) ->    
   case lks(registered_name, PP) of
@@ -124,7 +128,7 @@ pidf(Pid) ->
   {match,B,L} = regexp:match(Pid,"<[0-9]*"),
   [$<,$0|string:substr(Pid,B+L)].
 
-funf({M, F, A}) -> "("++to_list(M)++":"++to_list(F)++"/"++to_list(A)++")";
+funf({M, F, A}) -> to_list(M)++":"++to_list(F)++"/"++to_list(A);
 funf(Term) -> io_lib:fwrite("~p", [Term]).
 
 to_list(A) when is_list(A) -> A;

@@ -7,7 +7,7 @@
 %%%-------------------------------------------------------------------
 -module(prf).
 
--export([start/3,stop/1,config/3]).
+-export([start/3,start/4,stop/1,config/3]).
 
 %% prf internal
 -export([log/2,ticker_odd/0,ticker_even/0]).
@@ -18,9 +18,10 @@
 %%% the API
 %%% Name - atom() the name of this session
 %%% Node - atom() where to start the collectors
-%%% Consumer - atom() the name of the consumer callabck module
+%%% Consumer - atom() the name of the consumer callback module
 
-start(Name, Node, Consumer) -> prfHost:start(Name, Node, Consumer).
+start(Name,Node,Consumer) -> start(Name,Node,Consumer,no_proxy).
+start(Name,Node,Consumer,Proxy) -> prfHost:start(Name,Node,Consumer,Proxy).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% Name - atom() the name of this session

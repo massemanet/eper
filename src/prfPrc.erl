@@ -9,99 +9,129 @@
 -module(prfPrc).
 
 -export([collect/1,config/2]).
+-export([pid_info/1]).
 
--record(cst,{now=now(),items=19}).
+-record(cst,{old_info=get_info()}).
 
 %%% reductions,message_queue_len,memory
 %%% current_function,initial_call,registered_name
 %%% N.B. 'reductions' is reductions/sec
 
+-define(ITEMS,19).
 -define(SORT_ITEMS,[reductions,memory,message_queue_len]).
 -define(INFO_ITEMS,[current_function,initial_call,registered_name]).
+-define(TAGS,?SORT_ITEMS++?INFO_ITEMS).
+
 config(State,_ConfigData) -> State.
 
 %%% returns {State, Data}
 collect(init) -> 
-  catch ets:delete(?MODULE),
-  ets:new(?MODULE,[ordered_set,named_table]),
   collect(#cst{});
 collect(Cst) -> 
-  Now = now(),
-  NowDiff = timer:now_diff(Now,Cst#cst.now)/1000000,
-  T0 = empty_toplists(Cst#cst.items),
-  TopLists = lists:foldl(fun(P,A) -> topl(P,A,NowDiff) end, T0, processes()),
-  {Cst#cst{now=Now},{?MODULE,out(Now,TopLists)}}.
+  Info = get_info(),
+  {Cst#cst{old_info=Info}, {?MODULE,select(Cst#cst.old_info,Info)}}.
 
-topl(P,TopLists,NowDiff) ->
-  try [pinf(P,T) || T <- ?SORT_ITEMS] of
-    [Vred,Vmem,Vmsg] ->
-      RedDiff = red_diff(P,Vred,NowDiff),
-      update_toplists(P,TopLists,RedDiff,Vmem,Vmsg)
+get_info() ->
+  %% hardcoded 999, because it's really not a good idea to up it
+  %% trust me...
+  case 999 < erlang:system_info(process_count) of
+    true -> {now(),[]};
+    false-> {now(),[{P,pid_info(P,?SORT_ITEMS)}||P<-processes()]} 
+  end.
+
+%%% Dreds, Dmems, Mems and Msgqs are sorted lists of pids
+%%% PidInfo is a sorted list of {Pid,Info}
+%%% Info is a list of tagged tuples {atom(),number()}
+
+select({Then,Olds},{Now,Curs}) ->
+  {DredL,DmemL,MemL,MsgqL} = topl(Olds,Curs,outf(Then,Now),empties()),
+  PidInfo = lists:usort([I || {_,I} <- lists:append([DredL,DmemL,MemL,MsgqL])]),
+  [{dreds,e1e2(DredL)},
+   {dmem,e1e2(DmemL)},
+   {mem,e1e2(MemL)},
+   {msgq,e1e2(MsgqL)},
+   {info,complete(PidInfo)}].
+
+e1e2(List) -> [E || {_,{E,_}} <- List].
+
+complete(List) ->
+  [{Pid,Info++pid_info(Pid,?INFO_ITEMS)}||{Pid,Info}<-List].
+
+topl([],_,_,Out) -> Out;
+topl(_,[],_,Out) -> Out;
+topl(Os=[{Po,_}|_],[{Pc,_}|Cs],Outf,Out) when Pc<Po -> topl(Os,Cs,Outf,Out);
+topl([{Po,_}|Os],Cs=[{Pc,_}|_],Outf,Out) when Po<Pc -> topl(Os,Cs,Outf,Out);
+topl([{P,Io}|Os],[{P,Ic}|Cs],Outf,Out) -> topl(Os,Cs,Outf,Outf(P,Io,Ic,Out)).
+
+empties() -> {[],[],[],[]}.
+
+outf(Then,Now) ->  
+  NowDiff = timer:now_diff(Now,Then)/1000000,
+  fun(P,Io,Ic,Out) -> out(P,NowDiff,Io,Ic,Out) end.
+
+out(P,NowDiff,Io,Ic,O={Odred,Omem,Odmem,Omsgq}) -> 
+  try
+    Dred = dred(NowDiff,Io,Ic),
+    Dmem = dmem(NowDiff,Io,Ic),
+    Info = {P,[{dreductions,Dred},{dmemory,Dmem}|Ic]}, 
+    {new_topl(Odred,{Dred,Info}),
+     new_topl(Odmem,{Dmem,Info}),
+     new_topl(Omem,{mem(Ic),Info}),
+     new_topl(Omsgq,{msgq(Ic),Info})}
   catch 
-    _:_ -> 
-      catch ets:delete(?MODULE,P), TopLists
+    _:_ -> O
   end.
 
-empty_toplists(Items) ->
-  Dummies = lists:duplicate(Items,{}),
-  {Dummies,Dummies,Dummies}.
-
-red_diff(P,Reds,NowDiff) ->
-  try ets:lookup(?MODULE,P) of
-    [] -> 0;
-    [{P,OReds}] -> (Reds-OReds)/NowDiff
-  after 
-    ets:insert(?MODULE,{P,Reds})
-  end.
-
-update_toplists(P,{TopRed,TopMem,TopMsg},Vred,Vmem,Vmsg) ->
-  {update_toplist({Vred,[P,Vred,Vmem,Vmsg]},TopRed),
-   update_toplist({Vmem,[P,Vred,Vmem,Vmsg]},TopMem),
-   update_toplist({Vmsg,[P,Vred,Vmem,Vmsg]},TopMsg)}.
-
-update_toplist(El,Top) ->
+new_topl(Top,{Item,_}) when 0 =:= Item; 0.0 =:= Item -> 
+  Top;
+new_topl(Top,El) when length(Top) < ?ITEMS -> 
+  lists:sort([El|Top]);
+new_topl(Top,El) -> 
   case El < hd(Top) of
     true -> Top;
     false-> tl(lists:sort([El|Top]))
   end.
 
-out(Now,{RedList,MemList,MsgList}) -> 
-  [{now,Now},
-   {process_count,erlang:system_info(process_count)},
-   {reds,complete(RedList)},
-   {mem,complete(MemList)},
-   {msg,complete(MsgList)}].
+dred(NowDiff,Io,Ic)-> (red(Ic)-red(Io))/NowDiff.
+dmem(NowDiff,Io,Ic)-> (mem(Ic)-mem(Io))/NowDiff.
 
-complete(List) ->
-  lists:foldl(fun({_,El},Acc)->postf(El,Acc) end,[],List).
+red([]) -> 0;
+red([{reductions,Reds}|_]) -> Reds.
 
-postf(El,Acc) ->
-  try 
-    P = hd(El),
-    InfoItems = [{I,pinf(P,I)} || I <- ?INFO_ITEMS],
-    [lists:zip([pid|?SORT_ITEMS],El)++InfoItems|Acc]
-  catch 
-    _:_ -> Acc
+mem([]) -> 0;
+mem([_,{memory,Mem}|_])	-> Mem.
+
+msgq([]) -> 0;
+msgq([_,_,{message_queue_len,Msgq}]) -> Msgq.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% pid_info/1
+
+pid_info(Pid) when is_pid(Pid) ->
+  pid_info(Pid,?TAGS).
+
+pid_info(Pid,Tags) when is_list(Tags) -> 
+  try [pidinfo(Pid,T) || T <- Tags]
+  catch _:_ -> []
   end.
 
-pinf(Pid, Type = registered_name) ->
+pidinfo(Pid, Type = registered_name) ->
   case process_info(Pid, Type) of
-    [] -> [];
-    {Type,Val} -> Val
+    [] -> {Type,[]};
+    XX -> XX
   end;
-pinf(Pid, Type = initial_call) ->
+pidinfo(Pid, Type = initial_call) ->
   case process_info(Pid, Type) of
     {Type,{proc_lib,init_p,5}} -> 
       case proc_lib:translate_initial_call(Pid) of
-	{dets,init,2}->{dets, element(2, dets:pid2name(Pid))};
-	IC -> IC
+	{dets,init,2} -> {Type,{dets, element(2, dets:pid2name(Pid))}};
+	IC -> {Type,IC}
       end;
-    {Type,{dets, do_open_file, 11}}->pinf_dets(Pid);%gone in R12
-    {Type, Val} -> Val
+    {Type,{dets, do_open_file, 11}}->{Type,pinf_dets(Pid)};%gone in R12
+    XX -> XX
   end;
-pinf(Pid, Type) -> 
-  {Type, Val} = process_info(Pid, Type),
-  Val.
+pidinfo(Pid, Type) -> 
+  process_info(Pid, Type).
 
 pinf_dets(Pid) ->
   {dets, element(2, dets:pid2name(Pid))}.
