@@ -7,11 +7,16 @@
 %%%-------------------------------------------------------------------
 -module(dtop).
 
--export([start/0,start/1,stop/0,sort/1]).
+-export([start/0,start/1,start/2,stop/0,sort/1]).
 
-start()-> start(node()).
-start(Node) when is_atom(Node) -> start([Node]);
-start([Node]) -> prf:start(dtop,Node,dtopConsumer).
+start() -> start(node()).
+
+start([Node,Proxy]) -> start(Node,Proxy);
+start([Node]) -> start([Node,no_proxy]);
+start(Node) -> start([Node]).
+
+start(Node,Proxy) when is_atom(Node),is_atom(Proxy) ->
+  prf:start(dtop,Node,dtopConsumer,Proxy).
 
 stop() -> prf:stop(dtop).
 
