@@ -22,7 +22,6 @@
 	 ,userData			 %last user data
 	 ,prfData			 %last prf data
 	 ,monData			 %last system_monitor data
-	 ,lines=5			 %# of displayed procs
 	}).
 
 %% constants
@@ -88,7 +87,7 @@ init(Daddy) ->
       Daddy ! {self(),ok}
   catch _:_ -> exit(whereis(?MODULE))
   end,
-  LD = #ld{prfState=prfTarg:subscribe(node(),self(),[prfSys,prfPrc,prfNet])},
+  LD = #ld{prfState=prfTarg:subscribe(node(),self(),[prfSys,prfPrc])},
   start_monitor(LD#ld.triggers),
   loop(LD).
 
@@ -109,8 +108,6 @@ loop(LD) ->
       print_term(group_leader(),LD),
       loop(LD);
     %% set configs
-    {set_lines,N} when is_integer(N) -> 
-      loop(LD#ld{lines = N});		        %number of displayed processes
     list_triggers ->
       print_term(group_leader(),LD#ld.triggers),
       loop(LD);
@@ -228,17 +225,10 @@ make_report(user,LD) ->
 make_report(sysMon,LD) ->
   [{?MODULE,sysMon}|expand_ps(LD#ld.monData)];
 make_report(Trigger,LD) ->
-  [{?MODULE,Trigger}|maybe_procs(LD)++generic_report(LD#ld.prfData)].
+  [{?MODULE,Trigger}|generic_report(LD)].
 
 generic_report(LD) ->
-  get_measurement([prfSys],LD).
-
-maybe_procs(#ld{lines = 0}) -> [];
-maybe_procs(LD) -> 
-  lists:sublist(get_measurement([prfPrc,reds],LD#ld.prfData),LD#ld.lines).
-
-get_measurement([T|Tags],Data) -> get_measurement(Tags,lks(T,Data));
-get_measurement([],Data) -> Data.
+  LD#ld.prfData.
 
 expand_ps([]) -> [];
 expand_ps([{T,P}|Es]) when is_pid(P)-> pii({T,P})++expand_ps(Es);
@@ -246,28 +236,19 @@ expand_ps([{T,P}|Es]) when is_port(P)-> poi({T,P})++expand_ps(Es);
 expand_ps([E|Es]) -> [E|expand_ps(Es)].
 
 pi_info() -> [message_queue_len,current_function,initial_call,registered_name].
-pii({T,Pid}) -> [{T,Pid} | pii(Pid, pi_info())].
-pii(_Pid, []) -> [];
-pii(Pid, [Tag|Tags]) ->
-  case process_info(Pid, Tag) of
-    undefined -> pii(Pid, Tags);
-    [] -> pii(Pid, Tags);
-    Val -> [Val|pii(Pid, Tags)]
-  end.
+pii({T,Pid}) -> [{T,Pid} | prfPrc:pid_info(Pid, pi_info())].
 
-po_info() -> [name,id,connected,input,output].
-poi({T,Port}) -> [{T,Port}|poi(Port, po_info())].
-poi(_Port,[]) -> [];
-poi(Port,[Porti|Portis]) ->
-  case erlang:port_info(Port,Porti) of
-    undefined -> poi(Port,Portis);
-    X -> [X|poi(Port,Portis)]
-  end.
+poi({T,Port}) -> 
+  {Name,Stats} = prfNet:port_info(Port),
+  [{T,Port},{name,Name}|Stats].
 
 flush() ->    
   receive {monitor,_,_,_} -> flush()
   after 0 -> ok
   end.
+
+get_measurement([T|Tags],Data) -> get_measurement(Tags,lks(T,Data));
+get_measurement([],Data) -> Data.
 
 lks(Tag,List) -> 
   try {value,{Tag,Val}} = lists:keysearch(Tag,1,List), Val

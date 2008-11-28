@@ -9,6 +9,8 @@
 -module(prfNet).
 
 -export([collect/1,config/2]).
+-export([port_info/1]).
+
 -include_lib("kernel/include/inet.hrl").
 
 %%% returns {State, Data}
@@ -16,12 +18,12 @@ collect(State) -> {State, {?MODULE, data()}}.
 
 config(State,_ConfigData) -> State.
 
-data() -> lists:sort(data(erlang:ports())).
+data() -> lists:sort([port_info(P) || P <- erlang:ports()]).
 
-data([]) -> [];
-data([P|Ports]) ->
-  try [stats(P,name(P))|data(Ports)] 
-  catch _:_ -> data(Ports) 
+%%returns {Name::atom(),Stats::list()}
+port_info(P) when is_port(P) -> 
+  try stats(P,name(P))
+  catch _:_ -> {P,[]}
   end.
 
 stats(P,{driver,Name}) -> 
