@@ -21,24 +21,11 @@ tick(LD,Data) ->
   LD.
   
 do_tick([]) -> ok;
-do_tick([[]]) -> ok;
-do_tick([[{watchdog,user}|Data]|_]) -> 
-  ?log([{userData,Data}]);
-do_tick([[{watchdog,ticker}|Data]|_]) -> 
-  ?log([ticker|digger([node,now,user],Data)]);
-do_tick([[{watchdog,sysMon}|Data]|_]) -> 
-  ?log([sysMon|Data]);
-do_tick([[{watchdog,Trigger}|Data]|_]) -> 
-  ?log([{trigger,Trigger}|digger([node,now,user],Data)]).
-
-
-digger(Tags,Data) ->
-  try [{T,dig([T],Data)} || T <- Tags]
-  catch _:_ -> no_data
-  end.
-
-dig([T|Tags],Data) -> dig(Tags,lks(T,Data));
-dig([],Data) -> Data.
+do_tick([[]]) -> ?log(double_empty);
+do_tick(Data) -> 
+  PrfSys = lks(prfSys,Data),
+  io:fwrite("~w: ~p~n",[lks(node,PrfSys),
+			calendar:now_to_local_time(lks(now,PrfSys))]).
 
 lks(Tag,List) -> 
   try {value,{Tag,Val}} = lists:keysearch(Tag,1,List), Val
