@@ -1,4 +1,290 @@
 ------------------------------------------------------------------------
+r162 | mats.cronqvist | 2008-11-28
+
+  dropped 0.48
+
+------------------------------------------------------------------------
+r161 | mats.cronqvist | 2008-11-28 16:13:56 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/dtop.erl
+
+  proxy compliant
+
+------------------------------------------------------------------------
+r160 | mats.cronqvist | 2008-11-28 15:33:30 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/watchdogConsumer.erl
+
+  new data format
+
+------------------------------------------------------------------------
+r159 | mats.cronqvist | 2008-11-28 15:32:58 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfHost.erl
+
+  corner case
+
+------------------------------------------------------------------------
+r158 | mats.cronqvist | 2008-11-28 15:21:39 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfHost.erl
+
+  added proxy functionality, based on watchdog/prfDog
+
+------------------------------------------------------------------------
+r157 | mats.cronqvist | 2008-11-28 15:20:24 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfDog.erl
+   M /trunk/src/watchdog.erl
+
+  watchdog/prfDog disagreed on protocol
+
+------------------------------------------------------------------------
+r156 | mats.cronqvist | 2008-11-28 09:52:42 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfDog.erl
+   M /trunk/src/prfPrc.erl
+   M /trunk/src/watchdogConsumer.erl
+
+  cosmetic
+
+------------------------------------------------------------------------
+r155 | mats.cronqvist | 2008-11-28 09:51:57 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/dtopConsumer.erl
+
+  pids were sorted wrong way
+
+------------------------------------------------------------------------
+r154 | mats.cronqvist | 2008-11-28 09:09:46 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfNet.erl
+   M /trunk/src/watchdog.erl
+
+ replaced code in watchdog.erl with calls to prfNet and prfPrc
+
+------------------------------------------------------------------------
+r153 | mats.cronqvist | 2008-11-28 09:07:04 +0100 (Fri, 28 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/dtopConsumer.erl
+   M /trunk/src/prf.erl
+   M /trunk/src/prfConsumer.erl
+   M /trunk/src/prfPrc.erl
+   M /trunk/src/watchdogConsumer.erl
+
+  yet another prfPrc rewrite...
+
+------------------------------------------------------------------------
+r152 | mats.cronqvist | 2008-11-24 11:31:11 +0100 (Mon, 24 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/configure.ac
+   M /trunk/src/dtop.erl
+   M /trunk/src/gperfGtk.erl
+   M /trunk/src/ntop.erl
+   M /trunk/src/prfHost.erl
+   M /trunk/src/prfTarg.erl
+   M /trunk/src/prfTrc.erl
+   M /trunk/src/redbug.erl
+   M /trunk/src/sherk.erl
+   M /trunk/src/sherk_aquire.erl
+   M /trunk/src/sherk_list.erl
+   M /trunk/src/sherk_scan.erl
+   M /trunk/src/sherk_tab.erl
+   M /trunk/src/sherk_target.erl
+   M /trunk/src/watchdog.erl
+
+  started 0.48. fixed all R12B compiler warnings.
+
+------------------------------------------------------------------------
+r150 | mats.cronqvist | 2008-11-21 18:12:25 +0100 (Fri, 21 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/watchdog.erl
+
+  made it work...
+
+------------------------------------------------------------------------
+r149 | mats.cronqvist | 2008-11-21 18:11:58 +0100 (Fri, 21 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfTarg.erl
+
+  target needs prf_crypto.beam
+
+------------------------------------------------------------------------
+r148 | mats.cronqvist | 2008-11-21 18:11:26 +0100 (Fri, 21 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfDog.erl
+
+  bad caching
+
+------------------------------------------------------------------------
+r147 | mats.cronqvist | 2008-11-21 18:10:49 +0100 (Fri, 21 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/Makefile.am
+   M /trunk/src/prfConsumer.erl
+   A /trunk/src/watchdogConsumer.erl
+
+  added watchdogConsumer.erl
+
+------------------------------------------------------------------------
+r146 | mats.cronqvist | 2008-11-21 18:09:33 +0100 (Fri, 21 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/configure.ac
+
+  development version 0.47
+
+------------------------------------------------------------------------
+r145 | mats.cronqvist | 2008-11-21 10:07:52 +0100 (Fri, 21 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/sherk.erl
+   M /trunk/src/sherk_aquire.erl
+   M /trunk/src/sherk_target.erl
+
+  silenced some dialyzer whining
+
+------------------------------------------------------------------------
+r144 | mats.cronqvist | 2008-11-20 16:27:08 +0100 (Thu, 20 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/gperfGtk.erl
+
+  silenced some dialyzer whining
+
+------------------------------------------------------------------------
+r143 | mats.cronqvist | 2008-11-19 16:20:32 +0100 (Wed, 19 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/dtopConsumer.erl
+
+  better formatting in sys status line
+
+------------------------------------------------------------------------
+r142 | mats.cronqvist | 2008-11-18 23:17:46 +0100 (Tue, 18 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfPrc.erl
+
+  dtop shows dets table name as mock-name instead of dets:init/2
+
+------------------------------------------------------------------------
+r140 | mats.cronqvist | 2008-11-12 22:43:20 +0100 (Wed, 12 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/configure.ac
+
+  stepped to 0.46
+
+------------------------------------------------------------------------
+r139 | mats.cronqvist | 2008-11-12 22:15:46 +0100 (Wed, 12 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfConsumer.erl
+   M /trunk/src/watchdog.erl
+
+  tested user/message/logging, ticker and prfSys triggers.
+
+------------------------------------------------------------------------
+r138 | mats.cronqvist | 2008-11-12 21:26:38 +0100 (Wed, 12 Nov 2008) | 3 lines
+Changed paths:
+   M /trunk/src/watchdog.erl
+
+  dialyzer found a couple of bugs.
+  added a message/1 function; an API function for logging etc.
+
+------------------------------------------------------------------------
+r137 | mats.cronqvist | 2008-11-12 21:23:41 +0100 (Wed, 12 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/sherk_target.erl
+
+  dialyzer complained about some dead code
+
+------------------------------------------------------------------------
+r136 | mats.cronqvist | 2008-11-12 21:23:12 +0100 (Wed, 12 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/gen_serv.hrl
+   M /trunk/src/gperfGtk.erl
+   M /trunk/src/log.hrl
+   M /trunk/src/prfSys.erl
+   M /trunk/src/sherk_aquire.erl
+
+  dialyzer complained about the log macro
+
+------------------------------------------------------------------------
+r135 | mats.cronqvist | 2008-11-12 21:22:05 +0100 (Wed, 12 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/Makefile.am
+
+  cosmetic
+
+------------------------------------------------------------------------
+r134 | mats.cronqvist | 2008-11-12 16:42:32 +0100 (Wed, 12 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/dtopConsumer.erl
+
+  cpu% now a percentage!
+
+------------------------------------------------------------------------
+r133 | mats.cronqvist | 2008-11-12 14:40:28 +0100 (Wed, 12 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/Makefile.am
+   A /trunk/src/gen_serv.hrl
+   D /trunk/src/gen_server.hrl
+   M /trunk/src/prfDog.erl
+
+  slowly moving towards a more abstract gen_server
+
+------------------------------------------------------------------------
+r132 | mats.cronqvist | 2008-11-07 20:13:34 +0100 (Fri, 07 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfConsumer.erl
+
+  missing clause for no data
+
+------------------------------------------------------------------------
+r131 | mats.cronqvist | 2008-11-06 23:15:29 +0100 (Thu, 06 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfConsumer.erl
+
+  cosmetic
+
+------------------------------------------------------------------------
+r130 | mats.cronqvist | 2008-11-06 23:14:49 +0100 (Thu, 06 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfTrc.erl
+   M /trunk/src/sherk_scan.erl
+
+  fixed dialyzer warnings
+
+------------------------------------------------------------------------
+r129 | mats.cronqvist | 2008-11-06 23:02:58 +0100 (Thu, 06 Nov 2008) | 3 lines
+Changed paths:
+   A /trunk/src/gen_server.hrl
+   M /trunk/src/prfDog.erl
+
+  refactored a bit
+  better(?) socket error handling
+
+------------------------------------------------------------------------
+r128 | mats.cronqvist | 2008-11-06 23:01:19 +0100 (Thu, 06 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/gperfGtk.erl
+   M /trunk/src/watchdog.erl
+
+  cosmetic
+
+------------------------------------------------------------------------
+r127 | mats.cronqvist | 2008-11-05 18:48:16 +0100 (Wed, 05 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/src/prfConsumer.erl
+   M /trunk/src/prfDog.erl
+   M /trunk/src/watchdog.erl
+
+  cleaned out some debug printouts.
+
+------------------------------------------------------------------------
+r126 | mats.cronqvist | 2008-11-05 16:32:55 +0100 (Wed, 05 Nov 2008) | 2 lines
+Changed paths:
+   M /trunk/ChangeLog
+   M /trunk/src/prfDog.erl
+   M /trunk/src/watchdog.erl
+
+  production quality(?) watchdog/prfDog.
+
+------------------------------------------------------------------------
 r125 | mats.cronqvist | 2008-11-03 11:35:55 +0100 (Mon, 03 Nov 2008) | 2 lines
 Changed paths:
    M /trunk/src/prfDog.erl
