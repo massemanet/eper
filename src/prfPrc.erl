@@ -9,7 +9,7 @@
 -module(prfPrc).
 
 -export([collect/1,config/2]).
--export([pid_info/1]).
+-export([pid_info/1,pid_info/2]).
 
 -record(cst,{old_info=get_info()}).
 

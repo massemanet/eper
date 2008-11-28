@@ -62,7 +62,7 @@ do_info(LD,{tcp,Sock,Bin}) ->
       Msg = prf_crypto:decrypt(LD#ld.cookie,Bin),
       LD#ld{socket=LD#ld.socket--[Sock],msg=Msg};
   false->
-      %% got dataqt from unknown socket. wtf?
+      %% got data from unknown socket. wtf?
       ?log([{data_from,Sock},{sockets,LD#ld.socket},{bytes,byte_size(Bin)}]),
       LD
   end;

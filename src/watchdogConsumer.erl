@@ -9,7 +9,7 @@
 -include("log.hrl").
 
 %% example usage;
-%% watchdog:start(),prf:start(prf1,{watchdog,node()},prfConsumer).
+%% watchdog:start(),prf:start(w1,node(),watchdogConsumer,node()).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 collectors() -> [prfSys,prfPrc].
 init(Node) -> #cld{node = Node}.
