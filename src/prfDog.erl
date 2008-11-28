@@ -10,7 +10,9 @@
 %% prf callbacks
 -export([collect/1,config/2]).
 
--record(ld,{args,acceptor,socket=[],msg=[],cookie="I'm a Cookie"}).
+-import(orddict,[new/0,store/3]).
+
+-record(ld,{args,acceptor,socket=[],msg=new(),cookie="I'm a Cookie"}).
 -include("gen_serv.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -18,7 +20,7 @@
 
 collect(LD) ->
   assert(),
-  {LD,gen_server:call(?MODULE,get_data)}.
+  {LD,{?MODULE,gen_server:call(?MODULE,get_data)}}.
 
 config(LD,Data) -> 
   ?log([unknown,{data,Data}]),
@@ -45,7 +47,7 @@ do_terminate(_LD,_Reason) -> ok.
 
 do_code_change(LD,_Xtra) -> LD.
 
-do_call(LD,get_data) -> {LD#ld.msg,LD#ld{msg=[]}};
+do_call(LD,get_data) -> {LD#ld.msg,LD#ld{msg=new()}};
 do_call(LD,Msg) -> print_term(Msg),{ok,LD}.
 
 do_cast(LD,Msg) -> print_term(Msg),LD.
@@ -59,8 +61,8 @@ do_info(LD,{tcp,Sock,Bin}) ->
     true ->
       %% got data from a known socket. this is good
       gen_tcp:close(Sock),
-      Msg = prf_crypto:decrypt(LD#ld.cookie,Bin),
-      LD#ld{socket=LD#ld.socket--[Sock],msg=Msg};
+      {watchdog,Node,Trig,Msg} = prf_crypto:decrypt(LD#ld.cookie,Bin),
+      LD#ld{socket=LD#ld.socket--[Sock],msg=store({Node,Trig},Msg,LD#ld.msg)};
   false->
       %% got data from unknown socket. wtf?
       ?log([{data_from,Sock},{sockets,LD#ld.socket},{bytes,byte_size(Bin)}]),

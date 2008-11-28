@@ -56,7 +56,7 @@ stop() ->
   catch _:_ -> ok
   end.
 
-%% E.g:  add_send_subscriber("localhost",56669,"I'm a Cookie").
+%% E.g:  watchdog:add_send_subscriber("localhost",56669,"I'm a Cookie").
 add_send_subscriber(Host,Port,PassPhrase) ->
   try {ok,{hostent,Host,[],inet,4,_}} = inet:gethostbyname(Host),
       ?MODULE ! {add_subscriber,mk_send(Host,Port,PassPhrase)},
@@ -221,14 +221,14 @@ send_report(LD,Trigger) ->
   [Sub(Report) || Sub <- LD#ld.subscribers].
 
 make_report(user,LD) ->
-  [{?MODULE,user},{userData,LD#ld.userData}];
+  reporter(user,LD#ld.userData);
 make_report(sysMon,LD) ->
-  [{?MODULE,sysMon}|expand_ps(LD#ld.monData)];
+  reporter(sysMon,expand_ps(LD#ld.monData));
 make_report(Trigger,LD) ->
-  [{?MODULE,Trigger}|generic_report(LD)].
+  reporter(Trigger,LD#ld.prfData).
 
-generic_report(LD) ->
-  LD#ld.prfData.
+reporter(Trigger,TriggerData) ->
+  {?MODULE,node(),Trigger,TriggerData}.
 
 expand_ps([]) -> [];
 expand_ps([{T,P}|Es]) when is_pid(P)-> pii({T,P})++expand_ps(Es);
@@ -260,7 +260,7 @@ lks(Tag,List) ->
 mk_send(Name,Port,Cookie) ->
   fun(Chunk)->
       try {ok,Sck} = gen_tcp:connect(Name,Port,conn_opts(),conn_timeout()),
-	  try gen_tcp:send(Sck,prf_crypto:encrypt(Cookie,expand_recs(Chunk)))
+	  try gen_tcp:send(Sck,prf_crypto:encrypt(Cookie,Chunk))
 	  after gen_tcp:close(Sck)
 	  end
       catch _:_ -> ok
