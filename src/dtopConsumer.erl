@@ -91,7 +91,8 @@ which_sort(msgq,PrfPrc) -> expand(lks(msgq,PrfPrc),lks(info,PrfPrc));
 which_sort(dmem,PrfPrc) -> expand(lks(dmem,PrfPrc),lks(info,PrfPrc));
 which_sort( mem,PrfPrc) -> expand(lks(mem,PrfPrc),lks(info,PrfPrc)).
 
-expand(Pids,Infos) -> [[{pid,Pid}|lks(Pid,Infos)] || Pid <- Pids].
+expand(Pids,Infos) -> 
+  lists:reverse([[{pid,Pid}|lks(Pid,Infos)] || Pid <- Pids]).
 
 print_procs(Items,PrfSys,Prcs) -> 
   CpuPerRed = cpu_per_red(PrfSys),
