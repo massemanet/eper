@@ -109,6 +109,7 @@ loop(LD) ->
       ?LOOP(maybe_conf(CollData, LD))
   end.
 
+de_proxy(_,[]) -> [];
 de_proxy(LD,Data) ->
   case LD#ld.proxy of
     [] -> Data;
