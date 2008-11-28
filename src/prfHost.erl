@@ -7,24 +7,24 @@
 %%%-------------------------------------------------------------------
 -module(prfHost).
 
--export([start/3, stop/1,config/3]).
+-export([start/3,start/4,stop/1,config/3]).
 -export([loop/1]).				%internal
 
 -record(ld, {node, server=[], collectors, config=[], 
-             consumer, consumer_data, data=[]}).
+             proxy, consumer, consumer_data, data=[]}).
 
 -define(LOOP, ?MODULE:loop).
 
 -include("log.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% runs in the shell
 
-start(Name,{watchdog,Node},Consumer) -> start(Name,Node,Consumer,[prfDog]);
-start(Name,Node,Consumer) -> start(Name,Node,Consumer,Consumer:collectors()).
-
-start(Name, Node, Consumer, Colls) 
-  when is_atom(Name),is_atom(Node),is_atom(Consumer) -> 
-  SpawnFun = fun()->init(Node,Consumer,Colls) end,
+start(Name,Node,Consumer) -> start(Name,Node,Consumer,no_proxy).
+start(Name,Node,Consumer,Proxy)
+  when is_atom(Name),is_atom(Node),is_atom(Consumer),is_atom(Proxy) -> 
+  assert_proxy(Proxy),
+  SpawnFun = fun()->init(Consumer,Node,Proxy) end,
   case whereis(Name) of
     undefined -> register(Name, spawn_link(SpawnFun));
     Pid -> Pid
@@ -42,13 +42,33 @@ config(Name,Type,Data) ->
     _ -> {Name,not_running}
   end.
 
-init(Node, Consumer, Collectors) ->
+assert_proxy(no_proxy) -> ok;
+assert_proxy(Node) ->
+  erlang:set_cookie(Node,watchdog),
+  case net_adm:ping(Node) of
+    pong -> ok;
+    _    -> exit({no_proxy,Node})
+end.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% runs in the consumer process
+
+init(Consumer, Node, Proxy) ->
   process_flag(trap_exit,true),
   prf:ticker_even(),
-  loop(#ld{node = Node, 
-           consumer = Consumer, 
-           collectors = subscribe(Node,Collectors),
-           consumer_data = Consumer:init(Node)}).
+  case Proxy of
+    no_proxy ->
+      loop(#ld{node = Node, 
+	       proxy = [],
+	       consumer = Consumer, 
+	       collectors = subscribe(Node,Consumer:collectors()),
+	       consumer_data = Consumer:init(Node)});
+    _ ->
+      loop(#ld{node = Proxy,
+	       proxy = {Node,Consumer:collectors()},
+	       consumer = Consumer, 
+	       collectors = subscribe(Proxy,[prfDog]),
+	       consumer_data = Consumer:init(Node)})
+  end.
 
 loop(LD) ->
   receive
@@ -64,7 +84,7 @@ loop(LD) ->
     {timeout, _, {tick}} -> 
       prf:ticker_even(),
       {Data,NLD} = get_data(LD),
-      Cdata = (NLD#ld.consumer):tick(NLD#ld.consumer_data, Data),
+      Cdata = (NLD#ld.consumer):tick(NLD#ld.consumer_data, de_proxy(LD,Data)),
       ?LOOP(NLD#ld{consumer_data = Cdata});
     {'EXIT',Pid,Reason} when Pid == LD#ld.server ->
       ?log({lost_target, Reason}),
@@ -86,7 +106,32 @@ loop(LD) ->
       Cdata = (LD#ld.consumer):config(LD#ld.consumer_data, Data),
       ?LOOP(LD#ld{consumer_data = Cdata});
     {config,CollData} ->
-      ?LOOP(do_config(CollData, LD))
+      ?LOOP(maybe_conf(CollData, LD))
+  end.
+
+de_proxy(LD,Data) ->
+  case LD#ld.proxy of
+    [] -> Data;
+    {Node,Collectors} -> de_proxy(Data,Node,Collectors)
+  end.
+
+de_proxy([{prfDog,DogData}|_],Node,Collectors) ->
+  try Trigger = trigger(Collectors),
+      CollectorDatas = orddict:fetch({Node,Trigger},DogData),
+      [C || C={Coll,_} <- CollectorDatas, lists:member(Coll,Collectors)]
+  catch _:_ -> 
+      []
+  end.
+
+trigger(Collectors) -> 
+  case lists:member(prfSys,Collectors) of 
+    true -> ticker
+  end.
+
+maybe_conf(CollData, LD) ->
+  case LD#ld.proxy == [] of
+    true -> do_config(CollData, LD);
+    false-> ?log({no_config,running_with_proxy}),LD
   end.
 
 do_config(CollData, LD) ->
@@ -101,10 +146,10 @@ do_stop(LD) ->
 
 get_data(LD) -> 
   case {get_datas(LD#ld.node), LD#ld.data} of
-    {[],[]} -> {[],LD};
-    {[],[Data]} -> {Data,LD#ld{data=[]}};
-    {[Data],_} -> {Data,LD#ld{data=[]}};
-    {[Data,D2|_],_} ->{Data,LD#ld{data=[D2]}}
+    {[],[]}		-> {[],LD};
+    {[],[Data]}		-> {Data,LD#ld{data=[]}};
+    {[Data],_}		-> {Data,LD#ld{data=[]}};
+    {[Data,D2|_],_}	-> {Data,LD#ld{data=[D2]}}
   end.
 
 get_datas(Node) -> 
