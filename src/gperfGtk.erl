@@ -67,6 +67,8 @@ loop(LD) ->
 
     {args,['']}                      -> ?LP(LD);
     {args,[Node]}                    -> ?LP(conf(LD,anode,Node));
+    {args,[Node,Proxy]}              -> NLD = conf(LD,aproxy,Proxy),
+					?LP(conf(NLD,anode,Node));
 
     {tick, Stuff}                    -> ?LP(do_tick(LD,Stuff));
     dbg                              -> ?LP(dump_ld(LD));
@@ -81,6 +83,7 @@ dump_ld(LD) ->
 conf() ->
   from_list([{anode, #conf{widget=conf_node,  val='',  type=atom}}, 
 	     {cookie,#conf{widget=conf_cookie,val='',  type=atom}}, 
+	     {aproxy,#conf{widget=conf_proxy, val='',  type=atom}}, 
 	     {cpu,   #conf{widget=conf_cpu,   val=100, type=integer}},
 	     {mem,   #conf{widget=conf_mem,   val=1024,type=integer}},
 	     {net,   #conf{widget=conf_net,   val=1024,type=integer}}]).
@@ -102,10 +105,15 @@ conf_handler(Key,C,Val,LD) ->
   case Key of
     anode ->
       prf:stop(gperf_prf),
-      prf:start(gperf_prf,Val,gperfConsumer),
+      case get_gui_val(aproxy,LD) of
+	'' -> prf:start(gperf_prf,Val,gperfConsumer);
+	Proxy -> prf:start(gperf_prf,Val,gperfConsumer,Proxy)
+      end,
       [conf_send(K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
     cookie ->
       erlang:set_cookie(get_gui_val(anode,LD),Val);
+    aproxy ->
+      ok;
     _ ->
       conf_send(Key, Val)
   end,
