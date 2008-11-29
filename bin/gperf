@@ -18,8 +18,12 @@ fi
 n=4
 while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
 PATHS=""
-for p in `ls -d $SPATH/gtknode-*/ebin`; do
-    PATHS=$PATHS" -pa $p"
+for p in $SPATH/gtknode-*/ebin $SPATH/eper-*/ebin; do
+    if [ "${p: -7}" == "-*/ebin" ]; then
+	echo "Can't expand $p.${p: -7}"
+    else
+	PATHS=$PATHS" -pa $p"
+    fi
 done
 
 detach="-detached"
