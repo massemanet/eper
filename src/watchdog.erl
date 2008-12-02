@@ -37,7 +37,7 @@ default_triggers() ->
   ].
 
 timeout(restart) -> 5000;			%  5 sec
-timeout(release) -> 3000.			%  3 sec
+timeout(release) -> 1800.			%  1.8 sec
 -define(max_jailed, 100).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
