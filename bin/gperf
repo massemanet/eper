@@ -72,7 +72,7 @@ while [ -n "$1" ]
           echo dollar_one $1
           ;;
       *)
-          XTRA="$1" $XTRA
+          XTRA="$XTRA $1"
           ;;
   esac
   shift
