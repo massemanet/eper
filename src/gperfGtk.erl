@@ -11,13 +11,13 @@
 -export([loop/1]).				%internal export
 
 -import(lists,[foreach/2,flatten/1,keysearch/3,nth/2,reverse/1,seq/2,sort/1]).
--import(orddict,[fold/3,update/3,map/2,fetch/2,from_list/1]).
+-import(orddict,[new/0,store/3,is_key/2,fold/3,update/3,fetch/2,from_list/1]).
 
 -include("log.hrl").
 
 -define(LP(X), ?MODULE:loop(X)).
 -define(MARG,10).
--define(XSIZE,2000).
+-define(XSIZE,6000).
 -define(YSIZE,100).
 -define(WXSIZE,200).
 -define(WYSIZE,?YSIZE).
@@ -30,8 +30,11 @@
 -record(conf, {widget, val, type}).
 -record(ld, {conf=conf(),minute,x=?XHALF,dAreas=[],state=disc,stat_ctxt}).
 
+-type orddict(X,Y) :: [{X,Y}].
+-type tag_vals() :: orddict(atom(),any()).
+-type confs() :: orddict(atom(),#conf{}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-start() -> spawn(fun()-> init() end).
+start() -> spawn(fun init/0).
 stop() -> catch (gperf ! quit),quit.
 
 init() ->
@@ -45,13 +48,16 @@ init() ->
     _:R -> ?log([{error,R},{stack,erlang:get_stacktrace()}])
   end.
 
-glade_file() -> filename:join([code:priv_dir(eper),"glade","gperf.glade"]).
+glade_file() -> 
+  filename:join([code:priv_dir(eper),"glade","gperf.glade"]).
 
 loop(LD) ->
   receive
-    quit                                        -> die(LD);
-    {gperf_gtk,{signal,{window,'delete-event'}}}-> die(LD);
+    %% 2 ways to quit
+    quit                                         -> die(LD);
+    {gperf_gtk,{signal,{window,'delete-event'}}} -> die(LD);
 
+    %% the conf dialog
     {gperf_gtk,{signal,{conf_cancel,_}}} -> hide_cf(),?LP(LD);
     {gperf_gtk,{signal,{conf_ok,_}}}     -> hide_cf(),?LP(conf(LD));
 
@@ -63,16 +69,23 @@ loop(LD) ->
     {gperf_gtk,{signal,{memory,'activate'}}}  -> maybe_show(),?LP(LD);
     {gperf_gtk,{signal,{netload,'activate'}}} -> maybe_show(),?LP(LD);
 
-    {gperf_gtk,{signal,{Darea,'expose-event'}}}->?LP(do_expose(LD,Darea));
+    %% event from X
+    {gperf_gtk,{signal,{Darea,'expose-event'}}} -> ?LP(do_expose(LD,Darea));
 
-    {args,['']}                      -> ?LP(LD);
-    {args,[Node]}                    -> ?LP(conf(LD,anode,Node));
-    {args,[Node,Proxy]}              -> NLD = conf(LD,aproxy,Proxy),
-					?LP(conf(NLD,anode,Node));
+    %% start args
+    {args,['']}         -> ?LP(LD);
+    {args,[Node]}       -> ?LP(conf(LD,from_list([{anode,Node}])));
+    {args,[Node,Proxy]} -> ?LP(conf(LD,from_list([{aproxy,Proxy},
+						  {anode,Node}])));
 
-    {tick, Stuff}                    -> ?LP(do_tick(LD,Stuff));
-    dbg                              -> ?LP(dump_ld(LD));
-    X                                -> ?LP(do_unknown(LD,X))
+    %% ticker
+    {tick, Stuff}       -> ?LP(do_tick(LD,Stuff));
+
+    %% debugging
+    dbg                 -> ?LP(dump_ld(LD));
+
+    %% catchall
+    X                   -> ?LP(do_unknown(LD,X))
   end.
 
 dump_ld(LD) ->
@@ -80,6 +93,8 @@ dump_ld(LD) ->
   foreach(F,zip(record_info(fields,ld),tl(tuple_to_list(LD)))),
   LD.
 
+%% initialize the conf dialog
+-spec conf() -> confs().
 conf() ->
   from_list([{anode, #conf{widget=conf_node,  val='',  type=atom}}, 
 	     {cookie,#conf{widget=conf_cookie,val='',  type=atom}}, 
@@ -88,36 +103,50 @@ conf() ->
 	     {mem,   #conf{widget=conf_mem,   val=1024,type=integer}},
 	     {net,   #conf{widget=conf_net,   val=1024,type=integer}}]).
 
+%% sets and allpies conf values
+%% TagVals and Confs are dicts
+-spec conf(#ld{},tag_vals()) -> #ld{}.
+conf(LD,TagVals) ->
+  Confs = fold(fun conf_upd/3,LD#ld.conf,TagVals),
+  conf_apply(TagVals,Confs),
+  LD#ld{conf=Confs}.
+
+-spec conf_upd(atom(),any(),confs()) -> confs().
+conf_upd(Key,Val,Confs) ->
+  update(Key, fun(Conf) -> Conf#conf{val=Val} end, Confs).
+
+%% check if any conf values have changed, i.e. if the GUI and the conf
+%% struct differ. if so, take the value from the GUI
+%% TagVals and Confs are dicts
+-spec conf(#ld{}) -> #ld{}.
 conf(LD) -> 
-  LD#ld{conf=map(fun(Key,C)->conf_f(Key,C,LD) end, LD#ld.conf)}.
+  {TagVals,Confs} = fold(fun conf_chk/3, {new(),LD#ld.conf}, LD#ld.conf),
+  conf_apply(TagVals,Confs),
+  LD#ld{conf=Confs}.
 
-conf(LD,K,V) -> 
-  LD#ld{conf=update(K, fun(C)->conf_handler(K,C,V,LD) end, LD#ld.conf)}.
-
-conf_f(Key,C,LD) ->
-  NewV = get_gui_val(C#conf.widget,C#conf.type,C#conf.val),
-  case NewV == C#conf.val of
-    true -> C;
-    false-> conf_handler(Key,C,NewV,LD)
+-type tag_vals_confs() :: {tag_vals(),confs()}.
+-spec conf_chk(atom(), #conf{}, tag_vals_confs()) -> tag_vals_confs().
+conf_chk(Tag,Conf,{TagVals,Confs}) ->
+  Val = get_gui_val(Conf#conf.widget,Conf#conf.type,Conf#conf.val),
+  case Val == Conf#conf.val of
+    true -> {TagVals,Confs};
+    false-> {store(Tag,Val,TagVals), store(Tag,Conf#conf{val=Val},Confs)}
   end.
 
-conf_handler(Key,C,Val,LD) ->
-  case Key of
-    anode ->
-      prf:stop(gperf_prf),
-      case get_gui_val(aproxy,LD) of
-	'' -> prf:start(gperf_prf,Val,gperfConsumer);
-	Proxy -> prf:start(gperf_prf,Val,gperfConsumer,Proxy)
-      end,
-      [conf_send(K,conf_get_val(K,LD)) || K <- [cpu,net,mem]];
-    cookie ->
-      erlang:set_cookie(get_gui_val(anode,LD),Val);
-    aproxy ->
-      ok;
-    _ ->
-      conf_send(Key, Val)
-  end,
-  C#conf{val=Val}.
+%% TagVals are the items that has changed
+%% apply them. this is a side effect.
+-spec conf_apply(tag_vals(),confs())->any().
+conf_apply(TagVals,Confs) ->
+  at_least_one_of([anode,aproxy],TagVals,fun restart/1,Confs),
+  if_there([cpu,net,mem,cookie],TagVals,fun do_conf/2,Confs).
+
+if_there(Tags,TagVals,Fun,Confs) ->
+  _ = [Fun(Tag,Confs) || Tag<-Tags,is_key(Tag,TagVals)].
+
+do_conf(cpu,Confs)   -> conf_send(cpu,conf_val(cpu,Confs));
+do_conf(net,Confs)   -> conf_send(net,conf_val(net,Confs));
+do_conf(mem,Confs)   -> conf_send(mem,conf_val(mem,Confs));
+do_conf(cookie,Confs)-> setcookie(conf_val(anode,Confs),conf_val(cookie,Confs)).
 
 conf_send(Key, Val) -> prf:config(gperf_prf,consumer,{Key,Val}).
 
@@ -126,17 +155,22 @@ conf_fill(Confs) -> fold(fun conf_fill/3, [], Confs).
 conf_fill(_Key,#conf{widget=Widget, val=Val},_) ->
   g('Gtk_entry_set_text',[Widget,to_str(Val)]).
 
-conf_get_val(Key,LD) -> (fetch(Key,LD#ld.conf))#conf.val.
-
-get_gui_val(Key,LD) -> 
-  C = fetch(Key,LD#ld.conf),
-  get_gui_val(C#conf.widget,C#conf.type,C#conf.val).
+conf_val(Key,LD) when is_record(LD,ld) -> 
+  conf_val(Key,LD#ld.conf);
+conf_val(Key,Confs) ->
+  (fetch(Key,Confs))#conf.val.
 
 get_gui_val(Widget,Type,Val) -> 
   X = g('Gtk_entry_get_text',[Widget]),
   case Type of 
     atom -> try list_to_atom(X) catch _:_ -> Val end;
     integer-> try list_to_integer(X) catch _:_ -> Val end
+  end.
+
+at_least_one_of(Tags,TagVals,Fun,Confs) ->
+  case [Tag || Tag<-Tags,is_key(Tag,TagVals)] of
+    []-> ok;
+    _ -> Fun(Confs)
   end.
 
 zip([],[]) -> [];
@@ -146,6 +180,23 @@ to_str(L) when is_list(L) -> L;
 to_str(A) when is_atom(A) -> atom_to_list(A);
 to_str(F) when is_float(F) ->float_to_list(F);
 to_str(I) when is_integer(I) ->integer_to_list(I).
+
+setcookie(Node,Cookie) ->
+  erlang:set_cookie(Node,Cookie).
+
+restart(Confs) ->
+  try restart(conf_val(anode,Confs),conf_val(aproxy,Confs)),
+      [do_conf(Tag,Confs) || Tag <- [cpu,net,mem]]
+  catch _:R -> 
+      ?log([{reason,R},Confs])
+  end.
+
+restart(Anode,Aproxy) ->
+  prf:stop(gperf_prf),
+  case Aproxy of
+    ''-> prf:start(gperf_prf,Anode,gperfConsumer);
+    _ -> prf:start(gperf_prf,Anode,gperfConsumer,Aproxy)
+  end.
 
 -spec die(_) -> no_return().
 die(_LD) ->
@@ -220,13 +271,13 @@ timeline(LD = #ld{dAreas=Dareas},{_,M,_}=HMS) ->
   LD#ld{minute=M}.
 
 stat_change(up,LD) ->     
-  Nod = to_str(conf_get_val(anode,LD)),
+  Nod = to_str(conf_val(anode,LD)),
   g('Gtk_window_set_title',[window,"gperf - "++Nod]),
   statbar(Nod++" - connected",LD),
   LD#ld{state=conn};
 stat_change(down,LD) ->
   g('Gtk_window_set_title',[window,"gperf"]),
-  statbar(to_str(conf_get_val(anode,LD))++" - disconnected",LD),
+  statbar(to_str(conf_val(anode,LD))++" - disconnected",LD),
   LD#ld{state=disc}.
 
 statbar(Msg, #ld{stat_ctxt=Ctxt}) ->
