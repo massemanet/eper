@@ -93,7 +93,7 @@ new_topl(Top,El) ->
   end.
 
 dred(NowDiff,Io,Ic)-> (red(Ic)-red(Io))/NowDiff.
-dmem(NowDiff,Io,Ic)-> (mem(Ic)-mem(Io))/NowDiff.
+dmem(NowDiff,Io,Ic)-> abs((mem(Ic)-mem(Io))/NowDiff).
 
 red([]) -> 0;
 red([{reductions,Reds}|_]) -> Reds.
