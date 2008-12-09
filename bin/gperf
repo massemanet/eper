@@ -3,7 +3,7 @@
 usage(){
     cat <<- end
 usage: `basename $0` [-setcookie <cookie>] [-nocookie] [-nettick <tick>] 
-       [-pa <path>] [-win] [-dbg] [-vsn <OTP version>] [node [proxy]]
+       [-pa <path>] [-win] [-dbg] [-vsn <OTP version>] [-proxy proxy] [node]
 end
     exit
 }
@@ -69,6 +69,10 @@ while [ -n "$1" ]
 	   shift
 	   XTRA="-pa $1 $XTRA"
 	   ;;
+      "-proxy")
+	  shift
+	  proxy="$1"
+	  ;;
       "-*")
           echo dollar_one $1
           ;;
@@ -83,4 +87,4 @@ name="gperf_"$$
 FLAGS="$detach -boot start_sasl -sasl errlog_type error +A16"
 DISTR="-hidden -sname $name $cookie $nettick"
 
-$WIN erl $VSN $FLAGS $DISTR $PATHS $START $XTRA $HALT
+$WIN erl $VSN $FLAGS $DISTR $PATHS $START $XTRA $proxy $HALT
