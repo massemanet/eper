@@ -1,4 +1,4 @@
-AC_INIT(Various Erlang performance related tools, 0.49,
+AC_INIT(Various Erlang performance related tools, 0.50,
              mats.cronqvist()gmail.com, eper)
 
 dnl Require autoconf version >=2.59c. first one with erlang macros
