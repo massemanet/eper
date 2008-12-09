@@ -2,7 +2,7 @@
 %%% File        : ntopConsumer.erl
 %%% Author      : Mats Cronqvist <locmacr@mwlx084>
 %%% Created     : 12 Feb 2007
-%%% Description : 
+%%% Description : net-top consumer
 %%%----------------------------------------------------------------
 -module(ntopConsumer).
 -author('Mats Cronqvist').
@@ -21,17 +21,19 @@ config(LD,_) -> LD.
 
 tick(LD,Data) ->
   case Data of
-    [] -> LD;
-    [{prfNet,PrfNet},{prfSys,PrfSys}] -> 
-      Net = from_list(PrfNet),
-      Sys = from_list(PrfSys),
-      print(LD,Sys,Net),
-      LD#ld{prfSys=Sys,prfNet=Net}
+    [{prfNet,PrfNet},{prfSys,PrfSys}] -> print(LD, PrfNet, PrfSys);
+    _ -> LD
   end.
 
-print(#ld{prfNet=OPrfNet},_,PrfNet) ->
+print(LD, PrfNet, PrfSys) ->
+  Net = from_list(PrfNet),
+  Sys = from_list(PrfSys),
+  print(LD#ld.prfNet,Net),
+  LD#ld{prfSys=Sys,prfNet=Net}.
+
+print(OPrfNet,PrfNet) ->
   print_header(PrfNet),
-  [print(Name,Data) || {Name,Data} <- net(PrfNet,OPrfNet)].
+  [print_port(Name,Data) || {Name,Data} <- net(PrfNet,OPrfNet)].
 
 print_header(NDs)->
   [{_Name,Data}|_] = lists:reverse(NDs),
@@ -39,7 +41,7 @@ print_header(NDs)->
                                  [str("~8w",[short(I)])|| {I,_V}<-Data, ok(I)],
                                  str("~n",[])])]).
 
-print(Name,Data) ->
+print_port(Name,Data) ->
   io:fwrite("~s",[lists:flatten([str("~-23s",[name(Name)]),
                                  [str("~8w", [V]) || {I,V}<-Data, ok(I)],
                                  str("~n",[])])]).

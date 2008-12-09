@@ -1,9 +1,10 @@
 #!/bin/bash
 
 usage(){
-    U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
-    U2="[-nettick <tick>] [-win] [-dbg] [-vsn <OTP version>] nodename"
-    echo $U1 $U2
+    cat <<- end
+usage:  [-setcookie <cookie>] [-nocookie] [-nettick <tick>] 
+       [-win] [-dbg] [-vsn <OTP version>] [-proxy proxynode] nodename
+end
     exit
 }
 
@@ -15,11 +16,12 @@ else
     SPATH=`which $0`
 fi
 
+script=`basename $0`
+
 n=3
 while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
-echo SPATH $SPATH
 ERL=erl
-START="-s ntop start"
+START="-s $script start"
 
 while [ -n "$1" ] 
   do
@@ -33,23 +35,23 @@ while [ -n "$1" ]
 	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
 	  ;;
       "-vsn"|"-version")
-	  vsn=$2
 	  shift
-	  ERLP=`which erl`
-	  ERLP=`dirname $ERLP` ; ERLP=`dirname $ERLP` ; ERLP=`dirname $ERLP`
-	  ERL=`echo $ERLP/${vsn}*/bin/erl`
-	  if [ ! -x "$ERL" ]; then usage; fi
+	  VSN="+R "$1
 	  ;;
       "-nettick"|"-tick")
-	  nettick="-kernel net_ticktime $2"
 	  shift 
+	  nettick="-kernel net_ticktime $1"
 	  ;;
       "-cookie"|"-setcookie")
-	  cookie="-setcookie $2"
 	  shift
+	  cookie="-setcookie $1"
 	  ;;
       "-nocookie")
 	  cookie=""
+	  ;;
+      "-proxy")
+	  shift
+	  proxy="$1"
 	  ;;
       *)
 	  if [ $# -eq 1 ]; then
@@ -61,16 +63,15 @@ while [ -n "$1" ]
   esac
   shift
 done
+
 if [ -z "$TARG" ]; then 
     usage; 
 else
-    START="$START $TARG"
+    START="$START $TARG $proxy"
 fi
 
-name="ntop_"$$
+name=${script}_${$}
 FLAGS="-boot start_sasl -sasl errlog_type error +A16"
 DISTR="-hidden -sname $name $cookie $nettick"
 
-$WIN $ERL $FLAGS $DISTR \
--pa $SPATH/ebin \
-$START
+$WIN erl $VSN $FLAGS $DISTR -pa $SPATH/ebin $START
