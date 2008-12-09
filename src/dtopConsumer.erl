@@ -1,11 +1,11 @@
 %%%-------------------------------------------------------------------
-%%% File    : prfDtop.erl
+%%% File    : dtopConsumer.erl
 %%% Author  : Mats Cronqvist <qthmacr@duna283>
-%%% Description : 
-%%%
-%%% Created : 16 Dec 2003 by Mats Cronqvist <qthmacr@duna283>
+%%% Created : 16 Dec 2003
+%%% Description : rewrite of dtop for prf
 %%%-------------------------------------------------------------------
 -module(dtopConsumer).
+-author('Mats Cronqvist').
 
 -export([init/1, terminate/1, tick/2, collectors/0, config/2]).
 

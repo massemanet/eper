@@ -1,11 +1,11 @@
 %%%-------------------------------------------------------------------
 %%% File    : dtop.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
-%%%
-%%% Created :  5 Sep 2005 by Mats Cronqvist <locmacr@mwlx084>
+%%% Created :  5 Sep 2005
+%%% Description : top-like client for prf
 %%%-------------------------------------------------------------------
 -module(dtop).
+-author('Mats Cronqvist').
 
 -export([start/0,start/1,start/2,stop/0,sort/1]).
 
