@@ -1,9 +1,10 @@
 #!/bin/bash
 
 usage(){
-    U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
-    U2="[-nettick <tick>] [-win] [-vsn <OTP version>]"
-    echo $U1 $U2
+    cat <<- end
+usage: `basename $0` [-setcookie <cookie>] [-nocookie] [-nettick <tick>] 
+       [-pa <path>] [-win] [-dbg] [-vsn <OTP version>] [node [proxy]]
+end
     exit
 }
 
@@ -50,23 +51,23 @@ while [ -n "$1" ]
 	  detach=""
 	  ;;
       "-vsn"|"-version")
-	  VSN="+R "$2
 	  shift
+	  VSN="+R $1"
 	  ;;
       "-nettick"|"-tick")
-	  nettick="-kernel net_ticktime $2"
 	  shift 
+	  nettick="-kernel net_ticktime $1"
 	  ;;
       "-cookie"|"-setcookie")
-	  cookie="-setcookie $2"
 	  shift
+	  cookie="-setcookie $1"
 	  ;;
       "-nocookie")
 	  cookie=""
 	  ;;
       "-pa")
-	   XTRA="-pa $2 $XTRA"
 	   shift
+	   XTRA="-pa $1 $XTRA"
 	   ;;
       "-*")
           echo dollar_one $1
