@@ -101,7 +101,7 @@ print_procs(Items,PrfSys,Prcs) ->
 resize(Items,Prcs) ->
   case Items < length(Prcs) of
     true -> lists:sublist(Prcs,Items);
-    false-> Prcs++lists:duplicate(Items-length(Prcs),dummy)
+    false-> Prcs++lists:duplicate(Items-length(Prcs),[])
   end.
 
 cpu_per_red(Sys) ->
@@ -110,7 +110,7 @@ cpu_per_red(Sys) ->
     Reds -> 100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))/Reds
   end.
 
-procsI(dummy,_) -> io:fwrite("~n",[]);
+procsI([],_) -> io:fwrite("~n",[]);
 procsI(PP,CpuPerRed) ->
   io:fwrite(?FORMAT, [pidf(to_list(lks(pid,PP))),
 		      funf(reg(PP)), 
