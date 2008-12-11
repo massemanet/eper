@@ -99,9 +99,9 @@ conf() ->
   from_list([{anode, #conf{widget=conf_node,  val='',  type=atom}}, 
 	     {cookie,#conf{widget=conf_cookie,val='',  type=atom}}, 
 	     {aproxy,#conf{widget=conf_proxy, val='',  type=atom}}, 
-	     {cpu,   #conf{widget=conf_cpu,   val=100, type=integer}},
-	     {mem,   #conf{widget=conf_mem,   val=1024,type=integer}},
-	     {net,   #conf{widget=conf_net,   val=1024,type=integer}}]).
+	     {cpu,   #conf{widget=conf_cpu,   val=300, type=integer}},
+	     {mem,   #conf{widget=conf_mem,   val=8*1024,type=integer}},
+	     {net,   #conf{widget=conf_net,   val=32*1024,type=integer}}]).
 
 %% sets and allpies conf values
 %% TagVals and Confs are dicts

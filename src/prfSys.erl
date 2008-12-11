@@ -61,7 +61,7 @@
 -module(prfSys).
 -export([collect/1,config/2]).
 
--record(cst,{strategy=strategy(), node=node(), total_ram=0,
+-record(cst,{strategy=strategy(), node=node(), total_ram=0, cores=1,
 	     cache=[], now=now()}).
 
 -define(RATES,[context_switches,gcs,gc_reclaimed,io_in,io_out,reductions,
@@ -79,8 +79,8 @@ config(State,_ConfigData) -> State.
 
 data(Cst) -> constants(Cst)++stats()++os_info(Cst#cst.strategy).
 
-constants(#cst{node=Node,total_ram=Total_ram}) ->
-  [{node, Node},{total_ram,Total_ram}].
+constants(#cst{node=Node,total_ram=Total_ram,cores=Cores}) ->
+  [{node, Node},{total_ram,Total_ram},{cores,Cores}].
 
 stats() ->
   Procs = erlang:system_info(process_count),
@@ -125,21 +125,9 @@ lks(Tag,List) ->
   end.
 
 init_cst(Cst = #cst{strategy={linux,_}}) ->
-  Cst#cst{total_ram = total_ram()};
+  Cst#cst{total_ram = total_ram(), cores = cores(Cst#cst.strategy)};
 init_cst(Cst) ->
   Cst.
-
-total_ram() ->
-  case file:open("/proc/meminfo",[read]) of
-    {ok,FD} ->
-      try {ok,Str} = file:pread(FD,0,30),
-	  ["MemTotal:",T,"kB"|_] = string:tokens(Str," \n"),
-	  list_to_integer(T)*1024
-      catch _:_ -> 0
-      after file:close(FD)
-      end;
-    _ -> 0
-  end.
 
 strategy() ->
   Os_mon_p = [ok||{os_mon,_,_}<-application:which_applications()],
@@ -194,6 +182,25 @@ init_linux() ->
   {ok,FDs} = file:open("/proc/stat",[read]),
   {ok,FDss} = file:open("/proc/self/stat",[read]),
   #fds{proc_stat=FDs,proc_self_stat=FDss}.
+
+cores({linux,#fds{proc_stat=Proc_stat}}) ->
+  {ok,Str} = file:pread(Proc_stat,0,1000),
+  Toks = string:tokens(Str,"\n"),
+  length(lists:takewhile(fun(S)->lists:prefix("cpu",S) end,Toks));
+cores(_) ->
+  1.
+
+total_ram() ->
+  case file:open("/proc/meminfo",[read]) of
+    {ok,FD} ->
+      try {ok,Str} = file:pread(FD,0,30),
+	  ["MemTotal:",T,"kB"|_] = string:tokens(Str," \n"),
+	  list_to_integer(T)*1024
+      catch _:_ -> 0
+      after file:close(FD)
+      end;
+    _ -> 0
+  end.
 
 init_ps() ->
   [].

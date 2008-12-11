@@ -110,14 +110,16 @@ cpu_per_red(Sys) ->
     Reds -> 100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))/Reds
   end.
 
-procsI([],_) -> io:fwrite("~n",[]);
 procsI(PP,CpuPerRed) ->
-  io:fwrite(?FORMAT, [pidf(to_list(lks(pid,PP))),
-		      funf(reg(PP)), 
-		      funf(lks(current_function, PP)), 
-		      to_list(lks(message_queue_len, PP)),
-		      to_list(lks(memory,PP)/1024), 
-		      to_list(lks(dreductions,PP)*CpuPerRed)]).
+  try io:fwrite(?FORMAT, [pidf(to_list(lks(pid,PP))),
+			  funf(reg(PP)), 
+			  funf(lks(current_function, PP)), 
+			  to_list(lks(message_queue_len, PP)),
+			  to_list(lks(memory,PP)/1024), 
+			  to_list(lks(dreductions,PP)*CpuPerRed)])
+  catch _:_ ->
+      io:fwrite("~n",[])
+  end.
 
 reg(PP) ->    
   case lks(registered_name, PP) of
