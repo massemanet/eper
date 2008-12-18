@@ -36,7 +36,7 @@ get_info() ->
   %% trust me...
   case 999 < erlang:system_info(process_count) of
     true -> {now(),[]};
-    false-> {now(),[{P,pid_info(P,?SORT_ITEMS)}||P<-processes()]} 
+    false-> {now(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]} 
   end.
 
 %%% Dreds, Dmems, Mems and Msgqs are sorted lists of pids
