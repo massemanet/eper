@@ -13,7 +13,8 @@ erlsrc_DATA = \
 	sherk.erl sherk_tab.erl sherk_prof.erl \
 	sherk_tree.erl sherk_list.erl sherk_scan.erl sherk_aquire.erl \
 	sherk_target.erl sherk_ets.erl \
-	watchdog.erl watchdogConsumer.erl
+	watchdog.erl watchdogConsumer.erl \
+	loggerConsumer.erl
 
 erlinc_DATA = \
 	log.hrl gen_serv.hrl
