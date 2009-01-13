@@ -1,8 +1,7 @@
 %% -*- erlang-indent-level: 2 -*-
 %%% Created : 17 Oct 2008 by Mats Cronqvist <masse@kreditor.se>
 
-%% @doc
-%% @end
+%% implements a proxy function between watchdog and the prf consumers.
 
 -module(prfDog).
 -author('Mats Cronqvist').
