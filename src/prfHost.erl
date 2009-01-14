@@ -26,8 +26,15 @@ start(Name,Node,Consumer,Proxy)
   assert_proxy(Proxy),
   SpawnFun = fun()->init(Consumer,Node,Proxy) end,
   case whereis(Name) of
-    undefined -> register(Name, spawn_link(SpawnFun));
+    undefined -> register(Name, spawner(SpawnFun));
     Pid -> Pid
+  end.
+
+spawner(F) ->
+  {_,{x,S}} = (catch erlang:error(x)),
+  case hd(lists:reverse(S)) of
+    {shell,_,_} -> spawn(F);
+    _		-> spawn_link(F)
   end.
 
 stop(Name) -> 
