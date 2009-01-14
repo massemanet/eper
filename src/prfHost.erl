@@ -55,16 +55,19 @@ end.
 init(Consumer, Node, Proxy) ->
   process_flag(trap_exit,true),
   prf:ticker_even(),
+  Collectors = Consumer:collectors(),
   case Proxy of
+    no_proxy when Collectors=:=watchdog ->
+      exit(specify_proxy);
     no_proxy ->
       loop(#ld{node = Node, 
 	       proxy = [],
 	       consumer = Consumer, 
-	       collectors = subscribe(Node,Consumer:collectors()),
+	       collectors = subscribe(Node,Collectors),
 	       consumer_data = Consumer:init(Node)});
     _ ->
       loop(#ld{node = Proxy,
-	       proxy = {Node,Consumer:collectors()},
+	       proxy = {Node,Collectors},
 	       consumer = Consumer, 
 	       collectors = subscribe(Proxy,[prfDog]),
 	       consumer_data = Consumer:init(Node)})
@@ -112,22 +115,20 @@ loop(LD) ->
 de_proxy(_,[]) -> [];
 de_proxy(LD,Data) ->
   case LD#ld.proxy of
-    [] -> Data;
-    {Node,Collectors} -> de_proxy(Data,Node,Collectors)
+    []		    -> Data;
+    {Node,watchdog} -> dog_data(Data,Node);
+    {Node,Colls}    -> de_colls(Colls,dog_data(Data,Node))
   end.
 
-de_proxy([{prfDog,DogData}|_],Node,Collectors) ->
-  try Trigger = trigger(Collectors),
-      CollectorDatas = orddict:fetch({Node,Trigger},DogData),
-      [C || C={Coll,_} <- CollectorDatas, lists:member(Coll,Collectors)]
-  catch _:_ -> 
-      []
-  end.
+de_colls(Colls,DogData) -> 
+  F0 = fun({_,Ev},_) -> Ev=:=ticker end,
+  CD = orddict:filter(F0,DogData),
+  F1 = fun(C,_) -> lists:member(C,Colls) end,
+  orddict:filter(F1,CD).
 
-trigger(Collectors) -> 
-  case lists:member(prfSys,Collectors) of 
-    true -> ticker
-  end.
+dog_data([{prfDog,DogData}|_],Node) ->
+  F = fun({N,_},_) -> N=:=Node end,
+  orddict:filter(F, DogData).
 
 maybe_conf(CollData, LD) ->
   case LD#ld.proxy == [] of

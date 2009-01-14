@@ -4,7 +4,7 @@
 %% @doc
 %% @end
 
--module('loggerConsumer').
+-module(watchdogLogger).
 -author('Mats Cronqvist').
 
 -export([init/1, terminate/1, tick/2, collectors/0,config/2]).
@@ -13,9 +13,9 @@
 -include("log.hrl").
 
 %% example usage;
-%% prf:start(logger,node(),loggerConsumer).
+%% prf:start(wd_logger,kred@sarv,watchdogLogger,'watchdog@ruda-ii').
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-collectors() -> [prfPrc,prfSys].
+collectors() -> watchdog.
 
 init(Node) -> 
   FN = os:getenv("HOME")++"/log-"++atom_to_list(Node)++".gz",
