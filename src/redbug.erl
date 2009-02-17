@@ -46,7 +46,8 @@ help() ->
              "RMS: 'stack'|'return'|tuple(ArgDescriptor)",
              "ArgDescriptor: '_'|literal()"]).
 
-start([Node,Time,Msgs,Trc]) -> start([Node,Time,Msgs,Trc,"all"]);
+start([Node,Time,Msgs,Trc]) -> 
+  start([Node,Time,Msgs,Trc,"all"]);
 start([Node,Time,Msgs,Trc,Proc]) ->
   try 
     Cnf = #cnf{time=to_int(Time),
@@ -63,8 +64,14 @@ start([Node,Time,Msgs,Trc,Proc]) ->
       erlang:halt(1)
   end;
 start(X) ->
-  io:fwrite("bad args: ~p~n",[X]),
-  erlang:halt(1).
+  case is_in_shell() of
+    true -> start(60000,10,X);
+    false-> io:fwrite("bad args: ~p~n",[X]), erlang:halt(1)
+  end.
+
+is_in_shell() ->
+  {_,{x,S}} = (catch erlang:error(x)),
+  element(1,hd(lists:reverse(S))) == shell.
 
 start(Time,Msgs,Trc) -> go(Time,Msgs,Trc,#cnf{}).
 

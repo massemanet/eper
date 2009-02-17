@@ -31,10 +31,9 @@ start(Name,Node,Consumer,Proxy)
   end.
 
 spawner(F) ->
-  {_,{x,S}} = (catch erlang:error(x)),
-  case hd(lists:reverse(S)) of
-    {shell,_,_} -> spawn(F);
-    _		-> spawn_link(F)
+  case is_in_shell() of
+    true -> spawn(F);
+    false-> spawn_link(F)
   end.
 
 stop(Name) -> 
@@ -56,6 +55,11 @@ assert_proxy(Node) ->
     pong -> ok;
     _    -> exit({no_proxy,Node})
 end.
+
+is_in_shell() ->
+  {_,{x,S}} = (catch erlang:error(x)),
+  element(1,hd(lists:reverse(S))) == shell.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% runs in the consumer process
 
