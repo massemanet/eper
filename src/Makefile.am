@@ -6,6 +6,7 @@ erlbeamdir = $(ERLANG_INSTALL_LIB_DIR_eper)/ebin
 erlsrc_DATA = \
 	dtop.erl dtopConsumer.erl \
 	gperf.erl gperfConsumer.erl gperfGtk.erl \
+	gen_serv.erl \
 	ntop.erl ntopConsumer.erl \
 	prfNet.erl prfSys.erl prfPrc.erl prfTrc.erl prfDog.erl \
 	prf.erl prfHost.erl prfTarg.erl prfConsumer.erl prf_crypto.erl \

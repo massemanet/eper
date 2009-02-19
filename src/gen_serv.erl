@@ -58,7 +58,7 @@ start(Mod) ->
   start(Mod,[]).
 
 start(Mod,Args) ->
-  gen_server:start_link({local, Mod}, Mod, {Mod,Args}, []).
+  gen_server:start_link({local, Mod}, ?MODULE, {Mod,Args}, []).
 
 stop(Mod) -> 
   try gen_server:call(Mod,stop) 
@@ -72,12 +72,17 @@ print_state(Mod) ->
 %% implementation
 
 applie(LD,F,As) ->
-  {Reply,CLD} = applier(LD#ld.mod,F,As),
-  {Reply,LD#ld{cld=CLD}}.
+  case hd(As) of
+    print_state ->
+      print_state(LD#ld.mod,last(As)),
+      {ok,LD};
+    _ ->
+      {Reply,CLD} = applier(LD#ld.mod,F,As),
+      {Reply,LD#ld{cld=CLD}}
+  end.
 
 applier(M,F,As) ->
   case F of
-    print_state -> {ok,print_state(M,last(As))};
     handle_call -> safer(M,F,As,{ok,last(As)});
     _           -> {ok,safer(M,F,As,last(As))}
   end.
@@ -105,7 +110,8 @@ print_term(FD,Term) ->
     false-> io:fwrite(FD," ~p~n",[Term])
   end.
 
-expand_recs(M,List) when is_list(List) -> [expand_recs(M,L)||L<-List];
+expand_recs(M,List) when is_list(List) ->
+  [expand_recs(M,L)||L<-List];
 expand_recs(M,Tup) when is_tuple(Tup) -> 
   case tuple_size(Tup) of
     L when L < 1 -> Tup;
@@ -116,4 +122,5 @@ expand_recs(M,Tup) when is_tuple(Tup) ->
 	true -> expand_recs(M,lists:zip(Fields,tl(tuple_to_list(Tup))))
       end
   end;
-expand_recs(_,Term) -> Term.
+expand_recs(_,Term) ->
+  Term.
