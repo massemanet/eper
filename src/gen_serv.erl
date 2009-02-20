@@ -13,11 +13,11 @@
 -export([start/1
          , start/2
          , stop/1
-         , print_state/1]).
+         , print_state/1
+         , unlink/0]).
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% gen_server boiler plate
 
+%% the gen_server boilerplate
 -behaviour(gen_server).
 -export([handle_call/3
          , handle_cast/2
@@ -26,31 +26,7 @@
          , terminate/2
          , code_change/3]).
 
--record(ld,{mod,args,cld}).
-
-init({Mod,Args}) ->
-  {_,NLD} = applie(#ld{mod=Mod,args=Args},init,[Args]),
-  {ok,NLD}.
-
-terminate(Reason,LD) -> 
-  applie(LD,terminate,[Reason,LD#ld.cld]).
-
-code_change(_,LD,Info) -> 
-  {_,NLD} = applie(LD,code_change,["",LD#ld.cld,Info]),
-  {ok,NLD}.
-
-handle_cast(Msg,LD) -> 
-  {_,NLD} = applie(LD,handle_cast,[Msg,LD#ld.cld]),
-  {noreply,NLD}.
-
-handle_call(Msg,From,LD) -> 
-  {Reply,NLD} = applie(LD,handle_call,[Msg,From,LD#ld.cld]),
-  {reply,Reply,NLD}.
-
-handle_info(Msg,LD) -> 
-  {_,NLD} = applie(LD,handle_info,[Msg,LD#ld.cld]),
-  {noreply,NLD}.
-
+-include_lib("eper/src/log.hrl").
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% the API
 
@@ -61,40 +37,70 @@ start(Mod,Args) ->
   gen_server:start_link({local, Mod}, ?MODULE, {Mod,Args}, []).
 
 stop(Mod) -> 
-  try gen_server:call(Mod,stop) 
+  try gen_server:cast(Mod,stop) 
   catch exit:{noproc,_} -> ok
   end.
 
 print_state(Mod) ->
   gen_server:call(Mod,print_state).
 
+unlink() ->
+  {links,Links} = process_info(self(),links),
+  lists:foreach(fun unlink/1,Links).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% gen_server boiler plate
+
+-record(ld,{mod,args,cld}).
+
+init({Mod,Args}) ->
+  safer(#ld{mod=Mod,args=Args},init,[Args]).
+
+terminate(Reason,LD) -> 
+  safer(LD,terminate,[Reason,LD#ld.cld]).
+
+code_change(_,LD,Info) -> 
+  safer(LD,code_change,["",LD#ld.cld,Info]).
+
+handle_cast(Msg,LD) -> 
+  safer(LD,handle_cast,[Msg,LD#ld.cld]).
+
+handle_call(Msg,From,LD) -> 
+  safer(LD,handle_call,[Msg,From,LD#ld.cld]).
+
+handle_info(Msg,LD) -> 
+  safer(LD,handle_info,[Msg,LD#ld.cld]).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% implementation
 
-applie(LD,F,As) ->
-  case hd(As) of
-    print_state ->
-      print_state(LD#ld.mod,last(As)),
-      {ok,LD};
-    _ ->
-      {Reply,CLD} = applier(LD#ld.mod,F,As),
-      {Reply,LD#ld{cld=CLD}}
-  end.
-
-applier(M,F,As) ->
-  case F of
-    handle_call -> safer(M,F,As,{ok,last(As)});
-    _           -> {ok,safer(M,F,As,last(As))}
-  end.
-
-safer(M,F,As,Default) ->
-  case erlang:function_exported(M,F,length(As)) of
-    false-> Default;
+safer(LD,_,[stop|_]) ->
+  {stop,shutdown,LD};
+safer(LD,F,[print_state|As]) ->
+  print_state(LD#ld.mod,last(As)),
+  safe_default(F,LD);
+safer(LD,F,As) ->
+  case erlang:function_exported(LD#ld.mod,F,length(As)) of
+    false-> safe_default(F,LD);
     true ->
-      try apply(M,F,As) 
-      catch _:_ -> Default
+      try safe_reply(F,LD,apply(LD#ld.mod,F,As)) 
+      catch 
+        error:R ->
+          ?log([R,{mfa,{LD#ld.mod,F,As}},erlang:get_stacktrace()]),
+          safe_default(F,LD);
+        throw:R ->
+          {stop,shutdown,R}
       end
   end.
+
+safe_reply(handle_call,LD,{Reply,CLD}) -> {reply,Reply,LD#ld{cld=CLD}};
+safe_reply(handle_cast,LD,CLD) -> {noreply,LD#ld{cld=CLD}};
+safe_reply(handle_info,LD,CLD) -> {noreply,LD#ld{cld=CLD}};
+safe_reply(_          ,LD,CLD) -> {ok,LD#ld{cld=CLD}}.
+
+safe_default(handle_call,LD) -> {reply,ok,LD};
+safe_default(handle_cast,LD) -> {noreply,LD};
+safe_default(handle_info,LD) -> {noreply,LD};
+safe_default(_          ,LD) -> {ok,LD}.
 
 last(L) -> hd(lists:reverse(L)).
 
@@ -119,7 +125,7 @@ expand_recs(M,Tup) when is_tuple(Tup) ->
   case tuple_size(Tup) of
     L when L < 1 -> Tup;
     L ->
-      Fields = safer(M,rec_info,[element(1,Tup)],[]),
+      #ld{cld=Fields} = safer(#ld{mod=M,cld=[]},rec_info,[element(1,Tup)]),
       case L == length(Fields)+1 of
 	false-> list_to_tuple(expand_recs(M,tuple_to_list(Tup)));
 	true -> expand_recs(M,lists:zip(Fields,tl(tuple_to_list(Tup))))
