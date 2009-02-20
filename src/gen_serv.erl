@@ -90,7 +90,10 @@ applier(M,F,As) ->
 safer(M,F,As,Default) ->
   case erlang:function_exported(M,F,length(As)) of
     false-> Default;
-    true -> apply(M,F,As) 
+    true ->
+      try apply(M,F,As) 
+      catch _:_ -> Default
+      end
   end.
 
 last(L) -> hd(lists:reverse(L)).
@@ -116,7 +119,7 @@ expand_recs(M,Tup) when is_tuple(Tup) ->
   case tuple_size(Tup) of
     L when L < 1 -> Tup;
     L ->
-      Fields = safer(M,record_info,[element(1,Tup)],[]),
+      Fields = safer(M,rec_info,[element(1,Tup)],[]),
       case L == length(Fields)+1 of
 	false-> list_to_tuple(expand_recs(M,tuple_to_list(Tup)));
 	true -> expand_recs(M,lists:zip(Fields,tl(tuple_to_list(Tup))))
