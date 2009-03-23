@@ -13,7 +13,9 @@
 -export([active/1,idle/0,wait_for_local/1]).
 
 -import(lists,[reverse/1,foreach/2,map/2]).
--import(dict,[fetch/2]).
+-import(dict,[fetch/2
+              , store/3
+              , from_list/1]).
 
 %% states
 -define(ACTIVE, ?MODULE:active).
@@ -59,54 +61,85 @@ init() ->
 idle() ->
   receive
     {start,{HostPid,Conf}} -> ?ACTIVE(start_trace(HostPid,Conf));
-    {stop,{HostPid,_}} -> HostPid ! {prfTrc,{not_started,self()}}, ?IDLE();
-    X -> ?log({weird_in,X}), ?IDLE()
+    {stop,{HostPid,_}}     -> HostPid ! {prfTrc,{not_started,idle,self()}}, 
+                              ?IDLE();
+    X                      -> ?log({weird_in,X}), ?IDLE()
   end.
 
+active({not_started,R,HostPid}) ->
+  HostPid ! {prfTrc,{not_started,R,self()}},
+  ?IDLE();
 active(LD) ->
-  Cons = fetch(consumer,LD),
+  Consumer = fetch(consumer,LD),
   HostPid = fetch(host_pid,LD),
   receive
-    {start,{Pid,_}}    -> Pid ! {prfTrc,{already_started,self()}}, ?ACTIVE(LD);
-    {stop,_} 	       -> remote_stop(Cons, LD),?WAIT_FOR_LOCAL(Cons);
-    {'EXIT',HostPid,_} -> remote_stop(Cons, LD),?WAIT_FOR_LOCAL(Cons);
-    {local_stop,R}     -> local_stop(HostPid, LD, R),?WAIT_FOR_LOCAL(Cons);
-    {'EXIT',Cons,R}    -> local_stop(HostPid, LD, R),?IDLE();
-    X                  -> ?log({weird_in,X}), ?ACTIVE(LD) 
+    {start,{Pid,_}}     -> Pid ! {prfTrc,{already_started,self()}}, ?ACTIVE(LD);
+    {stop,_}            -> remote_stop(Consumer, LD),?WAIT_FOR_LOCAL(Consumer);
+    {'EXIT',HostPid,_}  -> remote_stop(Consumer, LD),?WAIT_FOR_LOCAL(Consumer);
+    {local_stop,R}      -> local_stop(HostPid, LD, R),?WAIT_FOR_LOCAL(Consumer);
+    {'EXIT',Consumer,R} -> local_stop(HostPid, LD, R),?IDLE();
+    X                   -> ?log({weird_in,X}), ?ACTIVE(LD) 
   end.
 
-wait_for_local(Cons) when is_pid(Cons) ->
+wait_for_local(Consumer) when is_port(Consumer) ->
+  ok;
+wait_for_local(Consumer) when is_pid(Consumer) ->
   receive 
-    {'EXIT',Cons,_} -> ?IDLE();
-    X               -> ?log({weird_in,X}), ?WAIT_FOR_LOCAL(Cons)
-  end;
-wait_for_local(_) -> 
-  ?IDLE().
+    {'EXIT',Consumer,_} -> ?IDLE();
+    X                   -> ?log({weird_in,X}), ?WAIT_FOR_LOCAL(Consumer)
+  end. 
 
 local_stop(HostPid, LD, R) ->
   stop_trace(LD),
   unlink(HostPid),
   HostPid ! {prfTrc,{stopping,self(),R}}.
 
-remote_stop(Cons, LD) ->
+remote_stop(Consumer, LD) ->
   stop_trace(LD),
-  consumer_stop(Cons).
+  consumer_stop(Consumer).
 
 stop_trace(LD) ->
   erlang:trace(all,false,fetch(flags,fetch(conf,LD))),
   unset_tps().
 
 start_trace(HostPid,Conf) ->
+  case maybe_load_modules(Conf) of
+    []    -> {not_started,no_modules,HostPid};
+    NConf -> start_trace(from_list([{host_pid,HostPid},{conf,NConf}]))
+  end.
+      
+start_trace(LD) -> 
+  Conf = fetch(conf,LD),
+  HostPid = fetch(host_pid,LD),
   link(HostPid),
-  Cons = consumer(fetch(where,Conf),fetch(time,Conf)),
-  HostPid ! {prfTrc,{starting,self(),Cons}},
+  Consumer = consumer(fetch(where,Conf),fetch(time,Conf)),
+  HostPid ! {prfTrc,{starting,self(),Consumer}},
   Procs = mk_prc(fetch(procs,Conf)),
-  Flags = [{tracer,Cons}|fetch(flags,Conf)],
+  Flags = [{tracer,Consumer}|fetch(flags,Conf)],
   unset_tps(),
   erlang:trace(Procs,true,Flags),
   untrace(family(redbug)++family(prfTrc),Flags),
   set_tps(fetch(rtps,Conf)),
-  dict:from_list([{host_pid,HostPid},{consumer,Cons},{conf,Conf}]).
+  store(consumer,Consumer,LD).
+
+maybe_load_modules(Conf) ->
+  case lists:foldl(fun maybe_load_rtp/2, [], fetch(rtps,Conf)) of
+    []   -> [];
+    Rtps -> store(rtps,Rtps,Conf)
+  end.
+
+maybe_load_rtp({{M,F,A},_MatchSpec,_Flags} = Rtp,O) ->
+  try 
+    "/" = [hd(code:which(M))],
+    [c:l(M) || false == code:is_loaded(M)],
+    case A of
+      '_' -> [F|_] = [F0 || {F0,_} <- M:module_info(exports),F==F0];
+      _   -> true = erlang:function_exported(M,F,A)
+    end,
+    [Rtp|O]
+  catch 
+    error:_ -> ?log({no_such_function,{M,F,A}}), O
+  end.
 
 family(Daddy) ->
   try D = whereis(Daddy), 
@@ -131,13 +164,13 @@ consumer_stop(Pid) when is_pid(Pid) -> Pid ! stop;
 consumer_stop(_Port) when is_port(_Port) -> dbg:flush_trace_port().
 
 consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Time) ->
-  Conf = dict:from_list([{daddy,self()},
-			 {count,Cnt},
-			 {time,Time},
-			 {maxsize,MaxSize},
-			 {maxqueue,MaxQueue},
-			 {where,Pid},
-			 {buffering,Buf}]),
+  Conf = from_list([{daddy,self()},
+                    {count,Cnt},
+                    {time,Time},
+                    {maxsize,MaxSize},
+                    {maxqueue,MaxQueue},
+                    {where,Pid},
+                    {buffering,Buf}]),
   spawn_link(fun() -> init_local(Conf) end).
 
 consumer_file(File,Size) ->
@@ -158,7 +191,7 @@ unset_tps() ->
 
 set_tps(TPs) -> foreach(fun set_tps_f/1,TPs).
 
-set_tps_f({MFA,MS,Fs}) -> erlang:trace_pattern(MFA,MS,Fs).
+set_tps_f({MFA,MatchSpec,Flags}) -> erlang:trace_pattern(MFA,MatchSpec,Flags).
 
 mk_prc(all) -> all;
 mk_prc(Pid) when is_pid(Pid) -> Pid;

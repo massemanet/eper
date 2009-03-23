@@ -24,11 +24,13 @@ ri(_) -> [].
 
 start() -> start([]).
 
-start(Args) -> gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
+start(Args) ->
+  gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
 
-stop() -> try gen_server:call(?MODULE,stop) 
-	  catch exit:{noproc,_} -> not_started
-	  end.
+stop() ->
+  try gen_server:call(?MODULE,stop) 
+  catch exit:{noproc,_} -> not_started
+  end.
 
 print_state() -> gen_server:call(?MODULE,print_state).
 

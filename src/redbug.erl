@@ -132,11 +132,11 @@ running(TrcPid,ConsPid,PrintPid) ->
   receive
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}}),
 		   stopping(PrintPid);
-    {prfTrc,{stopping,_,_}}       -> stopping(PrintPid);
-    {'EXIT',TrcPid,_}             -> stopping(PrintPid);
-    {prfTrc,{not_started,TrcPid}} -> ?log(not_started);
-    {'EXIT',PrintPid,_}           -> maybe_stopping(TrcPid);
-    X                             -> ?log([{unknown_message,X}])
+    {prfTrc,{stopping,_,_}}         -> stopping(PrintPid);
+    {'EXIT',TrcPid,_}               -> stopping(PrintPid);
+    {prfTrc,{not_started,R,TrcPid}} -> ?log([{not_started,R}]);
+    {'EXIT',PrintPid,_}             -> maybe_stopping(TrcPid);
+    X                               -> ?log([{unknown_message,X}])
   end.
 
 maybe_stopping(TrcPid) ->
