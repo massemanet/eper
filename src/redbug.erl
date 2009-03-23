@@ -36,15 +36,20 @@ print_fun() -> fun(Str) -> io:fwrite("~s~n",[Str]) end.
 
 help() ->
   F = print_fun(),
-  foreach(F,["redbug:start(Time,Msgs,Trc[,Proc[,Targ]])",
-             "Time: integer() [ms]",
-             "Msgs: integer() [#]",
-             "Trc: list('send'|'receive'|{M}|{M,F}|{M,RMSs}|{M,F,RMSs})",
-             "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}",
-             "Targ: node()",
-             "RMSs: (restricted match specs): list(RMS)",
-             "RMS: 'stack'|'return'|tuple(ArgDescriptor)",
-             "ArgDescriptor: '_'|literal()"]).
+  foreach(F,["redbug - the (sensibly) Restrictive Debugger"
+             , ""
+             , "  redbug:start(Trc) -> start(15000,10,Trc)."
+             , ""
+             , "  redbug:start(Time,Msgs,Trc[,Proc[,Targ]])."
+             , ""
+             , "Time: integer() [ms]"
+             , "Msgs: integer() [#]"
+             , "Trc: list('send'|'receive'|{M}|{M,F}|{M,RMSs}|{M,F,RMSs})"
+             , "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}"
+             , "Targ: node()"
+             , "RMSs: (restricted match specs): list(RMS)"
+             , "RMS: 'stack'|'return'|tuple(ArgDescriptor)"
+             , "ArgDescriptor: '_'|literal()"]).
 
 start([Node,Time,Msgs,Trc]) -> 
   start([Node,Time,Msgs,Trc,"all"]);
@@ -65,7 +70,7 @@ start([Node,Time,Msgs,Trc,Proc]) ->
   end;
 start(X) ->
   case is_in_shell() of
-    true -> start(60000,10,X);
+    true -> start(15000,10,X);
     false-> io:fwrite("bad args: ~p~n",[X]), erlang:halt(1)
   end.
 
