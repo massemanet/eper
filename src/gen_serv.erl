@@ -26,7 +26,7 @@
          , terminate/2
          , code_change/3]).
 
--include_lib("eper/src/log.hrl").
+-include("log.hrl").
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% the API
 
@@ -125,7 +125,7 @@ expand_recs(M,Tup) when is_tuple(Tup) ->
   case tuple_size(Tup) of
     L when L < 1 -> Tup;
     L ->
-      #ld{cld=Fields} = safer(#ld{mod=M,cld=[]},rec_info,[element(1,Tup)]),
+      {ok,#ld{cld=Fields}}=safer(#ld{mod=M,cld=[]},rec_info,[element(1,Tup)]),
       case L == length(Fields)+1 of
 	false-> list_to_tuple(expand_recs(M,tuple_to_list(Tup)));
 	true -> expand_recs(M,lists:zip(Fields,tl(tuple_to_list(Tup))))
