@@ -132,14 +132,9 @@ maybe_load_rtp({{M,F,A},_MatchSpec,_Flags} = Rtp,O) ->
   try 
     "/" = [hd(code:which(M))],
     [c:l(M) || false == code:is_loaded(M)],
-    case {F,A} of
-      {'_','_'} -> ok;
-      {_,'_'}   -> [F|_] = [F0 || {F0,_} <- M:module_info(exports),F==F0];
-      _         -> true = erlang:function_exported(M,F,A)
-    end,
     [Rtp|O]
   catch 
-    error:_ -> ?log({no_such_function,{M,F,A}}), O
+    error:R -> ?log({no_such_function,{R,{M,F,A}}}), O
   end.
 
 family(Daddy) ->
