@@ -48,10 +48,10 @@ sys_str(Sys) ->
   M	    = pad(element(2,Time),2,$0,left),
   S	    = pad(element(3,Time),2,$0,left),
   Node	    = to_list(lks(node, Sys)),
-  MEMbeam   = to_list(round(lks(beam_vss, Sys)/1048576)),
-  MEM	    = to_list(round(lks(total, Sys)/1048576)),
-  CPUbeam   = to_list(100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))),
-  CPU       = to_list(100*(lks(user,Sys)+lks(kernel,Sys))),
+  MEMbeam   = to_list(round(lks(beam_vss,Sys,0)/1048576)),
+  MEM	    = to_list(round(lks(total,Sys)/1048576)),
+  CPUbeam   = to_list(100*(lks(beam_user,Sys,0)+lks(beam_kernel,Sys))),
+  CPU       = to_list(100*(lks(user,Sys,0)+lks(kernel,Sys,0))),
   Procs	    = to_list(lks(procs,Sys)),
   RunQ	    = to_list(lks(run_queue, Sys)),
 
@@ -106,11 +106,8 @@ resize(Items,Prcs) ->
 
 cpu_per_red(Sys) ->
   case lks(reductions,Sys) of
-    0 -> 0;
-    Reds -> 
-      try 100*(lks(beam_user,Sys)+lks(beam_kernel,Sys))/Reds
-      catch error:function_clause -> 0
-      end
+    0    -> 0;
+    Reds -> 100*(lks(beam_user,Sys,1)+lks(beam_kernel,Sys,0))/Reds
   end.
 
 procsI(PP,CpuPerRed) ->
@@ -144,5 +141,11 @@ to_list(A) when is_float(A) -> to_list(round(A));
 to_list(A) when is_tuple(A) -> tuple_to_list(A);
 to_list(A) when is_integer(A) -> integer_to_list(A).
 
+lks(Tag,TVs,Def) ->
+  try lks(Tag,TVs) 
+  catch not_found -> Def
+  end.
+
+lks(_, [])              -> throw(not_found);
 lks(Tag, [{Tag,Val}|_]) -> Val;
-lks(Tag, [_|List]) -> lks(Tag, List).
+lks(Tag, [_|List])      -> lks(Tag, List).
