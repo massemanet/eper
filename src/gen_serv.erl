@@ -14,6 +14,7 @@
          , start/2
          , stop/1
          , print_state/1
+         , get_state/1
          , unlink/0]).
 
 
@@ -41,8 +42,11 @@ stop(Mod) ->
   catch exit:{noproc,_} -> ok
   end.
 
+get_state(Mod) ->
+  gen_server:call(Mod,get_state).
+
 print_state(Mod) ->
-  gen_server:call(Mod,print_state).
+  print_term(get_state(Mod)).
 
 unlink() ->
   {links,Links} = process_info(self(),links),
@@ -58,8 +62,8 @@ init({Mod,Args}) ->
 terminate(Reason,LD) -> 
   safer(LD,terminate,[Reason,LD#ld.cld]).
 
-code_change(_,LD,Info) -> 
-  safer(LD,code_change,["",LD#ld.cld,Info]).
+code_change(OldVsn,LD,Info) -> 
+  safer(LD,code_change,[OldVsn,LD#ld.cld,Info]).
 
 handle_cast(Msg,LD) -> 
   safer(LD,handle_cast,[Msg,LD#ld.cld]).
@@ -75,9 +79,9 @@ handle_info(Msg,LD) ->
 
 safer(LD,_,[stop|_]) ->
   {stop,shutdown,LD};
-safer(LD,F,[print_state|As]) ->
-  print_state(LD#ld.mod,last(As)),
-  safe_default(F,LD);
+safer(LD,F,[get_state|As]) ->
+  CLD = last(As),
+  safe_reply(F,LD,{expand_recs(LD#ld.mod,CLD),CLD});
 safer(LD,F,As) ->
   case erlang:function_exported(LD#ld.mod,F,length(As)) of
     false-> safe_default(F,LD);
@@ -93,9 +97,10 @@ safer(LD,F,As) ->
   end.
 
 safe_reply(handle_call,LD,{Reply,CLD}) -> {reply,Reply,LD#ld{cld=CLD}};
-safe_reply(handle_cast,LD,CLD) -> {noreply,LD#ld{cld=CLD}};
-safe_reply(handle_info,LD,CLD) -> {noreply,LD#ld{cld=CLD}};
-safe_reply(_          ,LD,CLD) -> {ok,LD#ld{cld=CLD}}.
+safe_reply(handle_call,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
+safe_reply(handle_cast,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
+safe_reply(handle_info,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
+safe_reply(_          ,LD,CLD)         -> {ok,LD#ld{cld=CLD}}.
 
 safe_default(handle_call,LD) -> {reply,ok,LD};
 safe_default(handle_cast,LD) -> {noreply,LD};
@@ -106,9 +111,6 @@ last(L) -> hd(lists:reverse(L)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utilities
-
-print_state(M,CLD) ->
-  print_term(expand_recs(M,CLD)).
 
 print_term(Term) -> 
   print_term(group_leader(),Term).
