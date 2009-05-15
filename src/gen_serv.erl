@@ -15,6 +15,7 @@
          , stop/1
          , print_state/1
          , get_state/1
+         , get_state/2
          , unlink/0]).
 
 
@@ -42,8 +43,17 @@ stop(Mod) ->
   catch exit:{noproc,_} -> ok
   end.
 
+get_state(Mod,Field) ->
+  case proplists:is_defined(Field,State = get_state(Mod)) of
+    true -> proplists:get_value(Field,State);
+    false-> exit({no_such_field,Field,State})
+  end.
+
 get_state(Mod) ->
-  gen_server:call(Mod,get_state).
+  case whereis(Mod) of
+    undefined -> exit({not_started,Mod});
+    _         -> gen_server:call(Mod,get_state)
+  end.
 
 print_state(Mod) ->
   print_term(get_state(Mod)).
