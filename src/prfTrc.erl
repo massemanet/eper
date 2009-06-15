@@ -130,11 +130,14 @@ maybe_load_modules(Conf) ->
 
 maybe_load_rtp({{M,F,A},_MatchSpec,_Flags} = Rtp,O) ->
   try 
-    "/" = [hd(code:which(M))],
-    [c:l(M) || false == code:is_loaded(M)],
+    case code:which(M) of
+      non_existing      -> throw(non_existing_module);
+      preloaded         -> ok;
+      F when is_list(F) -> [c:l(M) || false == code:is_loaded(M)]
+    end,
     [Rtp|O]
   catch 
-    error:R -> ?log({no_such_function,{R,{M,F,A}}}), O
+    _:R -> ?log({no_such_function,{R,{M,F,A}}}), O
   end.
 
 family(Daddy) ->
