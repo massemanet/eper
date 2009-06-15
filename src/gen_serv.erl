@@ -13,6 +13,7 @@
 -export([start/1
          , start/2
          , stop/1
+         , shutdown/1
          , print_state/1
          , get_state/1
          , get_state/2
@@ -39,9 +40,10 @@ start(Mod,Args) ->
   gen_server:start_link({local, Mod}, ?MODULE, {Mod,Args}, []).
 
 stop(Mod) -> 
-  try gen_server:cast(Mod,stop) 
-  catch exit:{noproc,_} -> ok
-  end.
+  cast(Mod,stop).
+
+shutdown(Mod) -> 
+  cast(Mod,shutdown).
 
 get_state(Mod,Field) ->
   case proplists:is_defined(Field,State = get_state(Mod)) of
@@ -88,6 +90,8 @@ handle_info(Msg,LD) ->
 %% implementation
 
 safer(LD,_,[stop|_]) ->
+  {stop,normal,LD};
+safer(LD,_,[shutdown|_]) ->
   {stop,shutdown,LD};
 safer(LD,F,[get_state|As]) ->
   CLD = last(As),
@@ -112,6 +116,7 @@ safe_reply(handle_cast,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
 safe_reply(handle_info,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
 safe_reply(_          ,LD,CLD)         -> {ok,LD#ld{cld=CLD}}.
 
+safe_default(init,LD)        -> exit(LD);
 safe_default(handle_call,LD) -> {reply,ok,LD};
 safe_default(handle_cast,LD) -> {noreply,LD};
 safe_default(handle_info,LD) -> {noreply,LD};
@@ -145,3 +150,8 @@ expand_recs(M,Tup) when is_tuple(Tup) ->
   end;
 expand_recs(_,Term) ->
   Term.
+
+cast(Mod,What) ->
+  try gen_server:cast(Mod,What) 
+  catch exit:{noproc,_} -> ok
+  end.
