@@ -8,7 +8,7 @@
 -module(watchdog).
 
 -export([start/0,stop/0]).
--export([add_send_subscriber/3,add_log_subscriber/0,clear_subscribers/0]).
+-export([add_send_subscriber/4,add_log_subscriber/0,clear_subscribers/0]).
 -export([message/1]).
 -export([loop/1]).
 
@@ -56,10 +56,10 @@ stop() ->
   catch _:_ -> ok
   end.
 
-%% E.g:  watchdog:add_send_subscriber("localhost",56669,"I'm a Cookie").
-add_send_subscriber(Host,Port,PassPhrase) ->
+%% E.g:  watchdog:add_send_subscriber(tcp,"localhost",56669,"I'm a Cookie").
+add_send_subscriber(Proto,Host,Port,PassPhrase) ->
   try {ok,{hostent,Host,[],inet,4,_}} = inet:gethostbyname(Host),
-      ?MODULE ! {add_subscriber,mk_send(Host,Port,PassPhrase)},
+      ?MODULE ! {add_subscriber,mk_send(Proto,Host,Port,PassPhrase)},
       ok
   catch 
     error:{badmatch,{ok,{hostent,G,[W],inet,4,_}}} -> {error,{badhost,W,G}};
@@ -257,17 +257,29 @@ lks(Tag,List) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-mk_send(Name,Port,Cookie) ->
+mk_send(tcp,Name,Port,Cookie) ->
+  ConnOpts = [{send_timeout,100},{active,false},{packet,4},binary],
+  ConnTimeout =  100,
   fun(Chunk)->
-      try {ok,Sck} = gen_tcp:connect(Name,Port,conn_opts(),conn_timeout()),
+      try {ok,Sck} = gen_tcp:connect(Name,Port,ConnOpts,ConnTimeout),
 	  try gen_tcp:send(Sck,prf_crypto:encrypt(Cookie,Chunk))
 	  after gen_tcp:close(Sck)
 	  end
       catch _:_ -> ok
       end
+  end;
+mk_send(udp,Name,Port,Cookie) ->
+  mk_send(0,Name,Port,Cookie);
+mk_send(UdpPort,Name,Port,Cookie) when is_integer(UdpPort)->
+  fun(Chunk) ->
+      try Payload = prf_crypto:encrypt(Cookie,Chunk),
+          PaySize = byte_size(Payload),
+          {ok,Sck} = gen_udp:open(UdpPort,[binary]),
+          gen_udp:send(Sck,Name,Port,<<PaySize:32,Payload/binary>>),
+          gen_udp:close(Sck)
+      catch _:_ -> ok
+      end
   end.
-conn_opts() -> [{send_timeout,100},{active,false},{packet,4},binary].
-conn_timeout() -> 100.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
