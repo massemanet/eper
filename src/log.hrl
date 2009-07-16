@@ -4,8 +4,15 @@
 %% this has infinitely high bitefactor.
 %% alas, it is a consequence of the braindead textual macros.
 
--define(log(T),'?log'(process_info(self(),current_function),{line,?LINE},T)).
-'?log'(CF,Line,T) when not is_integer(hd(T)) -> 
-  %% T is a list and it's not a string.
-  error_logger:info_report([CF,Line|T]);
-'?log'(CF,Line,T)  -> '?log'(CF,Line,[T]).
+-define(log(T),
+        '?log'([process_info(self(),current_function)
+                , {line,?LINE}]
+               ,T)).
+-define(log_bt(T),
+        '?log'([process_info(self(),current_function)
+                , {line,?LINE}
+                , {bt,erlang:get_stacktrace()}]
+               , T)).
+
+'?log'(HD,T) when not is_integer(hd(T)) -> error_logger:info_report(HD++T);
+'?log'(HD,T)  -> '?log'(HD,[T]).
