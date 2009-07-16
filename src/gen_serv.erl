@@ -110,6 +110,7 @@ safer(LD,F,As) ->
       end
   end.
 
+safe_reply(_,LD,{stop,R,CLD})          -> {stop,R,LD#ld{cld=CLD}};
 safe_reply(handle_call,LD,{Reply,CLD}) -> {reply,Reply,LD#ld{cld=CLD}};
 safe_reply(handle_call,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
 safe_reply(handle_cast,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
