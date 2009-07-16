@@ -186,7 +186,10 @@ init_linux() ->
 cores({linux,#fds{proc_stat=Proc_stat}}) ->
   {ok,Str} = file:pread(Proc_stat,0,1000),
   Toks = string:tokens(Str,"\n"),
-  length(lists:takewhile(fun(S)->lists:prefix("cpu",S) end,Toks));
+  case length(lists:takewhile(fun(S)->lists:prefix("cpu",S) end,Toks)) of
+    1 -> 1;
+    M -> M-1
+  end;
 cores(_) ->
   1.
 
