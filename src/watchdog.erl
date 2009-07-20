@@ -272,7 +272,8 @@ mk_send(udp,Name,Port,Cookie) ->
   mk_send(0,Name,Port,Cookie);
 mk_send(UdpPort,Name,Port,Cookie) when is_integer(UdpPort)->
   fun(Chunk) ->
-      try Payload = prf_crypto:encrypt(Cookie,Chunk),
+      try BC = term_to_binary(Chunk,[{compressed,3}]),
+          Payload = prf_crypto:encrypt(Cookie,BC),
           PaySize = byte_size(Payload),
           {ok,Sck} = gen_udp:open(UdpPort,[binary]),
           gen_udp:send(Sck,Name,Port,<<PaySize:32,Payload/binary>>),

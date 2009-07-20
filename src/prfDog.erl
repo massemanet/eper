@@ -62,7 +62,7 @@ do_info(LD,{tcp,Sock,Bin}) ->
       gen_tcp:close(Sock),
       {watchdog,Node,Trig,Msg} = prf_crypto:decrypt(LD#ld.cookie,Bin),
       LD#ld{socket=LD#ld.socket--[Sock],msg=store({Node,Trig},Msg,LD#ld.msg)};
-  false->
+    false->
       %% got data from unknown socket. wtf?
       ?log([{data_from,Sock},{sockets,LD#ld.socket},{bytes,byte_size(Bin)}]),
       LD
