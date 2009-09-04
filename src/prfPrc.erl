@@ -17,7 +17,7 @@
 %%% current_function,initial_call,registered_name
 %%% N.B. 'reductions' is reductions/sec
 
--define(ITEMS,19).
+-define(ITEMS,6).
 -define(SORT_ITEMS,[reductions,memory,message_queue_len]).
 -define(INFO_ITEMS,[current_function,initial_call,registered_name]).
 -define(TAGS,?SORT_ITEMS++?INFO_ITEMS).
@@ -45,8 +45,10 @@ get_info() ->
 
 select({Then,Olds},{Now,Curs}) ->
   {DredL,DmemL,MemL,MsgqL} = topl(Olds,Curs,outf(Then,Now),empties()),
-  PidInfo = lists:usort([I || {_,I} <- lists:append([DredL,DmemL,MemL,MsgqL])]),
-  [{dreds,e1e2(DredL)},
+  PidInfo = lists:usort([I || {_,I} <-lists:append([DredL,DmemL,MemL,MsgqL])]),
+  [{node,node()},
+   {now,now()},
+   {dreds,e1e2(DredL)},
    {dmem,e1e2(DmemL)},
    {mem,e1e2(MemL)},
    {msgq,e1e2(MsgqL)},
