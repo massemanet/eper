@@ -143,10 +143,11 @@ expand_recs(M,Tup) when is_tuple(Tup) ->
   case tuple_size(Tup) of
     L when L < 1 -> Tup;
     L ->
-      {ok,#ld{cld=Fields}}=safer(#ld{mod=M,cld=[]},rec_info,[element(1,Tup)]),
-      case L == length(Fields)+1 of
-	false-> list_to_tuple(expand_recs(M,tuple_to_list(Tup)));
-	true -> lists:zip(Fields,tl(tuple_to_list(Tup)))
+      try Fields = M:rec_info(element(1,Tup)),
+          L = length(Fields)+1,
+          lists:zip(Fields,expand_recs(M,tl(tuple_to_list(Tup))))
+      catch _:_ -> 
+          list_to_tuple(expand_recs(M,tuple_to_list(Tup)))
       end
   end;
 expand_recs(_,Term) ->
