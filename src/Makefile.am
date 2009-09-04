@@ -4,6 +4,7 @@ gladedir = $(ERLANG_INSTALL_LIB_DIR_eper)/priv/glade
 erlbeamdir = $(ERLANG_INSTALL_LIB_DIR_eper)/ebin
 
 erlsrc_DATA = \
+	bread.erl bread_server.erl \
 	dtop.erl dtopConsumer.erl \
 	gperf.erl gperfConsumer.erl gperfGtk.erl \
 	gen_serv.erl \
