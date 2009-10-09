@@ -57,6 +57,7 @@ stop() ->
   end.
 
 %% E.g:  watchdog:add_send_subscriber(tcp,"localhost",56669,"I'm a Cookie").
+%% it's possible to add the same subscriber twice. this is a bug.
 add_send_subscriber(Proto,Host,Port,PassPhrase) ->
   try {ok,{hostent,Host,[],inet,4,_}} = inet:gethostbyname(Host),
       ?MODULE ! {add_subscriber,mk_send(Proto,Host,Port,PassPhrase)},

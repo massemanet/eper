@@ -8,6 +8,7 @@
 -author('Mats Cronqvist').
 
 -export([sax/3
+         , xml/3
          , term/3
          , line/3
          , fold/4]).
@@ -29,30 +30,30 @@ line(Filename,Fun,Acc) ->
   fold(Filename,Fun,Acc,[line]).
 
 sax(Filename,Fun,Acc) ->
+  fold(Filename,Fun,Acc,[sax]).
+
+xml(Filename,Fun,Acc) ->
   fold(Filename,Fun,Acc,[xml]).
 
 term(Filename,Fun,Acc) ->
  fold(Filename,Fun,Acc,[term]).
 
 fold(Filename,Fun,Acc,Opts) ->
+  Type = take_first(Opts,[line,sax,xml,term]),
   case file:open(Filename, [read, raw, binary]) of
     {ok, FD} -> 
-      try fold(read(FD),FD,wrap(Fun,Opts),chunker(Opts),?state(Acc,?tail_0()))
+      try fold(read(FD),FD,wrap(Fun,Type),chunker(Type),?state(Acc,?tail_0()))
       after file:close(FD)
       end;
     {error,R} ->
       exit({open_error, R, Filename})
   end.
 
-wrap(Fun,Opts) ->
-  Es = [xml,term,line],
-  case [proplists:is_defined(T,Opts) || T <- Es] of
-    [true,false,false] -> xml_f(Fun);
-    [false,true,false] -> term_f(Fun);
-    [false,false,true] -> Fun;
-    [false,false,false]-> exit({valid_entities_are,Es});
-    _                  -> exit({use_one_of,Es})
-  end.
+wrap(Fun,xml)  -> Fun;
+wrap(Fun,sax)  -> sax_f(Fun);
+wrap(Fun,term) -> term_f(Fun);
+wrap(Fun,line) -> Fun.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% term funs
 term_f(Fun) ->
@@ -73,9 +74,9 @@ to_term(Bin) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% SAX funs
-xml_f(Fun) ->
+sax_f(Fun) ->
   fun(RawXML,O) -> 
-      try [erlsom:sax(encoding(RawXML),[],sax_f(Fun))|O]
+      try [erlsom:sax(encoding(RawXML),[],sax_if(Fun))|O]
       catch error:R -> ?log([{erlang:get_stacktrace(),RawXML}]),exit(R)
       end
   end.
@@ -84,7 +85,7 @@ xml_f(Fun) ->
 -define(END(El),       {endElement,_,El,_}).
 -define(CHS(Cs),       {characters,Cs}).
 -define(ATT(Id,Val),   {attribute,Id,_,_,Val}).
-sax_f(Fun) ->
+sax_if(Fun) ->
   fun(startDocument,_)   -> Fun(startDoc,[]);
      (?BEG(El,As),State) -> Fun({startEl,El,[{Id,V}||?ATT(Id,V)<-As]},State);
      (?END(El),State)    -> Fun({endEl,El},State);
@@ -131,16 +132,9 @@ is_empty(?tail(Bin,Off)) ->
 state_eof(?state(Acc,?tail(Bin,Off))) ->
   ?state(Acc,?tail_eof(Bin,Off)).
 
-chunker_patt(term) ->
-  re:compile("(.*\\.\\R)",[dotall,ungreedy]);
-chunker_patt(xml) ->
-  re:compile("(<\\?xml.*\\?>.*)<\\?xml.*\\?>",[dotall,caseless,ungreedy]);
-chunker_patt(line) ->
-  re:compile("\\R*(.+)\\R").
-
 -define(is_empty(X), X=:=<<>>; X=:=<<"\n">>; X=:=<<"\n\r">>).
-chunker(Opts) ->
-  {ok,Patt} = chunker_patt(take_first(Opts,[line,xml,term])),
+chunker(Type) ->
+  {ok,Patt} = chunker_patt(Type),
   fun(?tail_eof(Bin,Off)) ->
       case split_binary(Bin,Off) of
         {_,T} when ?is_empty(T) -> {cont,?tail_0()};
@@ -152,6 +146,13 @@ chunker(Opts) ->
         {match,[{O,L}]} -> {ok,snip(Bin,O,L),?tail(Bin,O+L)}
       end
   end.
+
+chunker_patt(term) ->
+  re:compile("(.*\\.\\R)",[dotall,ungreedy]);
+chunker_patt(xml) ->
+  re:compile("(<\\?xml.*\\?>.*)<\\?xml.*\\?>",[dotall,caseless,ungreedy]);
+chunker_patt(line) ->
+  re:compile("\\R*(.+)\\R").
 
 snip(Bin,B,L) ->
   <<_:B/binary,R:L/binary,_/binary>> = Bin,
