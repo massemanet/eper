@@ -153,7 +153,7 @@ chunker(zet) ->
         <<_:Off/binary,S:32/integer,B:S/binary,_/binary>> ->
           {ok,binary_to_term(B),?tail(Bin,Off+4+S)};
         <<_:Off/binary,R/binary>> ->
-          {cont,R}
+          {cont,?tail(R,0)}
       end
   end;
 chunker(Type) ->
