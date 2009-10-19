@@ -11,6 +11,7 @@
          , xml/3
          , term/3
          , line/3
+         , zet/3
          , fold/4]).
 
 -define(BLOCK, 1048576).
@@ -38,8 +39,11 @@ xml(Filename,Fun,Acc) ->
 term(Filename,Fun,Acc) ->
  fold(Filename,Fun,Acc,[term]).
 
+zet(Filename,Fun,Acc) ->
+ fold(Filename,Fun,Acc,[zet]).
+
 fold(Filename,Fun,Acc,Opts) ->
-  Type = take_first(Opts,[line,sax,xml,term]),
+  Type = take_first(Opts,[line,sax,xml,term,zet]),
   case file:open(Filename, [read, raw, binary]) of
     {ok, FD} -> 
       try fold(read(FD),FD,wrap(Fun,Type),chunker(Type),?state(Acc,?tail_0()))
@@ -49,10 +53,11 @@ fold(Filename,Fun,Acc,Opts) ->
       exit({open_error, R, Filename})
   end.
 
-wrap(Fun,xml)  -> Fun;
+wrap(Fun,line) -> Fun;
 wrap(Fun,sax)  -> sax_f(Fun);
+wrap(Fun,xml)  -> Fun;
 wrap(Fun,term) -> term_f(Fun);
-wrap(Fun,line) -> Fun.
+wrap(Fun,zet)  -> Fun.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% term funs
@@ -65,7 +70,7 @@ term_f(Fun) ->
   
 to_term(Bin) ->
   try
-    {ok,Ts,_}= erl_scan:string(binary_to_list(Bin)),
+    {ok,Ts,_} = erl_scan:string(binary_to_list(Bin)),
     {ok,Term} = erl_parse:parse_term(Ts),
     Term
   catch
@@ -133,6 +138,24 @@ state_eof(?state(Acc,?tail(Bin,Off))) ->
   ?state(Acc,?tail_eof(Bin,Off)).
 
 -define(is_empty(X), X=:=<<>>; X=:=<<"\n">>; X=:=<<"\n\r">>).
+chunker(zet) ->
+  fun(?tail_eof(Bin,Off)) ->
+     case Bin of
+       <<_:Off/binary>> ->
+         {cont,?tail_0()};
+       <<_:Off/binary,R:4/binary,Rs/binary>> ->
+         exit([{trailing_bytes,byte_size(Rs)+4},{tail,R}]);
+       <<_:Off/binary,R/binary>> ->
+         exit([{trailing_bytes,byte_size(R)},{tail,R}])
+     end;
+     (?tail(Bin,Off)) -> 
+      case Bin of
+        <<_:Off/binary,S:32/integer,B:S/binary,_/binary>> ->
+          {ok,binary_to_term(B),?tail(Bin,Off+4+S)};
+        <<_:Off/binary,R/binary>> ->
+          {cont,R}
+      end
+  end;
 chunker(Type) ->
   {ok,Patt} = chunker_patt(Type),
   fun(?tail_eof(Bin,Off)) ->
