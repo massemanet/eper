@@ -9,8 +9,10 @@
 -module(redbug).
 
 -export([help/0]).
--export([start/1]).
--export([start/3,start/4,start/5]).
+% start from the unix shell
+-export([unix/1]).
+% start from erlang shell
+-export([start/1,start/2,start/3,start/4,start/5]).
 -export([stop/0]).
 
 -import(lists,[foldl/3,usort/1,reverse/1,foreach/2,flatten/1]).
@@ -26,6 +28,9 @@
              proc=all,
 	     targ=node(),
 	     buffered=no,
+             print_pid=[],
+             trc_pid=[],
+             cons_pid=[],
 	     printf=print_fun(),
 	     max_queue=5000,
 	     max_msg_size=50000}).
@@ -39,6 +44,7 @@ help() ->
   foreach(F,["redbug - the (sensibly) Restrictive Debugger"
              , ""
              , "  redbug:start(Trc) -> start(15000,10,Trc)."
+             , "  redbug:start(M,F) -> start([{M,F}])."
              , ""
              , "  redbug:start(Time,Msgs,Trc[,Proc[,Targ]])."
              , ""
@@ -51,45 +57,55 @@ help() ->
              , "RMS: 'stack'|'return'|tuple(ArgDescriptor)"
              , "ArgDescriptor: '_'|literal()"]).
 
-start([Node,Time,Msgs,Trc]) -> 
-  start([Node,Time,Msgs,Trc,"all"]);
-start([Node,Time,Msgs,Trc,Proc]) ->
+unix([Node,Time,Msgs,Trc]) -> 
+  unix([Node,Time,Msgs,Trc,"all"]);
+unix([Node,Time,Msgs,Trc,Proc]) ->
   try 
-    Cnf = #cnf{time=to_int(Time),
-               msgs=to_int(Msgs),
-               trc=to_term(Trc),
-               proc=to_atom(Proc),
-               targ=to_atom(Node)},
+    Cnf = #cnf{time = to_int(Time),
+               msgs = to_int(Msgs),
+               trc  = to_term(Trc),
+               proc = to_atom(Proc),
+               targ = to_atom(Node)},
     self() ! {start,Cnf},
     init(),
-    erlang:halt()
+    maybe_halt(0)
   catch 
+    exit:exiting ->
+      maybe_halt(0);
     C:R -> 
       io:fwrite("~p~n",[{C,R,erlang:get_stacktrace()}]),
-      erlang:halt(1)
+      maybe_halt(1)
   end;
-start(X) ->
+unix(X) ->
+  io:fwrite("bad args: ~p~n",[X]),
+  maybe_halt(1).
+
+maybe_halt(Status) ->
   case is_in_shell() of
-    true -> start(15000,10,X);
-    false-> io:fwrite("bad args: ~p~n",[X]), erlang:halt(1)
+    true -> ok;
+    false-> erlang:halt(Status)
   end.
 
 is_in_shell() ->
   {_,{x,S}} = (catch erlang:error(x)),
   element(1,hd(lists:reverse(S))) == shell.
 
-start(Time,Msgs,Trc) -> go(Time,Msgs,Trc,#cnf{}).
+start(X) -> start(15000,10,X).
 
-start(Time,Msgs,Trc,Proc) -> go(Time,Msgs,Trc,#cnf{proc=Proc}).
+start(M,F) -> start({M,F}).
 
-start(Time,Msgs,Trc,Proc,Targ)  -> go(Time,Msgs,Trc,#cnf{targ=Targ,proc=Proc}).
+start(T,M,Trc) -> go(#cnf{time=T,msgs=M,trc=Trc}).
 
-go(Time,Msgs,Trc,Cnf) ->
+start(T,M,Trc,P) -> go(#cnf{time=T,msgs=M,trc=Trc,proc=P}).
+
+start(T,M,Trc,P,N)  -> go(#cnf{time=T,msgs=M,trc=Trc,proc=P,targ=N}).
+
+go(Cnf) ->
   case whereis(redbug) of
     undefined -> 
       try 
         register(redbug, spawn(fun init/0)),
-        redbug ! {start,Cnf#cnf{time=Time,msgs=Msgs,trc=Trc}},
+        redbug ! {start,Cnf},
         ok
       catch C:R -> {oops,{C,R}}
       end;
@@ -104,6 +120,7 @@ stop() ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% the main redbug process
+%%% a state machine. init, starting, running, stopping, maybe_stopping.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 init() ->
@@ -111,70 +128,87 @@ init() ->
   receive 
     {start,Cnf} -> 
       try 
-        PrintPid = spawn_link(fun()->printi(Cnf#cnf.printf) end),
-        Conf = pack(Cnf,PrintPid),
-        prf:start(prf_redbug,Cnf#cnf.targ,redbugConsumer),
-        prf:config(prf_redbug,prfTrc,{start,{self(),Conf}}),
-	starting(PrintPid)
+	starting(do_start(Cnf))
       catch 
         C:R -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
       end
   end,
   exit(exiting).
 
-starting(PrintPid) ->
+starting(Cnf = #cnf{print_pid=PrintPid}) ->
   receive
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}});
-    {prfTrc,{starting,TrcPid,ConsPid}} -> running(TrcPid,ConsPid,PrintPid);
-    {prfTrc,{already_started,_}}       -> ?log(already_started);
-    {'EXIT',PrintPid,R}                -> ?log([printer_died,{reason,R}]);
-    {'EXIT',R}                         -> ?log([exited,{reason,R}]);
-    X                                  -> ?log([{unknown_message,X}])
+    {prfTrc,{starting,T,C}}      -> running(Cnf#cnf{trc_pid=T,cons_pid=C});
+    {prfTrc,{already_started,_}} -> ?log(already_started);
+    {'EXIT',PrintPid,R}          -> ?log([printer_died,{reason,R}]);
+    {'EXIT',R}                   -> ?log([exited,{reason,R}]);
+    X                            -> ?log([{unknown_message,X}])
   end.
 
-running(TrcPid,ConsPid,PrintPid) ->
-  PrintPid ! {trace_consumer,ConsPid},
+running(Cnf = #cnf{trc_pid=TrcPid,print_pid=PrintPid}) ->
+  PrintPid ! {trace_consumer,Cnf#cnf.cons_pid},
   receive
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}}),
-		   stopping(PrintPid);
-    {prfTrc,{stopping,_,_}}         -> stopping(PrintPid);
-    {'EXIT',TrcPid,_}               -> stopping(PrintPid);
+		   stopping(Cnf);
+    {prfTrc,{stopping,_,_}}         -> stopping(Cnf);
+    {'EXIT',TrcPid,_}               -> stopping(Cnf);
     {prfTrc,{not_started,R,TrcPid}} -> ?log([{not_started,R}]);
-    {'EXIT',PrintPid,_}             -> maybe_stopping(TrcPid);
+    {'EXIT',PrintPid,_}             -> maybe_stopping(Cnf);
     X                               -> ?log([{unknown_message,X}])
   end.
 
-maybe_stopping(TrcPid) ->
+maybe_stopping(#cnf{trc_pid=TrcPid}) ->
   receive
     {prfTrc,{stopping,_,_}} -> ok;
     {'EXIT',TrcPid,_}       -> ok;
     X                       -> ?log({unknown_message,X})
   end.
 
-stopping(PrintPid) ->
+stopping(#cnf{print_pid=PrintPid}) ->
   receive
     {'EXIT',PrintPid,_} -> ok;
     X                   -> ?log([{unknown_message,X}])
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% Conf = {time,flags,rtps,procs,where}
+do_start(OCnf) ->
+  Cnf = maybe_print(maybe_new_targ(OCnf)),
+  prf:start(prf_redbug,Cnf#cnf.targ,redbugConsumer),
+  prf:config(prf_redbug,prfTrc,{start,{self(),pack(Cnf)}}),
+  Cnf.
+
+maybe_new_targ(Cnf = #cnf{targ=Targ}) ->
+  case lists:member($@,Str=atom_to_list(Targ)) of
+    true -> Cnf;
+    false-> Cnf#cnf{targ=to_atom(Str++"@"++element(2,inet:gethostname()))}
+  end.
+
+maybe_print(Cnf = #cnf{printf = Printf}) ->
+  Cnf#cnf{print_pid=spawn_link(fun()->printi(Printf) end)}.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% pack the cnf record into a proplist for prf consumption
+%%% Proplist = list({Tag,Val})
+%%% Tag = time | flags | rtps | procs | where
 %%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} | 
 %%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
 %%%         {file,File,Size} | 
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-pack(Cnf,PrintPid) ->
+pack(Cnf) ->
   {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},ass_list(Cnf#cnf.trc)),
   dict:from_list([{time,chk_time(Cnf#cnf.time)},
                   {flags,[call,timestamp|Flags]},
                   {rtps,RTPs},
                   {procs,chk_proc(Cnf#cnf.proc)},
-                  {where,{chk_buffered(Cnf#cnf.buffered),
-                          {PrintPid,
-			   chk_msgs(Cnf#cnf.msgs),
-			   Cnf#cnf.max_queue,
-			   Cnf#cnf.max_msg_size}}}]).
+                  {where,conf_term(Cnf)}]).
+
+conf_term(Cnf) ->
+  {chk_buffered(Cnf#cnf.buffered),
+   {Cnf#cnf.print_pid,
+    chk_msgs(Cnf#cnf.msgs),
+    Cnf#cnf.max_queue,
+    Cnf#cnf.max_msg_size}}.
 
 chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> exit({bad_time,X}).
@@ -285,6 +319,7 @@ mfaf(I) ->
 
 to_int(L) -> list_to_integer(L).
 to_atom(L) -> list_to_atom(L).
+
 to_term("_") -> '_';
 to_term(Str) -> 
   {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "["++Str++"]. ", 1),
