@@ -51,7 +51,7 @@ assert(Reg) ->
 %%% Conf = {time,flags,rtps,procs,where}
 %%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} | 
 %%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
-%%%         {file,File,Size} | 
+%%%         {file,File,Size,Count} | 
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init() ->
@@ -150,14 +150,15 @@ untrace(Pids,Flags) ->
   [try erlang:trace(P,false,Flags)
    catch _:R->erlang:display({R,process_info(P),erlang:trace_info(P,flags)})
    end || P <- Pids,
-	   node(P)==node(),
-	   {flags,[]}=/=erlang:trace_info(P,flags)].
+          is_pid(P),
+          node(P)==node(),
+          {flags,[]}=/=erlang:trace_info(P,flags)].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-consumer({term_buffer,Term},Time) -> consumer_pid(Term,yes,Time);
-consumer({term_stream,Term},Time) -> consumer_pid(Term,no,Time);
-consumer({file,File,Size},_) -> consumer_file(File,Size);
-consumer({ip,Port,Queue},_) -> consumer_ip(Port,Queue).
+consumer({term_buffer,Term},Time)  -> consumer_pid(Term,yes,Time);
+consumer({term_stream,Term},Time)  -> consumer_pid(Term,no,Time);
+consumer({file,File,Size,Count},_) -> consumer_file(File,Size,Count);
+consumer({ip,Port,Queue},_)        -> consumer_ip(Port,Queue).
 
 consumer_stop(Pid) when is_pid(Pid) -> Pid ! stop;
 consumer_stop(_Port) when is_port(_Port) -> dbg:flush_trace_port().
@@ -172,13 +173,10 @@ consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Time) ->
                     {buffering,Buf}]),
   spawn_link(fun() -> init_local(Conf) end).
 
-consumer_file(File,Size) ->
-  %% number of files
-  WrapCnt = 2,
-  %% file size (per file). Size is given in Mb.
-  WrapSize = Size*1024*1024,
+consumer_file(File,Size,WrapCount) ->
+  WrapSize = Size*1024*1024,  %% file size (per file). Size is given in Mb.
   Suffix = ".trc",
-  (dbg:trace_port(file,{File, wrap, Suffix, WrapSize, WrapCnt}))().
+  (dbg:trace_port(file,{File, wrap, Suffix, WrapSize, WrapCount}))().
 
 consumer_ip(Port,QueueSize) ->
   %% keep at most this many in the buffer on the sender side

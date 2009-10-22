@@ -21,9 +21,13 @@ stop() ->
   ?MODULE ! stop.
 
 get_bread() ->
-  ?MODULE ! {get_bread,self()},
-  receive
-    {bread,Bread} -> Bread
+  try
+    ?MODULE ! {get_bread,self()},
+    receive
+      {bread,Bread} -> Bread
+    end
+  catch
+    error:badarg -> eof
   end.
 
 %% state
@@ -44,6 +48,9 @@ handle_info({'DOWN',BR,_,BP,normal},LD = #ld{bread_pid=BP,bread_ref=BR}) ->
     [File|Files] -> start_breader(File,Files,LD);
     [] -> {stop,normal,LD}
   end;
+handle_info({'DOWN',BR,_,BP,R},LD = #ld{bread_pid=BP,bread_ref=BR}) ->
+  erlang:display(R),
+  {stop,normal,LD};
 handle_info({get_bread,Pid},LD) ->
   LD#ld.bread_pid ! {get_bread,Pid},
   LD.

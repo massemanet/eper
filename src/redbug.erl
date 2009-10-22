@@ -19,46 +19,54 @@
 
 -include("log.hrl").
 
-%% sensible defaults;
-%% Proc = all
-%% Targ = node()
-%% Buffered = no
-%% PrintF = print_fun()
--record(cnf,{time,msgs,trc,
-             proc=all,
-	     targ=node(),
-	     buffered=no,
-             print_pid=[],
-             trc_pid=[],
-             cons_pid=[],
-	     printf=print_fun(),
-	     max_queue=5000,
-	     max_msg_size=50000}).
+%% the redbug server data structure
+%% most can be set in the input proplist
+-record(cnf,{time         = 15000          % ms
+             , msgs         = 10           % unit
+             , trc          = []           % list of rtp's
+             , proc         = all          % list of procs (or 'all')
+	     , targ         = node()       % target node
+	     , buffered     = no           % output buffering
+             , print_form   = "~s~n"       % format for printing
+	     , print_fd     = standard_io  % fun used to print
+             , print_re     = ""           % regexp that must match to print
+	     , max_queue    = 5000         % max # of msgs before suicide
+	     , max_msg_size = 50000        % max message size before suicide
+             , file         = ""           % file to write trace msgs to
+             , file_size    = 1            % file size (per file [Mb])
+             , file_count   = 8            % number of files in wrap log
+
+             , print_pid    = []           % cannot be set by user
+             , trc_pid      = []           % cannot be set by user
+             , cons_pid     = []           % cannot be set by user
+            }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-print_fun() -> fun(Str) -> io:fwrite("~s~n",[Str]) end.
+print_fun(FD,Form) -> fun(Str) -> io:fwrite(FD,Form,[Str]) end.
 
 help() ->
-  F = print_fun(),
-  foreach(F,["redbug - the (sensibly) Restrictive Debugger"
-             , ""
-             , "  redbug:start(Trc) -> start(15000,10,Trc)."
-             , "  redbug:start(M,F) -> start([{M,F}])."
-             , ""
-             , "  redbug:start(Time,Msgs,Trc[,Proc[,Targ]])."
-             , ""
-             , "Time: integer() [ms]"
-             , "Msgs: integer() [#]"
-             , "Trc: list('send'|'receive'|{M}|{M,F}|{M,RMSs}|{M,F,RMSs})"
-             , "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}"
-             , "Targ: node()"
-             , "RMSs: (restricted match specs): list(RMS)"
-             , "RMS: 'stack'|'return'|tuple(ArgDescriptor)"
-             , "ArgDescriptor: '_'|literal()"]).
+  foreach(print_fun(standard_io,"~s~n"),
+          ["redbug - the (sensibly) Restrictive Debugger"
+           , ""
+           , "  redbug:start(Trc) -> start(15000,10,Trc)."
+           , "  redbug:start(M,F) -> start([{M,F}])."
+           , ""
+           , "  redbug:start(Time,Msgs,Trc[,Proc[,Targ]])."
+           , ""
+           , "Time: integer() [ms]"
+           , "Msgs: integer() [#]"
+           , "Trc: list('send'|'receive'|{M}|{M,F}|{M,RMSs}|{M,F,RMSs})"
+           , "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}"
+           , "Targ: node()"
+           , "RMSs: (restricted match specs): list(RMS)"
+           , "RMS: 'stack'|'return'|tuple(ArgDescriptor)"
+           , "ArgDescriptor: '_'|literal()"]).
 
-unix([Node,Time,Msgs,Trc]) -> 
-  unix([Node,Time,Msgs,Trc,"all"]);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% start from unix shell (e.g. the bin/redbug script)
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+unix([Node,Time,Msgs,Trc])      -> unix([Node,Time,Msgs,Trc,"all"]);
 unix([Node,Time,Msgs,Trc,Proc]) ->
   try 
     Cnf = #cnf{time = to_int(Time),
@@ -90,39 +98,56 @@ is_in_shell() ->
   {_,{x,S}} = (catch erlang:error(x)),
   element(1,hd(lists:reverse(S))) == shell.
 
-start(X) -> start(15000,10,X).
-
-start(M,F) -> start({M,F}).
-
-start(T,M,Trc) -> go(#cnf{time=T,msgs=M,trc=Trc}).
-
-start(T,M,Trc,P) -> go(#cnf{time=T,msgs=M,trc=Trc,proc=P}).
-
-start(T,M,Trc,P,N)  -> go(#cnf{time=T,msgs=M,trc=Trc,proc=P,targ=N}).
-
-go(Cnf) ->
-  case whereis(redbug) of
-    undefined -> 
-      try 
-        register(redbug, spawn(fun init/0)),
-        redbug ! {start,Cnf},
-        ok
-      catch C:R -> {oops,{C,R}}
-      end;
-    _ -> redbug_already_started
-  end.
-
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% API from erlang shell
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 stop() ->
   case whereis(redbug) of
     undefined -> not_started;
     Pid -> Pid ! {stop,[]}
   end.
 
+start(Trc) -> start(Trc, []).
+
+start(T,M,Trc) -> start(Trc, [{time,T},{msgs=M}]).
+
+start(T,M,Trc,P) -> start(Trc, [{time,T},{msgs=M},{procs=P}]).
+
+start(T,M,Trc,P,N)  -> start(Trc, [{time,T},{msgs=M},{procs=P},{target,N}]).
+
+start(M,F) when is_atom(M), is_atom(F) -> start({M,F});
+start(M,Props) when is_atom(M)         -> start([{M,'_'}],Props);
+start(Trc,{Tag,Val})                   -> start(Trc, [{Tag,Val}]);
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% the real start function!
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+start(Trc,Props) when is_list(Props) ->
+  case whereis(redbug) of
+    undefined -> 
+      try 
+        register(redbug, spawn(fun init/0)),
+        redbug ! {start,make_cnf(Trc,Props)},
+        ok
+      catch C:R -> {oops,{C,R}}
+      end;
+    _ -> redbug_already_started
+  end.
+
+%% turn the proplist inta a #cnf{}
+make_cnf(Trc,Props) -> 
+  make_cnf(Props,#cnf{trc=Trc},record_info(fields,cnf)).
+
+make_cnf([],Cnf,_) -> Cnf;
+make_cnf([{Tag,Val}|Props],Cnf,Tags) ->
+  make_cnf(Props,setelement(findex(Tag,Tags)+1,Cnf,Val),Tags).
+
+findex(Tag,[])       -> exit({field_not_allowed,Tag});
+findex(Tag,[Tag|_])  -> 1; 
+findex(Tag,[_|Tags]) -> findex(Tag,Tags)+1.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% the main redbug process
 %%% a state machine. init, starting, running, stopping, maybe_stopping.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
 init() ->
   process_flag(trap_exit,true),
   receive 
@@ -146,7 +171,7 @@ starting(Cnf = #cnf{print_pid=PrintPid}) ->
   end.
 
 running(Cnf = #cnf{trc_pid=TrcPid,print_pid=PrintPid}) ->
-  PrintPid ! {trace_consumer,Cnf#cnf.cons_pid},
+  maybe_alert_printer(Cnf),
   receive
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}}),
 		   stopping(Cnf);
@@ -177,14 +202,31 @@ do_start(OCnf) ->
   prf:config(prf_redbug,prfTrc,{start,{self(),pack(Cnf)}}),
   Cnf.
 
+maybe_alert_printer(Cnf) ->
+  case Cnf#cnf.print_pid of
+    [] -> ok;
+    PP -> PP ! {trace_consumer,Cnf#cnf.cons_pid}
+  end.
+
 maybe_new_targ(Cnf = #cnf{targ=Targ}) ->
   case lists:member($@,Str=atom_to_list(Targ)) of
     true -> Cnf;
     false-> Cnf#cnf{targ=to_atom(Str++"@"++element(2,inet:gethostname()))}
   end.
 
-maybe_print(Cnf = #cnf{printf = Printf}) ->
-  Cnf#cnf{print_pid=spawn_link(fun()->printi(Printf) end)}.
+maybe_print(Cnf = #cnf{file=[_|_]}) -> Cnf;
+maybe_print(Cnf = #cnf{print_re=RE,print_fd=FD,print_form=Form}) ->
+  PF = add_filter(RE, print_fun(FD,Form)),
+  Cnf#cnf{print_pid=spawn_link(fun()->printi(PF) end)}.
+
+add_filter("",PF) -> PF;
+add_filter(RE,PF) ->
+  fun(Str) -> 
+      case re:run(Str,RE) of
+        nomatch -> ok;
+        _       -> PF(Str)
+      end
+  end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% pack the cnf record into a proplist for prf consumption
@@ -192,7 +234,7 @@ maybe_print(Cnf = #cnf{printf = Printf}) ->
 %%% Tag = time | flags | rtps | procs | where
 %%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} | 
 %%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
-%%%         {file,File,Size} | 
+%%%         {file,File,Size,Count} | 
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pack(Cnf) ->
@@ -201,7 +243,16 @@ pack(Cnf) ->
                   {flags,[call,timestamp|Flags]},
                   {rtps,RTPs},
                   {procs,chk_proc(Cnf#cnf.proc)},
-                  {where,conf_term(Cnf)}]).
+                  {where,where(Cnf)}]).
+
+where(Cnf) ->
+  case Cnf#cnf.file of
+    "" -> conf_term(Cnf);
+    _  -> conf_file(Cnf)
+  end.
+
+conf_file(Cnf) ->
+  {file,Cnf#cnf.file,Cnf#cnf.file_size,Cnf#cnf.file_count}.
 
 conf_term(Cnf) ->
   {chk_buffered(Cnf#cnf.buffered),
@@ -248,35 +299,35 @@ ass_list(L) when is_list(L) -> usort(L);
 ass_list(X) -> [X].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-printi(PrintF) ->
+printi(PrintFun) ->
   receive 
     {trace_consumer,TC} -> 
       erlang:monitor(process,TC),
-      printl(PrintF)
+      printl(PrintFun)
   end.
 
-printl(PrintF) ->
+printl(PrintFun) ->
   receive
     {'DOWN',_,_,_Pid,R}-> io:fwrite("quitting: ~p~n",[R]);
-    X                  -> outer(PrintF,X), printl(PrintF)
+    X                  -> outer(PrintFun,X), printl(PrintFun)
   end.
 
 outer(_,[]) -> ok;
-outer(PrintF,[Msg|Msgs]) ->
+outer(PrintFun,[Msg|Msgs]) ->
   case Msg of
     {'call',{MFA,Bin},PI,TS} ->
-      PrintF(flat("~s <~p> ~p~n",[ts(TS),PI,MFA])),
-      foreach(fun(L)->PrintF(flat("  ~p~n",[L])) end, stak(Bin));
+      PrintFun(flat("~s <~p> ~p~n",[ts(TS),PI,MFA])),
+      foreach(fun(L)->PrintFun(flat("  ~p~n",[L])) end, stak(Bin));
     {'retn',{MFA,Val},PI,TS} -> 
-      PrintF(flat("~s <~p> ~p -> ~p~n",[ts(TS),PI,MFA,Val]));
+      PrintFun(flat("~s <~p> ~p -> ~p~n",[ts(TS),PI,MFA,Val]));
     {'send',{MSG,To},PI,TS} -> 
-      PrintF(flat("~s <~p> <~p> <<< ~p~n",[ts(TS),PI,To,MSG]));
+      PrintFun(flat("~s <~p> <~p> <<< ~p~n",[ts(TS),PI,To,MSG]));
     {'recv',MSG,PI,TS} -> 
-      PrintF(flat("~s <~p> <<< ~p~n",[ts(TS),PI,MSG]));
+      PrintFun(flat("~s <~p> <<< ~p~n",[ts(TS),PI,MSG]));
     MSG ->
-      PrintF(flat("~p~n", [MSG]))
+      PrintFun(flat("~p~n", [MSG]))
   end,
-  outer(PrintF,Msgs).
+  outer(PrintFun,Msgs).
 
 ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
 
