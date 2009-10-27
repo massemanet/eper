@@ -8,12 +8,16 @@
 -author('Mats Cronqvist').
 -export([get_bread/0
          , stop/0
+         , start/1
          , start/2]).
 -export([rec_info/1
          , init/1
          , handle_info/2]).
 
 %% the api
+start(FilePattern) ->
+  start(FilePattern,guess).
+
 start(FilePattern,Type) ->
   gen_serv:start(?MODULE,{FilePattern,Type}).
 
@@ -61,6 +65,8 @@ start_breader(File,Files,LD) ->
   LD#ld{file=File,files=Files,bread_pid=BP,bread_ref=BR}.
 
 %% runs in its own process
+breader(File,guess) -> 
+  breader(File,guess_type(filename:extension(File)));
 breader(File,Type) -> 
   bread:fold(File,fun breaded/2,0,[Type]).
   
@@ -69,3 +75,7 @@ breaded(Blob,N) ->
     quit -> exit(N);
     {get_bread,Pid} -> Pid ! {bread,Blob}, N+1
   end.
+
+guess_type(".txt") -> line;
+guess_type(".xml") -> xml;
+guess_type(".trc") -> trc.
