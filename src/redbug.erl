@@ -19,23 +19,25 @@
 
 -include("log.hrl").
 
+%-define(bla,erlang:display(process_info(self(),current_function))).
+
 %% the redbug server data structure
 %% most can be set in the input proplist
 -record(cnf,{time         = 15000          % ms
              , msgs         = 10           % unit
-             , trc          = []           % list of rtp's
              , proc         = all          % list of procs (or 'all')
 	     , targ         = node()       % target node
 	     , buffered     = no           % output buffering
              , print_form   = "~s~n"       % format for printing
-	     , print_fd     = standard_io  % fun used to print
+	     , print_file   = ""           % file to print to (standard_io)
              , print_re     = ""           % regexp that must match to print
 	     , max_queue    = 5000         % max # of msgs before suicide
 	     , max_msg_size = 50000        % max message size before suicide
              , file         = ""           % file to write trace msgs to
              , file_size    = 1            % file size (per file [Mb])
              , file_count   = 8            % number of files in wrap log
-
+ 
+             , trc          = []           % cannot be set by user
              , print_pid    = []           % cannot be set by user
              , trc_pid      = []           % cannot be set by user
              , cons_pid     = []           % cannot be set by user
@@ -49,19 +51,48 @@ help() ->
   foreach(print_fun(standard_io,"~s~n"),
           ["redbug - the (sensibly) Restrictive Debugger"
            , ""
-           , "  redbug:start(Trc) -> start(15000,10,Trc)."
-           , "  redbug:start(M,F) -> start([{M,F}])."
+           , "  redbug:start(Trc) -> start(Trc,[])."
+           , "  redbug:start(Trc,Opts)."
            , ""
-           , "  redbug:start(Time,Msgs,Trc[,Proc[,Targ]])."
+           , "  redbug is a tool to interact with the Erlang trace facility."
+           , "  It will instruct the Erlang VM to generate so called "
+           , "  'trace messages' when certain events (such as a particular"
+           , "  function being called) occur."
+           , "  The trace messages are either printed (i.e. human readable)"
+           , "  to a file or to the screen; or written to a trc file." 
+           , "  Using a trc file puts less stress on the system, but"
+           , "  there is no way to count the messages (so the msgs opt"
+           , "  is ignored), and the files can only be read by special tools"
+           , "  (such as 'bread'). Printing and trc files cannot be combined."
+           , "  By default (i.e. if the 'file' opt is not given), messages"
+           , "  are printed."
            , ""
-           , "Time: integer() [ms]"
-           , "Msgs: integer() [#]"
            , "Trc: list('send'|'receive'|{M}|{M,F}|{M,RMSs}|{M,F,RMSs})"
            , "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}"
            , "Targ: node()"
            , "RMSs: (restricted match specs): list(RMS)"
            , "RMS: 'stack'|'return'|tuple(ArgDescriptor)"
-           , "ArgDescriptor: '_'|literal()"]).
+           , "ArgDescriptor: '_'|literal()"
+           , ""
+           , "Opts: list({Opt,Val})"
+           , "  general opts:"
+           , "time         (15000)       stop trace after this many ms"
+           , "msgs         (10)          stop trace after this many msgs"
+           , "proc         (all)         (list of) Erlang process(es)"
+           , "targ         (node())      node to trace on"
+           , "  print-related opts"
+           , "max_queue    (5000)        fail if internal queue gets this long"
+           , "max_msg_size (50000)       fail if seeing a msg this big"
+           , "buffered     (no)          buffer messages till end of trace"
+           , "print_form   (\"~s~n\")      print msgs using this format"
+           , "print_file   (standard_io) print to this file"
+           , "print_re     (\"\")          print only strings that match this"
+           , "  trc file related opts"
+           , "file         (none)        use a trc file based on this name"
+           , "file_size    (1)           size of each trc file"
+           , "file_count   (8)           number of trc files"
+           , ""
+          ]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% start from unix shell (e.g. the bin/redbug script)
@@ -203,10 +234,7 @@ do_start(OCnf) ->
   Cnf.
 
 maybe_alert_printer(Cnf) ->
-  case Cnf#cnf.print_pid of
-    [] -> ok;
-    PP -> PP ! {trace_consumer,Cnf#cnf.cons_pid}
-  end.
+  Cnf#cnf.print_pid ! {trace_consumer,Cnf#cnf.cons_pid}.
 
 maybe_new_targ(Cnf = #cnf{targ=Targ}) ->
   case lists:member($@,Str=atom_to_list(Targ)) of
@@ -214,10 +242,21 @@ maybe_new_targ(Cnf = #cnf{targ=Targ}) ->
     false-> Cnf#cnf{targ=to_atom(Str++"@"++element(2,inet:gethostname()))}
   end.
 
-maybe_print(Cnf = #cnf{file=[_|_]}) -> Cnf;
-maybe_print(Cnf = #cnf{print_re=RE,print_fd=FD,print_form=Form}) ->
-  PF = add_filter(RE, print_fun(FD,Form)),
+maybe_print(Cnf) ->
+  PF = the_print_fun(Cnf),
   Cnf#cnf{print_pid=spawn_link(fun()->printi(PF) end)}.
+
+the_print_fun(#cnf{file=[_|_]}) ->
+  fun(_) -> ok end;
+the_print_fun(#cnf{file="",print_re=RE,print_file=F,print_form=Form}) ->
+  add_filter(RE, print_fun(get_fd(F),Form)).
+
+get_fd("") -> standard_io;
+get_fd(FN) -> 
+  case file:open(FN,[write]) of
+    {ok,FD} -> FD;
+    _ -> exit({cannot_open,FN})
+  end.
 
 add_filter("",PF) -> PF;
 add_filter(RE,PF) ->
@@ -308,8 +347,8 @@ printi(PrintFun) ->
 
 printl(PrintFun) ->
   receive
-    {'DOWN',_,_,_Pid,R}-> io:fwrite("quitting: ~p~n",[R]);
-    X                  -> outer(PrintFun,X), printl(PrintFun)
+    {'DOWN',_,_,_,R} -> io:fwrite("quitting: ~p~n",[R]);
+    X                -> outer(PrintFun,X), printl(PrintFun)
   end.
 
 outer(_,[]) -> ok;

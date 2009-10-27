@@ -17,10 +17,12 @@
               , store/3
               , from_list/1]).
 
+%-define(bla,erlang:display(process_info(self(),current_function))).
+
 %% states
--define(ACTIVE, ?MODULE:active).
--define(IDLE, ?MODULE:idle).
--define(WAIT_FOR_LOCAL, ?MODULE:wait_for_local).
+-define(ACTIVE         , ?MODULE:active).
+-define(IDLE           , ?MODULE:idle).
+-define(WAIT_FOR_LOCAL , ?MODULE:wait_for_local).
 
 -include("log.hrl").
 
@@ -42,7 +44,8 @@ stop(Args) ->
 assert(Reg) ->
   case whereis(Reg) of
     Pid when is_pid(Pid) -> Pid;
-    undefined -> register(Reg,Pid=spawn_link(fun init/0)),Pid
+    undefined            -> register(Reg,Pid=spawn_link(fun init/0)),
+                            Pid
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -70,19 +73,17 @@ active({not_started,R,HostPid}) ->
   HostPid ! {prfTrc,{not_started,R,self()}},
   ?IDLE();
 active(LD) ->
-  Consumer = fetch(consumer,LD),
+  Cons = fetch(consumer,LD),
   HostPid = fetch(host_pid,LD),
   receive
-    {start,{Pid,_}}     -> Pid ! {prfTrc,{already_started,self()}}, ?ACTIVE(LD);
-    {stop,_}            -> remote_stop(Consumer, LD),?WAIT_FOR_LOCAL(Consumer);
-    {'EXIT',HostPid,_}  -> remote_stop(Consumer, LD),?WAIT_FOR_LOCAL(Consumer);
-    {local_stop,R}      -> local_stop(HostPid, LD, R),?WAIT_FOR_LOCAL(Consumer);
-    {'EXIT',Consumer,R} -> local_stop(HostPid, LD, R),?IDLE();
+    {start,{Pid,_}}     -> Pid ! {prfTrc,{already_started,self()}},?ACTIVE(LD);
+    {stop,_}            -> remote_stop(Cons,LD),?WAIT_FOR_LOCAL(Cons);
+    {'EXIT',HostPid,_}  -> remote_stop(Cons,LD),?WAIT_FOR_LOCAL(Cons);
+    {local_stop,R}      -> local_stop(HostPid,LD,R),?WAIT_FOR_LOCAL(Cons);
+    {'EXIT',Cons,R}     -> local_stop(HostPid,LD,R),?IDLE();
     X                   -> ?log({weird_in,X}), ?ACTIVE(LD) 
   end.
 
-wait_for_local(Consumer) when is_port(Consumer) ->
-  ok;
 wait_for_local(Consumer) when is_pid(Consumer) ->
   receive 
     {'EXIT',Consumer,_} -> ?IDLE();
@@ -115,7 +116,7 @@ start_trace(LD) ->
   Consumer = consumer(fetch(where,Conf),fetch(time,Conf)),
   HostPid ! {prfTrc,{starting,self(),Consumer}},
   Procs = mk_prc(fetch(procs,Conf)),
-  Flags = [{tracer,Consumer}|fetch(flags,Conf)],
+  Flags = [{tracer,real_consumer(Consumer)}|fetch(flags,Conf)],
   unset_tps(),
   erlang:trace(Procs,true,Flags),
   untrace(family(redbug)++family(prfTrc),Flags),
@@ -148,39 +149,11 @@ family(Daddy) ->
 
 untrace(Pids,Flags) ->
   [try erlang:trace(P,false,Flags)
-   catch _:R->erlang:display({R,process_info(P),erlang:trace_info(P,flags)})
+   catch _:R-> erlang:display({R,process_info(P),erlang:trace_info(P,flags)})
    end || P <- Pids,
           is_pid(P),
           node(P)==node(),
           {flags,[]}=/=erlang:trace_info(P,flags)].
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-consumer({term_buffer,Term},Time)  -> consumer_pid(Term,yes,Time);
-consumer({term_stream,Term},Time)  -> consumer_pid(Term,no,Time);
-consumer({file,File,Size,Count},_) -> consumer_file(File,Size,Count);
-consumer({ip,Port,Queue},_)        -> consumer_ip(Port,Queue).
-
-consumer_stop(Pid) when is_pid(Pid) -> Pid ! stop;
-consumer_stop(_Port) when is_port(_Port) -> dbg:flush_trace_port().
-
-consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Time) ->
-  Conf = from_list([{daddy,self()},
-                    {count,Cnt},
-                    {time,Time},
-                    {maxsize,MaxSize},
-                    {maxqueue,MaxQueue},
-                    {where,Pid},
-                    {buffering,Buf}]),
-  spawn_link(fun() -> init_local(Conf) end).
-
-consumer_file(File,Size,WrapCount) ->
-  WrapSize = Size*1024*1024,  %% file size (per file). Size is given in Mb.
-  Suffix = ".trc",
-  (dbg:trace_port(file,{File, wrap, Suffix, WrapSize, WrapCount}))().
-
-consumer_ip(Port,QueueSize) ->
-  %% keep at most this many in the buffer on the sender side
-  (dbg:trace_port(ip,{Port, QueueSize}))().
 
 unset_tps() ->
   erlang:trace_pattern({'_','_','_'},false,[local]),
@@ -199,8 +172,93 @@ mk_prc(Reg) when is_atom(Reg) ->
     Pid when is_pid(Pid) -> Pid
   end.
 
+real_consumer(C) ->
+  Mon = erlang:monitor(process,C),
+  C ! {show_port, self()},
+  receive
+    {'DOWN',Mon,_,C,R} -> exit({no_local_consumer,R});
+    Port               -> erlang:demonitor(Mon,[flush]),
+                          Port
+  end.
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  the local consumer process. 
+consumer({term_buffer,Term},Time)     -> consumer_pid(Term,yes,Time);
+consumer({term_stream,Term},Time)     -> consumer_pid(Term,no,Time);
+consumer({file,File,Size,Count},Time) -> consumer_file(File,Size,Count,Time);
+consumer({ip,Port,Queue},Time)        -> consumer_ip(Port,Queue,Time).
+
+consumer_stop(Pid) -> Pid ! stop.
+
+consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Time) ->
+  Conf =
+    from_list([{daddy,self()},
+               {count,Cnt},
+               {time,Time},
+               {maxsize,MaxSize},
+               {maxqueue,MaxQueue},
+               {where,Pid},
+               {buffering,Buf}]),
+  spawn_link(fun() -> init_local_pid(Conf) end).
+
+consumer_file(File,Size,WrapCount,Time) ->
+  Conf =
+    from_list([{style,file}
+               , {file,File}
+               , {size,Size}
+               , {wrap_count,WrapCount}
+               , {time,Time}
+               , {daddy, self()}]),
+  spawn_link(fun() -> init_local_port(Conf) end).
+
+consumer_ip(Port,QueueSize,Time) ->
+  Conf =
+    from_list([{style,ip}
+               , {port_no,Port}
+               , {queue_size,QueueSize}
+               , {time,Time}
+               , {daddy, self()}]),
+  spawn_link(fun() -> init_local_port(Conf) end).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%  local consumer process for port-style tracing. 
+%%%  writes trace messages directly to an erlang port.
+%%%  flushes and quits when;
+%%%    it gets a stop from the controller
+%%%    timeout
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+init_local_port(Conf) -> 
+  erlang:start_timer(fetch(time,Conf),self(),fetch(daddy,Conf)),
+  Port = mk_port(Conf),
+  loop_local_port(store(port,Port,Conf)).
+
+loop_local_port(Conf) ->
+  Daddy = fetch(daddy, Conf),
+  receive 
+    {show_port,Pid}   -> Pid ! fetch(port,Conf),
+                         loop_local_port(Conf);
+    stop              -> dbg:flush_trace_port(),
+                         exit(local_done);
+    {timeout,_,Daddy} -> Daddy ! {local_stop,timeout},
+                         dbg:flush_trace_port(),
+                         exit(timeout)
+  end.
+
+mk_port(Conf) ->
+  case fetch(style,Conf) of
+    ip -> 
+      Port = fetch(port_no,Conf),
+      QueueSize = fetch(queue_size,Conf),
+      (dbg:trace_port(ip,{Port, QueueSize}))();
+    file ->
+      File = fetch(file,Conf),
+      WrapCount = fetch(wrap_count,Conf),
+      WrapSize = fetch(size,Conf)*1024*1024,% file size (per file) in MB.
+      Suffix = ".trc",
+      (dbg:trace_port(file,{File, wrap, Suffix, WrapSize, WrapCount}))()
+  end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%%  local consumer process for pid-style tracing. 
 %%%  buffers trace messages, and flushes them when;
 %%%    it gets a stop from the controller
 %%%    reaches count=0
@@ -211,27 +269,29 @@ mk_prc(Reg) when is_atom(Reg) ->
 %% 
 -record(ld,{daddy,where,count,maxqueue,maxsize}).
 
-init_local(Conf) -> 
+init_local_pid(Conf) -> 
   erlang:start_timer(fetch(time,Conf),self(),fetch(daddy,Conf)),
-  lloop({#ld{daddy=fetch(daddy,Conf),
-	     where=fetch(where,Conf),
-	     maxsize=fetch(maxsize,Conf),
-	     maxqueue=fetch(maxqueue,Conf)},
-	 buffering(fetch(buffering,Conf)),
-	 fetch(count,Conf)}).
+  loop_lp({#ld{daddy=fetch(daddy,Conf),
+               where=fetch(where,Conf),
+               maxsize=fetch(maxsize,Conf),
+               maxqueue=fetch(maxqueue,Conf)},
+           buffering(fetch(buffering,Conf)),
+           fetch(count,Conf)}).
 
 buffering(yes) -> [];
 buffering(no) -> no.
 
-lloop({LD,Buff,Count}) ->
+loop_lp({LD,Buff,Count}=State) ->
   maybe_exit(msg_queue,LD),
   maybe_exit(msg_count,{LD,Buff,Count}),
   receive 
-    {timeout,_,Daddy}        -> Daddy ! {local_stop,timeout},
-				flush(LD,Buff),exit(timeout);
-    stop 		     -> flush(LD,Buff),exit(local_done);
-    {trace_ts,Pid,Tag,A,TS}  -> lloop(msg(LD,Buff,Count,{Tag,Pid,TS,A}));
-    {trace_ts,Pid,Tag,A,B,TS}-> lloop(msg(LD,Buff,Count,{Tag,Pid,TS,{A,B}}))
+    {timeout,_,Daddy}         -> Daddy ! {local_stop,timeout},
+                                 flush(LD,Buff),exit(timeout);
+    stop                      -> flush(LD,Buff),exit(local_done);
+    {show_port,Pid}           -> Pid ! self(),
+                                 loop_lp(State);
+    {trace_ts,Pid,Tag,A,TS}   -> loop_lp(msg(LD,Buff,Count,{Tag,Pid,TS,A}));
+    {trace_ts,Pid,Tag,A,B,TS} -> loop_lp(msg(LD,Buff,Count,{Tag,Pid,TS,{A,B}}))
   end.
 
 msg(LD,Buff,Count,Item) ->
