@@ -7,7 +7,16 @@
 -module(dtopConsumer).
 -author('Mats Cronqvist').
 
--export([init/1, terminate/1, tick/2, collectors/0, config/2]).
+-export(
+   [init/1
+    , terminate/1
+    , tick/2
+    , collectors/0
+    , config/2]).
+
+-export(
+  [fwrite/2
+   , fwrite/3]).
 
 -record(cld, {sort=cpu, items=19}).
 
@@ -23,6 +32,16 @@ tick(LD,Data) ->
     [{prfPrc,PrfPrc},{prfSys,PrfSys}] -> print(LD,PrfSys,PrfPrc), LD;
     _ -> LD
   end.
+
+fwrite(PrfSys,PrfPrc) ->
+  fwrite(PrfSys,PrfPrc,[]).
+
+fwrite(PrfSys,PrfPrc,Opts) ->
+  print(mk_cld(Opts,#cld{}),PrfSys,PrfPrc).
+
+mk_cld([],CLD) -> CLD;
+mk_cld([{sort ,S}|Opts],CLD) ->mk_cld(Opts,CLD#cld{sort =S});
+mk_cld([{items,I}|Opts],CLD) ->mk_cld(Opts,CLD#cld{items=I}).
 
 print(#cld{sort=Sort,items=Items},PrfSys,PrfPrc) ->
   print_del(),

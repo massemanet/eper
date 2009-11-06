@@ -19,7 +19,10 @@ start(FilePattern) ->
   start(FilePattern,guess).
 
 start(FilePattern,Type) ->
-  gen_serv:start(?MODULE,{FilePattern,Type}).
+  case filelib:wildcard(FilePattern) of
+    [File|Files] -> gen_serv:start(?MODULE,{File,Files,Type});
+    [] -> exit({no_files,FilePattern})
+  end.
 
 stop() ->
   ?MODULE ! stop.
@@ -39,13 +42,9 @@ get_bread() ->
 rec_info(ld) -> record_info(fields,ld).
 
 %% gen_serv callbacks
-init({FilePattern,Type}) ->
-  case filelib:wildcard(FilePattern) of
-    [File|Files] -> 
-      start_breader(File,Files,#ld{type=Type});
-    [] ->
-      exit(no_files)
-  end.
+init({File,Files,Type}) ->
+  gen_serv:unlink(),
+  start_breader(File,Files,#ld{type=Type}).
 
 handle_info({'DOWN',BR,_,BP,normal},LD = #ld{bread_pid=BP,bread_ref=BR}) ->
   case LD#ld.files of
