@@ -66,6 +66,7 @@ idle() ->
     {start,{HostPid,Conf}} -> ?ACTIVE(start_trace(HostPid,Conf));
     {stop,{HostPid,_}}     -> HostPid ! {prfTrc,{not_started,idle,self()}}, 
                               ?IDLE();
+    {'EXIT',_,exiting}     -> ?IDLE();
     X                      -> ?log({weird_in,X}), ?IDLE()
   end.
 

@@ -138,13 +138,14 @@ stop() ->
     Pid -> Pid ! {stop,[]}
   end.
 
+%% a bunch of aliases for start/2
 start(Trc) -> start(Trc, []).
 
-start(T,M,Trc) -> start(Trc, [{time,T},{msgs=M}]).
+start(T,M,Trc) -> start(Trc, [{time,T},{msgs,M}]).
 
-start(T,M,Trc,P) -> start(Trc, [{time,T},{msgs=M},{procs=P}]).
+start(T,M,Trc,P) -> start(Trc, [{time,T},{msgs,M},{procs,P}]).
 
-start(T,M,Trc,P,N)  -> start(Trc, [{time,T},{msgs=M},{procs=P},{target,N}]).
+start(T,M,Trc,P,N)  -> start(Trc, [{time,T},{msgs,M},{procs,P},{target,N}]).
 
 start(M,F) when is_atom(M), is_atom(F) -> start({M,F});
 start(M,Props) when is_atom(M)         -> start([{M,'_'}],Props);
