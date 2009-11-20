@@ -7,10 +7,12 @@
 %%%-------------------------------------------------------------------
 -module(watchdog).
 
--export([start/0,stop/0]).
--export([add_send_subscriber/4,add_log_subscriber/0,clear_subscribers/0]).
--export([message/1]).
--export([loop/1]).
+-export(
+   [start/0,stop/0
+    ,add_send_subscriber/4,add_log_subscriber/0,add_proc_subscriber/1
+    ,clear_subscribers/0
+    ,message/1
+    ,loop/1]).
 
 -include("log.hrl").
 
@@ -52,19 +54,27 @@ start() ->
   end.
 
 stop() -> 
-  try ?MODULE ! stop
-  catch _:_ -> ok
-  end.
+  send_to_wd(stop).
+
+add_proc_subscriber(Pid) when is_pid(Pid) ->
+  case is_process_alive(Pid) of
+    true -> send_to_wd({add_subscriber,mk_send(Pid)});
+    false-> {error,no_such_pid}
+  end;
+add_proc_subscriber(Reg) when is_atom(Reg) ->
+  send_to_wd({add_subscriber,mk_send(Reg)});
+add_proc_subscriber({Reg,Node}) when is_atom(Reg),is_atom(Node) ->
+  send_to_wd({add_subscriber,mk_send({Reg,Node})}).
 
 %% E.g:  watchdog:add_send_subscriber(tcp,"localhost",56669,"I'm a Cookie").
 %% it's possible to add the same subscriber twice. this is a bug.
 add_send_subscriber(Proto,Host,Port,PassPhrase) ->
-  try {ok,{hostent,Host,[],inet,4,_}} = inet:gethostbyname(Host),
-      ?MODULE ! {add_subscriber,mk_send(Proto,Host,Port,PassPhrase)},
-      ok
-  catch 
-    error:{badmatch,{ok,{hostent,G,[W],inet,4,_}}} -> {error,{badhost,W,G}};
-    _:R -> {error,R}
+  case inet:gethostbyname(Host) of
+    {ok,{hostent,Host,[],inet,4,_}} -> 
+      send_to_wd({add_subscriber,mk_send(Proto,Host,Port,PassPhrase)});
+    {ok,{hostent,G,[W],inet,4,_}} -> {error,{badhost,W,G}};
+    {ok,R}                        -> {error,R};
+    {error,R}                     -> {error,R}
   end.
 
 add_log_subscriber() ->
@@ -258,6 +268,13 @@ lks(Tag,List) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mk_send(Where) ->
+  fun(Chunk) ->
+      try Where ! Chunk
+      catch _:_ -> ok
+      end
+  end.
+
 mk_send(tcp,Name,Port,Cookie) ->
   ConnOpts = [{send_timeout,100},{active,false},{packet,4},binary],
   ConnTimeout =  100,
@@ -293,6 +310,14 @@ print_term(FD,Term) ->
     false-> io:fwrite(FD," ~p~n",[Term])
   end.
 
+send_to_wd(Term) ->
+  try
+    ?MODULE ! Term,
+    ok
+  catch 
+    error:badarg   -> {error,watchdog_not_started};
+    _:R            -> {error,R}
+  end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 expand_recs(List) when is_list(List) -> [expand_recs(L)||L<-List];
 expand_recs(Tup) when is_tuple(Tup) -> 
