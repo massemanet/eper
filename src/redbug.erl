@@ -28,6 +28,7 @@
              , proc         = all          % list of procs (or 'all')
 	     , targ         = node()       % target node
 	     , buffered     = no           % output buffering
+             , arity        = false        % arity instead of args
              , print_form   = "~s~n"       % format for printing
 	     , print_file   = ""           % file to print to (standard_io)
              , print_re     = ""           % regexp that must match to print
@@ -71,7 +72,7 @@ help() ->
            , "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}"
            , "Targ: node()"
            , "RMSs: (restricted match specs): list(RMS)"
-           , "RMS: 'stack'|'return'|tuple(ArgDescriptor)"
+           , "RMS: 'stack'|'return'|integer(Arity)|tuple(ArgDescriptor)"
            , "ArgDescriptor: '_'|literal()"
            , ""
            , "Opts: list({Opt,Val})"
@@ -80,6 +81,7 @@ help() ->
            , "msgs         (10)          stop trace after this many msgs"
            , "proc         (all)         (list of) Erlang process(es)"
            , "targ         (node())      node to trace on"
+           , "arity        (false)       print arity instead of arg list"
            , "  print-related opts"
            , "max_queue    (5000)        fail if internal queue gets this long"
            , "max_msg_size (50000)       fail if seeing a msg this big"
@@ -280,7 +282,7 @@ add_filter(RE,PF) ->
 pack(Cnf) ->
   {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},ass_list(Cnf#cnf.trc)),
   dict:from_list([{time,chk_time(Cnf#cnf.time)},
-                  {flags,[call,timestamp|Flags]},
+                  {flags,[call,timestamp|maybe_arity(Cnf,Flags)]},
                   {rtps,RTPs},
                   {procs,chk_proc(Cnf#cnf.proc)},
                   {where,where(Cnf)}]).
@@ -301,6 +303,9 @@ conf_term(Cnf) ->
     Cnf#cnf.max_queue,
     Cnf#cnf.max_msg_size}}.
 
+maybe_arity(#cnf{arity=true},Flags) -> [arity|Flags];
+maybe_arity(_,Flags)                -> Flags.  
+
 chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> exit({bad_time,X}).
 
@@ -315,10 +320,11 @@ chk_proc(X) -> exit({bad_proc,X}).
 chk_msgs(Msgs) when is_integer(Msgs) -> Msgs;
 chk_msgs(X) -> exit({bad_msgs,X}).
 
-chk_trc('send',{Flags,RTPs}) -> {['send'|Flags],RTPs};
-chk_trc('receive',{Flags,RTPs}) -> {['receive'|Flags],RTPs};
+chk_trc('send',{Flags,RTPs})                 -> {['send'|Flags],RTPs};
+chk_trc('receive',{Flags,RTPs})              -> {['receive'|Flags],RTPs};
+chk_trc('arity',{Flags,RTPs})                -> {['arity'|Flags],RTPs};
 chk_trc(RTP,{Flags,RTPs}) when is_tuple(RTP) -> {Flags,[chk_rtp(RTP)|RTPs]};
-chk_trc(X,_) -> exit({bad_trc,X}).
+chk_trc(X,_)                                 -> exit({bad_trc,X}).
 
 chk_rtp({M})                             -> chk_rtp({M,'_',[]});
 chk_rtp({M,F}) when is_atom(F)           -> chk_rtp({M,F,[]});
@@ -330,10 +336,13 @@ chk_rtp(X)                               -> exit({bad_rtp,X}).
 
 ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
 
-msf(stack, [{Head,Cond,Body}]) -> [{Head,Cond,[{message,{process_dump}}|Body]}];
-msf(return, [{Head,Cond,Body}]) -> [{Head,Cond,[{return_trace}|Body]}];
+msf(stack,[{Head,Cond,Body}]) -> [{Head,Cond,[{message,{process_dump}}|Body]}];
+msf(return,[{Head,Cond,Body}])-> [{Head,Cond,[{return_trace}|Body]}];
+msf(Ari, [{_,Cond,Body}]) when is_integer(Ari)-> [{mk_head(Ari),Cond,Body}];
 msf(Head, [{_,Cond,Body}]) when is_tuple(Head)-> [{Head,Cond,Body}];
 msf(X,_) -> exit({bad_match_spec,X}).
+
+mk_head(N) -> erlang:make_tuple(N,'_').
 
 ass_list(L) when is_list(L) -> usort(L);
 ass_list(X) -> [X].
