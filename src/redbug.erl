@@ -158,11 +158,13 @@ start(Trc,{Tag,Val})                   -> start(Trc, [{Tag,Val}]);
 start(Trc,Props) when is_list(Props) ->
   case whereis(redbug) of
     undefined -> 
+      Cnf = make_cnf(Trc,Props),
       try 
         register(redbug, spawn(fun init/0)),
-        redbug ! {start,make_cnf(Trc,Props)},
+        redbug ! {start,Cnf},
         ok
-      catch C:R -> {oops,{C,R}}
+      catch
+        C:R -> {oops,{C,R}}
       end;
     _ -> redbug_already_started
   end.
