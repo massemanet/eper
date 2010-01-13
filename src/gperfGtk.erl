@@ -40,7 +40,7 @@ stop() -> catch (gperf ! quit),quit.
 init() ->
   register(gperf,self()),
   gtknode:start(gperf_gtk),
-  g('GN_glade_init',[glade_file()]),
+  g('GN_glade_init',[glade_file("gperf.glade")]),
   maybe_show(),
   try loop(do_init(#ld{}))
   catch
@@ -48,8 +48,18 @@ init() ->
     _:R -> ?log([{error,R},{stack,erlang:get_stacktrace()}])
   end.
 
-glade_file() -> 
-  filename:join([code:priv_dir(eper),"glade","gperf.glade"]).
+glade_file(Glade) -> 
+  try take_first(
+        fun(F) -> true = filelib:is_regular(F) end,
+        [filename:join([code:lib_dir(eper),"src",Glade])
+         , filename:join([code:priv_dir(eper),"glade",Glade])])
+  catch _:_ -> exit({not_found,Glade})
+  end.
+
+take_first(F,[H|T]) -> 
+  try F(H),H 
+  catch _:_ -> take_first(F,T)
+  end.
 
 loop(LD) ->
   receive
