@@ -25,7 +25,7 @@ start(FilePattern,Type) ->
   end.
 
 stop() ->
-  ?MODULE ! stop.
+  gen_serv:stop(?MODULE).
 
 get_bread() ->
   Ref = erlang:monitor(process,?MODULE),
