@@ -117,7 +117,7 @@ safe_reply(handle_cast,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
 safe_reply(handle_info,LD,CLD)         -> {noreply,LD#ld{cld=CLD}};
 safe_reply(_          ,LD,CLD)         -> {ok,LD#ld{cld=CLD}}.
 
-safe_default(init,LD)        -> exit(LD);
+safe_default(init,LD)        -> {ok,LD#ld{cld={}}};
 safe_default(handle_call,LD) -> {reply,ok,LD};
 safe_default(handle_cast,LD) -> {noreply,LD};
 safe_default(handle_info,LD) -> {noreply,LD};

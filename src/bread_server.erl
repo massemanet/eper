@@ -28,13 +28,17 @@ stop() ->
   ?MODULE ! stop.
 
 get_bread() ->
+  Ref = erlang:monitor(process,?MODULE),
   try
     ?MODULE ! {get_bread,self()},
     receive
-      {bread,Bread} -> Bread
+      {bread,Bread} -> Bread;
+      {'DOWN',Ref,process,_,_} -> eof
     end
   catch
     error:badarg -> eof
+  after
+    erlang:demonitor(Ref,[flush])
   end.
 
 %% state
