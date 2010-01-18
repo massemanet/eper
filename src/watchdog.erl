@@ -7,18 +7,12 @@
 %%%-------------------------------------------------------------------
 -module(watchdog).
 
-% API
 -export(
    [start/0,stop/0
     ,add_send_subscriber/4,add_log_subscriber/0,add_proc_subscriber/1
     ,clear_subscribers/0
-    ,message/1]).
-
-% gen_serv callbacks
--export(
-   [handle_info/2
-    ,init/1
-    ,rec_info/1]).
+    ,message/1
+    ,loop/1]).
 
 -include("log.hrl").
 
@@ -31,9 +25,6 @@
 	 ,prfData			 %last prf data
 	 ,monData			 %last system_monitor data
 	}).
-
-rec_info(ld) ->
-  record_info(fields,ld).
 
 %% constants
 
@@ -55,38 +46,39 @@ timeout(release) -> 1800.			%  1.8 sec
 %% api
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 start() -> 
-  case gen_serv:start(?MODULE) of
-    {ok,Pid} ->  Pid;
-    {error,{already_started,Pid}} -> Pid
+  Init = fun(D) -> fun() -> init(D) end end,       % mmm.... haskell....
+  {Pid,Ref} = erlang:spawn_monitor(Init(self())), 
+  receive
+    {Pid,ok} -> erlang:demonitor(Ref,[flush]),Pid;
+    {'DOWN',Ref,_,Pid,OldPid} -> OldPid
   end.
 
 stop() -> 
-  gen_serv:stop().
+  send_to_wd(stop).
 
 add_proc_subscriber(Pid) when is_pid(Pid) ->
   case is_process_alive(Pid) of
-    true -> send_to_wd({add_subscriber,{{pid,Pid},mk_send(Pid)}});
+    true -> send_to_wd({add_subscriber,mk_send(Pid)});
     false-> {error,no_such_pid}
   end;
 add_proc_subscriber(Reg) when is_atom(Reg) ->
-  send_to_wd({add_subscriber,{{Reg,node()},mk_send(Reg)}});
+  send_to_wd({add_subscriber,mk_send(Reg)});
 add_proc_subscriber({Reg,Node}) when is_atom(Reg),is_atom(Node) ->
-  send_to_wd({add_subscriber,{{Reg,Node},mk_send({Reg,Node})}}).
+  send_to_wd({add_subscriber,mk_send({Reg,Node})}).
 
 %% E.g:  watchdog:add_send_subscriber(tcp,"localhost",56669,"I'm a Cookie").
 %% it's possible to add the same subscriber twice. this is a bug.
 add_send_subscriber(Proto,Host,Port,PassPhrase) ->
   case inet:gethostbyname(Host) of
     {ok,{hostent,Host,[],inet,4,_}} -> 
-      Key = {Proto,{Host,Port}},
-      send_to_wd({add_subscriber,{Key,mk_send(Proto,Host,Port,PassPhrase)}});
+      send_to_wd({add_subscriber,mk_send(Proto,Host,Port,PassPhrase)});
     {ok,{hostent,G,[W],inet,4,_}} -> {error,{badhost,W,G}};
     {ok,R}                        -> {error,R};
     {error,R}                     -> {error,R}
   end.
 
 add_log_subscriber() ->
-  try ?MODULE ! {add_subscriber,{log,mk_log(group_leader())}}, ok
+  try ?MODULE ! {add_subscriber,mk_log(group_leader())}, ok
   catch _:R -> {error,R}
   end.
 
@@ -101,59 +93,73 @@ message(Term) ->
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-init([]) ->
+init(Daddy) ->
+  try register(?MODULE,self()), 
+      Daddy ! {self(),ok}
+  catch _:_ -> exit(whereis(?MODULE))
+  end,
   LD = #ld{prfState=prfTarg:subscribe(node(),self(),[prfSys,prfPrc])},
   start_monitor(LD#ld.triggers),
-  LD.
+  loop(LD).
 
-% admin
-handle_info(list_triggers,LD) ->
-  print_term(group_leader(),LD#ld.triggers),
-  LD;
-handle_info({del_trigger,ID},LD) ->
-  LD#ld{triggers=del_trigger(LD#ld.triggers,ID)};
-handle_info({add_trigger,{ID,Fun}},LD) ->
-  LD#ld{triggers=add_trigger(LD#ld.triggers,ID,Fun)};
-handle_info(list_subscribers,LD) ->
-  print_term(group_leader(),LD#ld.subscribers),
-  LD;
-handle_info(clear_subscribers,LD) ->
-  LD#ld{subscribers=[]};
-handle_info({add_subscriber,{Key,Sub}},LD) ->
-  case lists:keysearch
-  LD#ld{subscribers=[Sub|LD#ld.subscribers]};
-
-% events
-handle_info(trigger,LD) -> % fake trigger for debugging
-  send_report(LD,test),
-  LD;
-handle_info({user,Data},LD) -> % data from user
-  NLD = LD#ld{userData=Data},
-  try do_user(check_jailed(NLD,userData))
-  catch _ -> NLD
-  end;
-handle_info({{data,_},Data},LD) -> % data from prfTarg
-  NLD = LD#ld{prfData=Data},
-  try do_triggers(check_jailed(NLD,prfData))
-  catch _ -> NLD
-  end;
-handle_info({monitor,Pid,Tag,Data},LD) -> % data from system_monitor
-  NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}]},
-  try do_mon(check_jailed(NLD,Pid))
-  catch _ -> NLD
-  end;
-
-% timeouts
-handle_info({timeout, _, restart},LD) -> % restarting after timeout
-  start_monitor(LD#ld.triggers),
-  LD#ld{jailed=[]};
-handle_info({timeout, _, {release, Pid}},LD) -> % release a pid from jail
-  LD#ld{jailed = LD#ld.jailed--[Pid]};
-
-% "this shouldn't happen"(TM)
-handle_info(X,LD) ->
-  ?log({unexpected_msg,X}),
-  LD.
+loop(LD) when ?max_jailed < length(LD#ld.jailed) ->
+  %% we take a timeout when enough pids are jailed. conservative is good.
+  erlang:start_timer(timeout(restart), self(), restart),
+  stop_monitor(),
+  flush(),
+  loop(LD#ld{jailed=[]});
+loop(LD) ->
+  receive
+    %% quit
+    stop -> 
+      ok;
+    reload ->
+      ?MODULE:loop(LD);
+    print_state ->
+      print_term(group_leader(),LD),
+      loop(LD);
+    %% set configs
+    list_triggers ->
+      print_term(group_leader(),LD#ld.triggers),
+      loop(LD);
+    {del_trigger,ID} ->
+      loop(LD#ld{triggers=del_trigger(LD#ld.triggers,ID)});
+    {add_trigger,{ID,Fun}} ->
+      loop(LD#ld{triggers=add_trigger(LD#ld.triggers,ID,Fun)});
+    list_subscribers ->
+      print_term(group_leader(),LD#ld.subscribers),
+      loop(LD);
+    clear_subscribers ->
+      loop(LD#ld{subscribers=[]});
+    {add_subscriber,Sub} ->
+      loop(LD#ld{subscribers=[Sub|LD#ld.subscribers]});
+    %% fake trigger for debugging
+    trigger ->
+      send_report(LD,test),
+      loop(LD);
+    %% data from user
+    {user,Data} -> 
+      NLD = LD#ld{userData=Data},
+      loop(try do_user(check_jailed(NLD,userData)) catch _:_ -> NLD end);
+    %% data from prfTarg
+    {{data,_},Data} ->
+      NLD = LD#ld{prfData=Data},
+      loop(try do_triggers(check_jailed(NLD,prfData)) catch _:_ -> NLD end);
+    %% data from system_monitor
+    {monitor,Pid,Tag,Data} ->
+      NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}]},
+      loop(try do_mon(check_jailed(NLD,Pid)) catch _:_ -> NLD end);
+    %% restarting after timeout
+    {timeout, _, restart} -> 
+      start_monitor(LD#ld.triggers),
+      loop(LD#ld{jailed=[]});
+    %% release a pid from jail
+    {timeout, _, {release, Pid}} ->
+      loop(LD#ld{jailed = LD#ld.jailed--[Pid]});
+    X ->
+      ?log({unexpected_msg,X}),
+      loop(LD)
+  end.
 
 start_monitor(Triggers) ->
   erlang:system_monitor(self(), sysmons(Triggers)).
@@ -184,20 +190,11 @@ maybe_restart(Trig,Triggers) ->
 clean_triggers(Triggers,IDs) ->
   lists:filter(fun({ID,_})->not lists:member(ID,IDs) end, Triggers).
 
-check_jailed(LD,_) when ?max_jailed < length(LD#ld.jailed) ->
-  % we take a timeout when enough pids are jailed. conservative is good.
-  erlang:start_timer(timeout(restart), self(), restart),
-  stop_monitor(),
-  flush(),
-  throw(taking_timeout);
+%%exit if What is jailed
 check_jailed(LD,What) ->
-  case lists:member(What, LD#ld.jailed) of
-    false-> 
-      erlang:start_timer(timeout(release), self(), {release, What}),
-      LD#ld{jailed=[What|LD#ld.jailed]};
-    true -> 
-      throw(is_jailed)
-    end.
+  false = lists:member(What, LD#ld.jailed),
+  erlang:start_timer(timeout(release), self(), {release, What}),
+  LD#ld{jailed=[What|LD#ld.jailed]}.
 
 do_mon(LD) ->
   send_report(LD,sysMon),
