@@ -22,8 +22,9 @@
 -define(tail_eof(Bin,Offset), {Bin,Offset,eof}).
 -define(state(Acc,Tail),      {Acc,Tail}).
 
--define(log(T),error_logger:info_report(
-                 [process_info(self(),current_function),{line,?LINE},T])).
+-define(log(T),
+        error_logger:info_report(
+          [process_info(self(),current_function),{line,?LINE}]++T)).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% the API
@@ -64,7 +65,7 @@ wrap(Fun,trc)  -> Fun.
 term_f(Fun) ->
   fun(TermBin,O) ->
       try Fun(to_term(TermBin),O)
-      catch {parsing_failed,R} -> ?log({parse_error,R,TermBin}),O
+      catch {parsing_failed,R} -> ?log([{parse_error,R},{string,TermBin}]),O
       end
   end.
   
@@ -82,7 +83,8 @@ to_term(Bin) ->
 sax_f(Fun) ->
   fun(RawXML,O) -> 
       try [erlsom:sax(encoding(RawXML),[],sax_if(Fun))|O]
-      catch error:R -> ?log([{erlang:get_stacktrace(),RawXML}]),exit(R)
+      catch error:R -> ?log([{bt,erlang:get_stacktrace()},{doc,RawXML}]),
+                       exit(R)
       end
   end.
 
@@ -112,7 +114,7 @@ encoding(Bin) ->
 %%% implementation
 fold(eof,_,Fun,Chunker,State) ->
   ?state(Acc,Tail) = folder(Chunker,Fun,state_eof(State)),
-  [?log({trailing,Tail}) || not is_empty(Tail)],
+  [?log([{trailing,Tail}]) || not is_empty(Tail)],
   Acc;
 fold({ok,Chunk},FD,Fun,Chunker,State) -> 
   fold(read(FD),FD,Fun,Chunker,folder(Chunker,Fun,add_chunk(Chunk,State))).
@@ -143,10 +145,12 @@ chunker(trc) ->
      case Bin of
        <<_:Off/binary>> ->
          {cont,?tail_0()};
-       <<_:Off/binary,0,R:4/binary,Rs/binary>> ->
-         exit([{trailing_bytes,byte_size(Rs)+4},{tail,R}]);
-       <<_:Off/binary,0,R/binary>> ->
-         exit([{trailing_bytes,byte_size(R)},{tail,R}])
+       <<_:Off/binary,0,I:4/integer,Rs/binary>> ->
+         ?log([{trailing_bytes,byte_size(Rs)+4},{needed,I}]),
+         {cont,?tail_0()};
+       <<_:Off/binary,R/binary>> ->
+         ?log([{garbarge_at_eof,byte_size(R)}]),
+         {cont,?tail_0()}
      end;
      (?tail(Bin,Off)) -> 
       case Bin of
