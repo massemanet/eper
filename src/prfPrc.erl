@@ -19,7 +19,7 @@
 
 -define(ITEMS,6).
 -define(SORT_ITEMS,[reductions,memory,message_queue_len]).
--define(INFO_ITEMS,[current_function,initial_call,registered_name]).
+-define(INFO_ITEMS,[current_function,initial_call,registered_name,last_calls]).
 -define(TAGS,?SORT_ITEMS++?INFO_ITEMS).
 
 config(State,_ConfigData) -> State.
@@ -117,6 +117,15 @@ pid_info(Pid,Tags) when is_list(Tags) ->
   catch _:_ -> []
   end.
 
+pidinfo(Pid, Type = last_calls) ->
+  try 
+    case process_info(Pid,last_calls) of
+      {_,false} -> process_flag(Pid,save_calls,16),{Type,[]};
+      {_,Calls} -> {Type,lists:usort(Calls)}
+    end
+  catch
+    _:_ -> {Type,[]}
+  end;
 pidinfo(Pid, Type = registered_name) ->
   case process_info(Pid, Type) of
     [] -> {Type,[]};
