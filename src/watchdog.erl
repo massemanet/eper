@@ -7,12 +7,19 @@
 %%%-------------------------------------------------------------------
 -module(watchdog).
 
+% API
 -export(
-   [start/0,stop/0
-    ,add_send_subscriber/4,add_log_subscriber/0,add_proc_subscriber/1
-    ,clear_subscribers/0
-    ,message/1
-    ,loop/1]).
+   [start/0,stop/0,state/0
+    ,add_send_subscriber/4,add_log_subscriber/1,add_proc_subscriber/1
+    ,delete_subscriber/1,clear_subscribers/0
+    ,add_trigger/2,delete_trigger/1
+    ,message/1]).
+
+% gen_serv callbacks
+-export(
+   [handle_info/2
+    ,init/1
+    ,rec_info/1]).
 
 -include("log.hrl").
 
@@ -25,6 +32,9 @@
 	 ,prfData			 %last prf data
 	 ,monData			 %last system_monitor data
 	}).
+
+rec_info(ld) -> record_info(fields,ld);
+rec_info(_)  -> [].
 
 %% constants
 
@@ -46,119 +56,129 @@ timeout(release) -> 1800.			%  1.8 sec
 %% api
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 start() -> 
-  Init = fun(D) -> fun() -> init(D) end end,       % mmm.... haskell....
-  {Pid,Ref} = erlang:spawn_monitor(Init(self())), 
-  receive
-    {Pid,ok} -> erlang:demonitor(Ref,[flush]),Pid;
-    {'DOWN',Ref,_,Pid,OldPid} -> OldPid
+  case gen_serv:start(?MODULE) of
+    {ok,Pid} ->  Pid;
+    {error,{already_started,Pid}} -> Pid
   end.
 
 stop() -> 
-  send_to_wd(stop).
+  gen_serv:stop(?MODULE).
+
+state() -> 
+  handle_state().
+  
+delete_trigger(Key) ->
+  send_to_wd({delete_trigger,Key}).
+
+add_trigger(Key,Fun) ->
+  send_to_wd({add_trigger,Key,Fun}).
 
 add_proc_subscriber(Pid) when is_pid(Pid) ->
   case is_process_alive(Pid) of
-    true -> send_to_wd({add_subscriber,mk_send(Pid)});
+    true -> send_to_wd({add_subscriber,{{pid,Pid},''}});
     false-> {error,no_such_pid}
   end;
 add_proc_subscriber(Reg) when is_atom(Reg) ->
-  send_to_wd({add_subscriber,mk_send(Reg)});
+  send_to_wd({add_subscriber,{{pid,{Reg,node()}},''}});
 add_proc_subscriber({Reg,Node}) when is_atom(Reg),is_atom(Node) ->
-  send_to_wd({add_subscriber,mk_send({Reg,Node})}).
+  send_to_wd({add_subscriber,{{pid,{Reg,Node}},''}}).
 
 %% E.g:  watchdog:add_send_subscriber(tcp,"localhost",56669,"I'm a Cookie").
-%% it's possible to add the same subscriber twice. this is a bug.
 add_send_subscriber(Proto,Host,Port,PassPhrase) ->
   case inet:gethostbyname(Host) of
     {ok,{hostent,Host,[],inet,4,_}} -> 
-      send_to_wd({add_subscriber,mk_send(Proto,Host,Port,PassPhrase)});
+      send_to_wd({add_subscriber,{{Proto,{Host,Port}},PassPhrase}});
     {ok,{hostent,G,[W],inet,4,_}} -> {error,{badhost,W,G}};
     {ok,R}                        -> {error,R};
     {error,R}                     -> {error,R}
   end.
 
-add_log_subscriber() ->
-  try ?MODULE ! {add_subscriber,mk_log(group_leader())}, ok
-  catch _:R -> {error,R}
-  end.
+add_log_subscriber({trc,FN}) ->
+  send_to_wd({add_subscriber,{{log,trc},FN}});
+add_log_subscriber({text,FN}) ->
+  send_to_wd({add_subscriber,{{text,trc},FN}});
+add_log_subscriber(screen) ->
+  send_to_wd({add_subscriber,{{log,screen},''}}).
+
+delete_subscriber(Key) ->
+  send_to_wd({delete_subscriber,Key}).
 
 clear_subscribers() ->
-  try ?MODULE ! clear_subscribers, ok
-  catch _:R -> {error,R}
-  end.
+  send_to_wd(clear_subscribers).
 
 message(Term) ->
-  try ?MODULE ! {user,Term}, ok
-  catch C:R -> {C,R}
-  end.
+  send_to_wd({user,Term}).
 
+send_to_wd(Term) ->
+  try
+    ?MODULE ! Term,
+    ok
+  catch 
+    error:badarg   -> {error,watchdog_not_started};
+    _:R            -> {error,R}
+  end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-init(Daddy) ->
-  try register(?MODULE,self()), 
-      Daddy ! {self(),ok}
-  catch _:_ -> exit(whereis(?MODULE))
-  end,
+init([]) ->
   LD = #ld{prfState=prfTarg:subscribe(node(),self(),[prfSys,prfPrc])},
   start_monitor(LD#ld.triggers),
-  loop(LD).
+  LD.
 
-loop(LD) when ?max_jailed < length(LD#ld.jailed) ->
-  %% we take a timeout when enough pids are jailed. conservative is good.
-  erlang:start_timer(timeout(restart), self(), restart),
-  stop_monitor(),
-  flush(),
-  loop(LD#ld{jailed=[]});
-loop(LD) ->
-  receive
-    %% quit
-    stop -> 
-      ok;
-    reload ->
-      ?MODULE:loop(LD);
-    print_state ->
-      print_term(group_leader(),LD),
-      loop(LD);
-    %% set configs
-    list_triggers ->
-      print_term(group_leader(),LD#ld.triggers),
-      loop(LD);
-    {del_trigger,ID} ->
-      loop(LD#ld{triggers=del_trigger(LD#ld.triggers,ID)});
-    {add_trigger,{ID,Fun}} ->
-      loop(LD#ld{triggers=add_trigger(LD#ld.triggers,ID,Fun)});
-    list_subscribers ->
-      print_term(group_leader(),LD#ld.subscribers),
-      loop(LD);
-    clear_subscribers ->
-      loop(LD#ld{subscribers=[]});
-    {add_subscriber,Sub} ->
-      loop(LD#ld{subscribers=[Sub|LD#ld.subscribers]});
-    %% fake trigger for debugging
-    trigger ->
-      send_report(LD,test),
-      loop(LD);
-    %% data from user
-    {user,Data} -> 
-      NLD = LD#ld{userData=Data},
-      loop(try do_user(check_jailed(NLD,userData)) catch _:_ -> NLD end);
-    %% data from prfTarg
-    {{data,_},Data} ->
-      NLD = LD#ld{prfData=Data},
-      loop(try do_triggers(check_jailed(NLD,prfData)) catch _:_ -> NLD end);
-    %% data from system_monitor
-    {monitor,Pid,Tag,Data} ->
-      NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}]},
-      loop(try do_mon(check_jailed(NLD,Pid)) catch _:_ -> NLD end);
-    %% restarting after timeout
-    {timeout, _, restart} -> 
-      start_monitor(LD#ld.triggers),
-      loop(LD#ld{jailed=[]});
-    %% release a pid from jail
-    {timeout, _, {release, Pid}} ->
-      loop(LD#ld{jailed = LD#ld.jailed--[Pid]});
-    X ->
-      ?log({unexpected_msg,X}),
-      loop(LD)
+% admin triggers
+handle_info({delete_trigger,Key},LD) ->
+  LD#ld{triggers=delete_trigger(LD#ld.triggers,Key)};
+handle_info({add_trigger,Key,Fun},LD) ->
+  LD#ld{triggers=add_trigger(LD#ld.triggers,Key,Fun)};
+
+% admin subscribers
+handle_info(clear_subscribers,LD) ->
+  LD#ld{subscribers=[]};
+handle_info({delete_subscriber,Key},LD = #ld{subscribers=Subs}) ->
+  LD#ld{subscribers=delete_subscriber(Key,Subs)};
+handle_info({add_subscriber,{Key,Val}},LD = #ld{subscribers=Subs}) ->
+  LD#ld{subscribers=add_subscriber(Key,Val,Subs)};
+
+% events
+handle_info(trigger,LD) -> % fake trigger for debugging
+  send_report(LD,test),
+  LD;
+handle_info({user,Data},LD) -> % data from user
+  NLD = LD#ld{userData=Data},
+  try do_user(check_jailed(NLD,userData))
+  catch _ -> NLD
+  end;
+handle_info({{data,_},Data},LD) -> % data from prfTarg
+  erlang:garbage_collect(self()),
+  NLD = LD#ld{prfData=Data},
+  try do_triggers(check_jailed(NLD,prfData))
+  catch _ -> NLD
+  end;
+handle_info({monitor,Pid,Tag,Data},LD) -> % data from system_monitor
+  NLD = LD#ld{monData=[{tag,Tag},{pid,Pid},{data,Data}]},
+  try do_mon(check_jailed(NLD,Pid))
+  catch _ -> NLD
+  end;
+
+% timeouts
+handle_info({timeout, _, restart},LD) -> % restarting after timeout
+  start_monitor(LD#ld.triggers),
+  LD#ld{jailed=[]};
+handle_info({timeout, _, {release, Pid}},LD) -> % release a pid from jail
+  LD#ld{jailed = LD#ld.jailed--[Pid]};
+
+% "this shouldn't happen"(TM)
+handle_info(X,LD) ->
+  ?log({unexpected_msg,X}),
+  LD.
+
+handle_state() ->
+  handle_state([jailed,subscribers,triggers]).
+
+handle_state(Ks) ->
+  try
+    State = gen_serv:get_state(?MODULE),
+    [I || {Key,_} = I <- State, lists:member(Key,Ks)]
+  catch
+    _:R -> R
   end.
 
 start_monitor(Triggers) ->
@@ -177,7 +197,7 @@ stop_monitor() ->
 add_trigger(Triggers,ID,Fun) -> 
   maybe_restart(ID,[{ID,Fun}|clean_triggers(Triggers,[ID])]).
 
-del_trigger(Triggers,ID) ->
+delete_trigger(Triggers,ID) ->
   maybe_restart(ID,clean_triggers(Triggers,[ID])).
 
 maybe_restart(Trig,Triggers) -> 
@@ -190,11 +210,20 @@ maybe_restart(Trig,Triggers) ->
 clean_triggers(Triggers,IDs) ->
   lists:filter(fun({ID,_})->not lists:member(ID,IDs) end, Triggers).
 
-%%exit if What is jailed
+check_jailed(LD,_) when ?max_jailed < length(LD#ld.jailed) ->
+  % we take a timeout when enough pids are jailed. conservative is good.
+  erlang:start_timer(timeout(restart), self(), restart),
+  stop_monitor(),
+  flush(),
+  throw(taking_timeout);
 check_jailed(LD,What) ->
-  false = lists:member(What, LD#ld.jailed),
-  erlang:start_timer(timeout(release), self(), {release, What}),
-  LD#ld{jailed=[What|LD#ld.jailed]}.
+  case lists:member(What, LD#ld.jailed) of
+    false-> 
+      erlang:start_timer(timeout(release), self(), {release, What}),
+      LD#ld{jailed=[What|LD#ld.jailed]};
+    true -> 
+      throw(is_jailed)
+    end.
 
 do_mon(LD) ->
   send_report(LD,sysMon),
@@ -220,16 +249,30 @@ check_triggers([],_,O) -> O;
 check_triggers([T|Ts],Data,O) ->
   check_triggers(Ts,Data,try [check_trigger(T,Data)|O] catch _:_-> O end).
 
-check_trigger({ticker,true},_Data) -> {ticker,true};
+check_trigger({ticker,true},_Data) ->
+  {ticker,true};
 check_trigger({ID,T},Data) when is_function(T) -> 
   case T(get_measurement(ID,Data)) of
     true -> {ID,T};
     NewT when is_function(NewT)  -> {ID,NewT}
   end.
 
+delete_subscriber(Key,Subs) -> 
+  lists:keydelete(Key,1,Subs).
+
+add_subscriber(Key,Val,Subs) ->
+  try Sub = mk_subscriber(Key,Val),
+      case lists:keysearch(Key,1,Subs) of
+        false -> [{Key,Sub}|Subs];
+        _     -> lists:keyreplace(Key,1,Subs,Sub)
+      end
+  catch _:R ->
+      ?log([{subscriber_not_added,R},{Key,Val}])
+    end.
+
 send_report(LD,Trigger) ->
   Report = make_report(Trigger,LD),
-  [Sub(Report) || Sub <- LD#ld.subscribers].
+  [Sub(Report) || {_,Sub} <- LD#ld.subscribers].
 
 make_report(user,LD) ->
   reporter(user,LD#ld.userData);
@@ -246,8 +289,10 @@ expand_ps([{T,P}|Es]) when is_pid(P)-> pii({T,P})++expand_ps(Es);
 expand_ps([{T,P}|Es]) when is_port(P)-> poi({T,P})++expand_ps(Es);
 expand_ps([E|Es]) -> [E|expand_ps(Es)].
 
-pi_info() -> [message_queue_len,current_function,initial_call,registered_name].
-pii({T,Pid}) -> [{T,Pid} | prfPrc:pid_info(Pid, pi_info())].
+pii({T,Pid}) -> 
+  Tags = [message_queue_len,current_function,initial_call,
+          registered_name,last_calls],
+  [{T,Pid} | prfPrc:pid_info(Pid, Tags)].
 
 poi({T,Port}) -> 
   {Name,Stats} = prfNet:port_info(Port),
@@ -268,6 +313,13 @@ lks(Tag,List) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+mk_subscriber({pid,To},_) -> mk_send(To);
+mk_subscriber({Proto,{Host,Port}},Pwd) -> mk_send(Proto,Host,Port,Pwd);
+mk_subscriber({log,trc},FN) -> mk_log(trc,open_file(FN));
+mk_subscriber({log,text},FN) -> mk_log(text,open_file(FN));
+mk_subscriber({log,screen},_) -> mk_log(text,group_leader()).
+
+%% send subscribers
 mk_send(Where) ->
   fun(Chunk) ->
       try Where ! Chunk
@@ -300,9 +352,18 @@ mk_send(UdpPort,Name,Port,Cookie) when is_integer(UdpPort)->
       end
   end.
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-mk_log(FD) -> fun(E)-> print_term(FD,expand_recs(E)) end.
+%% log subscribers
+mk_log(text,FD) -> fun(E)-> print_term(FD,expand_recs(E)) end;
+mk_log(trc,FD) -> 
+  fun(P)->
+      S = byte_size(P),
+      file:write(FD,<<0,S:32/integer,P/binary>>)
+  end.
+
+open_file(FN) ->
+  ok = filelib:ensure_dir(FN),
+  {ok,FD} = file:open(FN,[write,raw,binary]),
+  FD.
 
 print_term(FD,Term) -> 
   case node(FD) == node() of
@@ -310,27 +371,16 @@ print_term(FD,Term) ->
     false-> io:fwrite(FD," ~p~n",[Term])
   end.
 
-send_to_wd(Term) ->
-  try
-    ?MODULE ! Term,
-    ok
-  catch 
-    error:badarg   -> {error,watchdog_not_started};
-    _:R            -> {error,R}
-  end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 expand_recs(List) when is_list(List) -> [expand_recs(L)||L<-List];
 expand_recs(Tup) when is_tuple(Tup) -> 
   case tuple_size(Tup) of
     L when L < 1 -> Tup;
     L ->
-      Fields = ri(element(1,Tup)),
+      Fields = rec_info(element(1,Tup)),
       case L == length(Fields)+1 of
 	false-> list_to_tuple(expand_recs(tuple_to_list(Tup)));
 	true -> expand_recs(lists:zip(Fields,tl(tuple_to_list(Tup))))
       end
   end;
 expand_recs(Term) -> Term.
-
-ri(ld) -> record_info(fields,ld);
-ri(_) -> [].
