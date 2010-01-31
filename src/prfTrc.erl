@@ -105,11 +105,29 @@ stop_trace(LD) ->
   unset_tps().
 
 start_trace(HostPid,Conf) ->
-  case maybe_load_modules(Conf) of
-    []    -> {not_started,no_modules,HostPid};
-    NConf -> start_trace(from_list([{host_pid,HostPid},{conf,NConf}]))
+  case {maybe_load_rtps(fetch(rtps,Conf)),is_message_trace(fetch(flags,Conf))} of
+    {[],false}-> {not_started,no_modules,HostPid};
+    {Rtps,_}  -> start_trace(from_list([{host_pid,HostPid},{conf,store(rtps,Rtps,Conf)}]))
   end.
-      
+
+maybe_load_rtps(Rtps) ->
+  lists:foldl(fun maybe_load_rtp/2, [], Rtps).
+
+maybe_load_rtp({{M,F,A},_MatchSpec,_Flags} = Rtp,O) ->
+  try 
+    case code:which(M) of
+      preloaded         -> ok;
+      non_existing      -> throw(non_existing_module);
+      L when is_list(L) -> [c:l(M) || false == code:is_loaded(M)]
+    end,
+    [Rtp|O]
+  catch 
+    _:R -> ?log({no_such_function,{R,{M,F,A}}}), O
+  end.
+
+is_message_trace(Flags) ->
+  (lists:member(send,Flags) orelse lists:member('receive',Flags)).
+
 start_trace(LD) -> 
   Conf = fetch(conf,LD),
   HostPid = fetch(host_pid,LD),
@@ -123,24 +141,6 @@ start_trace(LD) ->
   untrace(family(redbug)++family(prfTrc),Flags),
   set_tps(fetch(rtps,Conf)),
   store(consumer,Consumer,LD).
-
-maybe_load_modules(Conf) ->
-  case lists:foldl(fun maybe_load_rtp/2, [], fetch(rtps,Conf)) of
-    []   -> [];
-    Rtps -> store(rtps,Rtps,Conf)
-  end.
-
-maybe_load_rtp({{M,F,A},_MatchSpec,_Flags} = Rtp,O) ->
-  try 
-    case code:which(M) of
-      non_existing      -> throw(non_existing_module);
-      preloaded         -> ok;
-      L when is_list(L) -> [c:l(M) || false == code:is_loaded(M)]
-    end,
-    [Rtp|O]
-  catch 
-    _:R -> ?log({no_such_function,{R,{M,F,A}}}), O
-  end.
 
 family(Daddy) ->
   try D = whereis(Daddy), 

@@ -150,6 +150,8 @@ start(T,M,Trc,P) -> start(Trc, [{time,T},{msgs,M},{procs,P}]).
 start(T,M,Trc,P,N)  -> start(Trc, [{time,T},{msgs,M},{procs,P},{target,N}]).
 
 start(M,F) when is_atom(M), is_atom(F) -> start({M,F});
+start(send,Props)                      -> start([send],Props);
+start('receive',Props)                 -> start(['receive'],Props);
 start(M,Props) when is_atom(M)         -> start([{M,'_'}],Props);
 start(Trc,{Tag,Val})                   -> start(Trc, [{Tag,Val}]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
