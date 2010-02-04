@@ -26,7 +26,8 @@
 -record(cnf,{time         = 15000          % ms
              , msgs         = 10           % unit
              , proc         = all          % list of procs (or 'all')
-	     , targ         = node()       % target node
+	     , target       = node()       % target node
+	     , cookie       = ''           % target node cookie
 	     , buffered     = no           % output buffering
              , arity        = false        % arity instead of args
              , print_form   = "~s~n"       % format for printing
@@ -70,7 +71,7 @@ help() ->
            , ""
            , "Trc: list('send'|'receive'|{M}|{M,F}|{M,RMSs}|{M,F,RMSs})"
            , "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}"
-           , "Targ: node()"
+           , "Target: node()"
            , "RMSs: (restricted match specs): list(RMS)"
            , "RMS: 'stack'|'return'|integer(Arity)|tuple(ArgDescriptor)"
            , "ArgDescriptor: '_'|literal()"
@@ -80,7 +81,7 @@ help() ->
            , "time         (15000)       stop trace after this many ms"
            , "msgs         (10)          stop trace after this many msgs"
            , "proc         (all)         (list of) Erlang process(es)"
-           , "targ         (node())      node to trace on"
+           , "target       (node())      node to trace on"
            , "arity        (false)       print arity instead of arg list"
            , "  print-related opts"
            , "max_queue    (5000)        fail if internal queue gets this long"
@@ -103,10 +104,10 @@ unix([Node,Time,Msgs,Trc])      -> unix([Node,Time,Msgs,Trc,"all"]);
 unix([Node,Time,Msgs,Trc,Proc]) ->
   try 
     Cnf = #cnf{time = to_int(Time),
-               msgs = to_int(Msgs),
-               trc  = to_term(Trc),
-               proc = to_atom(Proc),
-               targ = to_atom(Node)},
+               msgs   = to_int(Msgs),
+               trc    = to_term(Trc),
+               proc   = to_atom(Proc),
+               target = to_atom(Node)},
     self() ! {start,Cnf},
     init(),
     maybe_halt(0)
@@ -161,6 +162,7 @@ start(Trc,Props) when is_list(Props) ->
   case whereis(redbug) of
     undefined -> 
       Cnf = make_cnf(Trc,Props),
+      assert_cookie(Cnf),
       try 
         register(redbug, spawn(fun init/0)),
         redbug ! {start,Cnf},
@@ -170,6 +172,9 @@ start(Trc,Props) when is_list(Props) ->
       end;
     _ -> redbug_already_started
   end.
+
+assert_cookie(#cnf{cookie=''}) -> ok;
+assert_cookie(Cnf) -> erlang:set_cookie(Cnf#cnf.target,Cnf#cnf.cookie).
 
 %% turn the proplist inta a #cnf{}
 make_cnf(Trc,Props) -> 
@@ -235,18 +240,18 @@ stopping(#cnf{print_pid=PrintPid}) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 do_start(OCnf) ->
-  Cnf = maybe_print(maybe_new_targ(OCnf)),
-  prf:start(prf_redbug,Cnf#cnf.targ,redbugConsumer),
+  Cnf = maybe_print(maybe_new_target(OCnf)),
+  prf:start(prf_redbug,Cnf#cnf.target,redbugConsumer),
   prf:config(prf_redbug,prfTrc,{start,{self(),pack(Cnf)}}),
   Cnf.
 
 maybe_alert_printer(Cnf) ->
   Cnf#cnf.print_pid ! {trace_consumer,Cnf#cnf.cons_pid}.
 
-maybe_new_targ(Cnf = #cnf{targ=Targ}) ->
-  case lists:member($@,Str=atom_to_list(Targ)) of
+maybe_new_target(Cnf = #cnf{target=Target}) ->
+  case lists:member($@,Str=atom_to_list(Target)) of
     true -> Cnf;
-    false-> Cnf#cnf{targ=to_atom(Str++"@"++element(2,inet:gethostname()))}
+    false-> Cnf#cnf{target=to_atom(Str++"@"++element(2,inet:gethostname()))}
   end.
 
 maybe_print(Cnf) ->
