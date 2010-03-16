@@ -289,7 +289,7 @@ add_filter(RE,PF) ->
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pack(Cnf) ->
-  {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},ass_list(Cnf#cnf.trc)),
+  {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},slist(Cnf#cnf.trc)),
   dict:from_list([{time,chk_time(Cnf#cnf.time)},
                   {flags,[call,timestamp|maybe_arity(Cnf,Flags)]},
                   {rtps,RTPs},
@@ -335,12 +335,13 @@ chk_trc('arity',{Flags,RTPs})                -> {['arity'|Flags],RTPs};
 chk_trc(RTP,{Flags,RTPs}) when is_tuple(RTP) -> {Flags,[chk_rtp(RTP)|RTPs]};
 chk_trc(X,_)                                 -> exit({bad_trc,X}).
 
+-define(is_aal(M,F,MS), is_atom(M),is_atom(F),is_list(MS)).
+
 chk_rtp({M})                             -> chk_rtp({M,'_',[]});
 chk_rtp({M,F}) when is_atom(F)           -> chk_rtp({M,F,[]});
 chk_rtp({M,L}) when is_list(L)           -> chk_rtp({M,'_',L});
 chk_rtp({'_',_,_})                       -> exit(dont_wildcard_module);
-chk_rtp({M,F,MS}) 
-  when is_atom(M),is_atom(F),is_list(MS) -> {{M,F,'_'},ms(MS),[local]};
+chk_rtp({M,F,MS}) when ?is_aal(M,F,MS)   -> {{M,F,'_'},ms(MS),[local]};
 chk_rtp(X)                               -> exit({bad_rtp,X}).
 
 ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
@@ -348,13 +349,14 @@ ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
 msf(stack,[{Head,Cond,Body}]) -> [{Head,Cond,[{message,{process_dump}}|Body]}];
 msf(return,[{Head,Cond,Body}])-> [{Head,Cond,[{return_trace}|Body]}];
 msf(Ari, [{_,Cond,Body}]) when is_integer(Ari)-> [{mk_head(Ari),Cond,Body}];
+msf({Head,Cond},[{_,_,Body}]) when is_tuple(Head)->[{Head,slist(Cond),Body}];
 msf(Head, [{_,Cond,Body}]) when is_tuple(Head)-> [{Head,Cond,Body}];
 msf(X,_) -> exit({bad_match_spec,X}).
 
 mk_head(N) -> erlang:make_tuple(N,'_').
 
-ass_list(L) when is_list(L) -> usort(L);
-ass_list(X) -> [X].
+slist(L) when is_list(L) -> usort(L);
+slist(X) -> [X].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 printi(PrintFun) ->
