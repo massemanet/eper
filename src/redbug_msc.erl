@@ -8,11 +8,19 @@
 -module('redbug_msc').
 -author('Mats Cronqvist').
 
--export([transform/1,parse/1,compile/1]).
+-export([transform/1]).
 -export([unit/0]).
 
-transform(Str) ->
-  compile(parse(Str)).
+-define(is_string(Str), (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
+
+transform(Es = [_|_]) when not ?is_string(Es) ->
+  [compile(parse(to_string(E))) || E <- Es];
+transform(E) ->
+  transform([E]).
+
+to_string(A) when is_atom(A)    -> atom_to_list(A);
+to_string(S) when ?is_string(S) -> S;
+to_string(X)                    -> exit({illegal_input,X}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% compiler
@@ -83,13 +91,15 @@ assert_type(Type,Val) ->
 %%   "a:b->stack", "a:b(X)whenX==2->return"
 %% returns
 %%   {atom(M),atom(F),list(Arg)|integer(Arity),list(Guard),list(Action)}
-parse(Str) -> 
-  {Body,Guard,Action} = assert(split_fun(Str),no_module),
-  {M,F,A} = assert(body_fun(Body),parse_error),
-  Guards = assert(guards_fun(Guard),parse_error),
-  Actions = assert(actions_fun(Action),parse_error),
+parse(Str) ->
+  {Body,Guard,Action} = assert(split_fun(Str),{split_string,Str}),
+  {M,F,A}             = assert(body_fun(Body),{parse_body,Str}),
+  Guards              = assert(guards_fun(Guard),{parse_guards,Str}),
+  Actions             = assert(actions_fun(Action),{parse_actions,Str}),
   {M,F,A,Guards,Actions}.
 
+%% split the input string in three parts; body, guards, actions
+%% we parse them separately
 split_fun(Str) ->
   fun() ->
       % strip off the actions, if any
@@ -102,10 +112,10 @@ split_fun(Str) ->
         {match,[S,Guard]} -> ok;
         nomatch           -> S=St,Guard=""
       end,
-      % add a wildcard F, if needed
-      case re:run(S,":") of
-        nomatch -> Body=S++":'_'";
-        _       -> Body=S
+      % add a wildcard F, if Body is just an atom (presumably a module)
+      case re:run(S,"^[a-zA-Z0-9_]+\$") of
+        nomatch -> Body=S;
+        _       -> Body=S++":'_'"
       end,
       {Body,Guard,Action}
   end.
@@ -119,8 +129,10 @@ body_fun(Str) ->
         {ok,[{call,1,{remote,1,{atom,1,M},{atom,1,F}},Args}]} ->
           {M,F,[arg(A) || A<-Args]};
         {ok,[{remote,1,{atom,1,M},{atom,1,F}}]} ->
-          {M,F,'_'}
-      end
+          {M,F,'_'};
+        {ok,_} ->
+          exit(this_is_too_confusing)
+     end
   end.
 
 guards_fun(Str) -> 
@@ -139,7 +151,7 @@ guard({op,1,Op,One,Two})        -> {Op,guard(One),guard(Two)};% unary op
 guard({op,1,Op,One})            -> {Op,guard(One)};           % binary op
 guard(Guard)                    -> arg(Guard).                % variable
 
-arg({cons,_,_,_})   -> throw({badmatch,{syntax_error,no_lists_in_args}});
+arg({cons,_,_,_})   -> exit({syntax_error,no_lists_in_args});
 arg({tuple,1,Args}) -> {tuple,[arg(A)||A<-Args]};
 arg({T,1,Var})      -> {T,Var}.
 
@@ -150,7 +162,9 @@ actions_fun(Str) ->
 
 assert(Fun,Tag) ->
   try Fun()
-  catch _:{badmatch,R} -> exit({Tag,{R,erlang:fun_info(Fun,name)}})
+  catch 
+    _:{_,{error,{1,erl_parse,L}}} -> exit({Tag,lists:flatten(L)});
+    _:R                           -> exit({Tag,R})
   end.
 
 
@@ -161,39 +175,43 @@ unit() ->
   lists:foldr(
     fun(Str,O)->[unit(fun transform/1,Str)|O]end,[],
     [{"a",
-      {{a,'_','_'},{[],[],[]}}}
+      [{{a,'_','_'},{[],[],[]}}]}
      ,{"a->stack",
-       {{a,'_','_'},{[],[],[{message,{process_dump}}]}}}
+       [{{a,'_','_'},{[],[],[{message,{process_dump}}]}}]}
      ,{"a:b",
-       {{a,b,'_'},{[],[],[]}}}
+       [{{a,b,'_'},{[],[],[]}}]}
      ,{"a:b->return",
-       {{a,b,'_'},{[],[],[{return_trace}]}}}
+       [{{a,b,'_'},{[],[],[{return_trace}]}}]}
      ,{"a:b/2",
-       {{a,b,2},{[],[],[]}}}
+       [{{a,b,2},{[],[],[]}}]}
      ,{"a:b/2->return",
-       {{a,b,2},{[],[],[{return_trace}]}}}
+       [{{a,b,2},{[],[],[{return_trace}]}}]}
      ,{"a:b(X,Y)",
-       {{a,b,2},{['$1','$2'],[],[]}}}
+       [{{a,b,2},{['$1','$2'],[],[]}}]}
      ,{"a:b(X,X)",
-       {{a,b,2},{['$1','$1'],[],[]}}}
+       [{{a,b,2},{['$1','$1'],[],[]}}]}
      ,{"a:b(X,X) -> return;stack",
-       {{a,b,2},{['$1','$1'],[],[{return_trace},{message,{process_dump}}]}}}
+       [{{a,b,2},{['$1','$1'],[],[{return_trace},{message,{process_dump}}]}}]}
      ,{"a:b(X,y)",
-       {{a,b,2},{['$1',y],[],[]}}}
+       [{{a,b,2},{['$1',y],[],[]}}]}
      ,{"a:b(X,1)",
-       {{a,b,2},{['$1',1],[],[]}}}
+       [{{a,b,2},{['$1',1],[],[]}}]}
      ,{"a:b(X,\"foo\")",
-       {{a,b,2},{['$1',"foo"],[],[]}}}
+       [{{a,b,2},{['$1',"foo"],[],[]}}]}
      ,{"a:b(X,y)when is_atom(Y)",
        unbound_variable}
+     ,{"x:c([string])",
+       {syntax_error,no_lists_in_args}}
+     ,{"x(s)",
+       this_is_too_confusing}
      ,{"a:b(X,y)when not is_atom(X)",
-       {{a,b,2},{['$1',y],[{'not',{is_atom,'$1'}}],[]}}}
+       [{{a,b,2},{['$1',y],[{'not',{is_atom,'$1'}}],[]}}]}
      ,{"a:b(X,y)when not is_atom(X) -> return",
-       {{a,b,2},{['$1',y],[{'not',{is_atom,'$1'}}],[{return_trace}]}}}
+       [{{a,b,2},{['$1',y],[{'not',{is_atom,'$1'}}],[{return_trace}]}}]}
      ,{"a:b(X,y)when element(1,X)==foo, (X==z)",
-       {{a,b,2},{['$1',y],[{'==',{element,1,'$1'},foo},{'==','$1',z}],[]}}}
-     ,{"a:b(X,Y)when X==1,Y=/=a",
-       {{a,b,2},{['$1','$2'],[{'==','$1',1},{'=/=','$2',a}],[]}}}
+       [{{a,b,2},{['$1',y],[{'==',{element,1,'$1'},foo},{'==','$1',z}],[]}}]}
+    ,{"a:b(X,Y)when X==1,Y=/=a",
+       [{{a,b,2},{['$1','$2'],[{'==','$1',1},{'=/=','$2',a}],[]}}]}
     ]).
 
 
@@ -201,5 +219,6 @@ unit(Method,{Str,MS}) ->
   try MS=Method(Str),Str
   catch 
     _:{MS,_} -> Str;
+    _:{_,MS} -> Str;
     C:R      -> {C,R,Str,erlang:get_stacktrace()}
   end.
