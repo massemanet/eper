@@ -37,7 +37,8 @@ compile_acts(As) ->
   [ac_fun(A)|| A <- As].
 
 ac_fun("stack") -> {message,{process_dump}};
-ac_fun("return")-> {return_trace}.
+ac_fun("return")-> {return_trace};
+ac_fun(X)       -> exit({unknown_action,X}).
 
 compile_guards(Gs,Vars) ->
   {Vars,O} = lists:foldr(fun gd_fun/2,{Vars,[]},Gs),
@@ -151,7 +152,7 @@ guard({op,1,Op,One,Two})        -> {Op,guard(One),guard(Two)};% unary op
 guard({op,1,Op,One})            -> {Op,guard(One)};           % binary op
 guard(Guard)                    -> arg(Guard).                % variable
 
-arg({cons,_,_,_})   -> exit({syntax_error,no_lists_in_args});
+arg({cons,_,_,_})   -> exit({syntax_error,"lists not allowed in arg list"});
 arg({tuple,1,Args}) -> {tuple,[arg(A)||A<-Args]};
 arg({T,1,Var})      -> {T,Var}.
 
@@ -163,8 +164,8 @@ actions_fun(Str) ->
 assert(Fun,Tag) ->
   try Fun()
   catch 
-    _:{_,{error,{1,erl_parse,L}}} -> exit({Tag,lists:flatten(L)});
-    _:R                           -> exit({Tag,R})
+    _:{_,{error,{1,erl_parse,L}}}-> exit({{syntax_error,lists:flatten(L)},Tag});
+    _:R                          -> exit({R,Tag})
   end.
 
 
@@ -201,9 +202,13 @@ unit() ->
      ,{"a:b(X,y)when is_atom(Y)",
        unbound_variable}
      ,{"x:c([string])",
-       {syntax_error,no_lists_in_args}}
+       {syntax_error,"lists not allowed in arg list"}}
      ,{"x(s)",
        this_is_too_confusing}
+     ,{"x:c(S)when S==x;S==y",
+       {syntax_error,"syntax error before: S"}}
+     ,{"x:y(z)->bla",
+       unknown_action}
      ,{"a:b(X,y)when not is_atom(X)",
        [{{a,b,2},{['$1',y],[{'not',{is_atom,'$1'}}],[]}}]}
      ,{"a:b(X,y)when not is_atom(X) -> return",
@@ -219,6 +224,5 @@ unit(Method,{Str,MS}) ->
   try MS=Method(Str),Str
   catch 
     _:{MS,_} -> Str;
-    _:{_,MS} -> Str;
     C:R      -> {C,R,Str,erlang:get_stacktrace()}
   end.
