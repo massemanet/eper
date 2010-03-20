@@ -13,10 +13,8 @@
 
 -define(is_string(Str), (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
 
-transform(Es = [_|_]) when not ?is_string(Es) ->
-  [compile(parse(to_string(E))) || E <- Es];
 transform(E) ->
-  transform([E]).
+  compile(parse(to_string(E))).
 
 to_string(A) when is_atom(A)    -> atom_to_list(A);
 to_string(S) when ?is_string(S) -> S;
@@ -24,14 +22,18 @@ to_string(X)                    -> exit({illegal_input,X}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% compiler
-%% returns {{Module,Function,Arity},{Head,Cond,Body}}
+%% returns {{Module,Function,Arity},[{Head,Cond,Body}],[Flag]}
 compile({M,F,'_',[],Actions}) ->
-  {{M,F,'_'},{[],[],compile_acts(Actions)}};
+  {{M,F,'_'},[{[],[],compile_acts(Actions)}],flags()};
 compile({M,F,Ari,[],Actions}) when is_integer(Ari) ->
-  {{M,F,Ari},{[],[],compile_acts(Actions)}};
+  compile({M,F,lists:duplicate(Ari,{var,'_'}),[],Actions});
 compile({M,F,As,Gs,Actions}) when is_list(As) ->
   {Vars,Args} = compile_args(As),
-  {{M,F,length(As)},{Args,compile_guards(Gs,Vars),compile_acts(Actions)}}.
+  {{M,F,length(As)},
+   [{Args,compile_guards(Gs,Vars),compile_acts(Actions)}],
+   flags()}.
+
+flags() -> [local].
 
 compile_acts(As) ->
   [ac_fun(A)|| A <- As].
@@ -68,6 +70,8 @@ unpack_var({Type,Val},_) ->
 compile_args(As) ->
   lists:foldl(fun ca_fun/2,{[],[]},As).
 
+ca_fun({var,'_'},{Vars,O}) -> 
+  {Vars,O++['_']};
 ca_fun({var,Var},{Vars,O}) -> 
   case proplists:get_value(Var,Vars) of
     undefined -> V = list_to_atom("\$"++integer_to_list(length(Vars)+1));
@@ -176,29 +180,31 @@ unit() ->
   lists:foldr(
     fun(Str,O)->[unit(fun transform/1,Str)|O]end,[],
     [{"a",
-      [{{a,'_','_'},{[],[],[]}}]}
+      {{a,'_','_'},[{[],[],[]}],[local]}}
      ,{"a->stack",
-       [{{a,'_','_'},{[],[],[{message,{process_dump}}]}}]}
+       {{a,'_','_'},[{[],[],[{message,{process_dump}}]}],[local]}}
      ,{"a:b",
-       [{{a,b,'_'},{[],[],[]}}]}
+       {{a,b,'_'},[{[],[],[]}],[local]}}
      ,{"a:b->return",
-       [{{a,b,'_'},{[],[],[{return_trace}]}}]}
+       {{a,b,'_'},[{[],[],[{return_trace}]}],[local]}}
      ,{"a:b/2",
-       [{{a,b,2},{[],[],[]}}]}
+       {{a,b,2},[{['_','_'],[],[]}],[local]}}
      ,{"a:b/2->return",
-       [{{a,b,2},{[],[],[{return_trace}]}}]}
+       {{a,b,2},[{['_','_'],[],[{return_trace}]}],[local]}}
      ,{"a:b(X,Y)",
-       [{{a,b,2},{['$1','$2'],[],[]}}]}
+       {{a,b,2},[{['$1','$2'],[],[]}],[local]}}
+     ,{"a:b(_,_)",
+       {{a,b,2},[{['_','_'],[],[]}],[local]}}
      ,{"a:b(X,X)",
-       [{{a,b,2},{['$1','$1'],[],[]}}]}
+       {{a,b,2},[{['$1','$1'],[],[]}],[local]}}
      ,{"a:b(X,X) -> return;stack",
-       [{{a,b,2},{['$1','$1'],[],[{return_trace},{message,{process_dump}}]}}]}
+       {{a,b,2},[{['$1','$1'],[],[{return_trace},{message,{process_dump}}]}],[local]}}
      ,{"a:b(X,y)",
-       [{{a,b,2},{['$1',y],[],[]}}]}
+       {{a,b,2},[{['$1',y],[],[]}],[local]}}
      ,{"a:b(X,1)",
-       [{{a,b,2},{['$1',1],[],[]}}]}
+       {{a,b,2},[{['$1',1],[],[]}],[local]}}
      ,{"a:b(X,\"foo\")",
-       [{{a,b,2},{['$1',"foo"],[],[]}}]}
+       {{a,b,2},[{['$1',"foo"],[],[]}],[local]}}
      ,{"a:b(X,y)when is_atom(Y)",
        unbound_variable}
      ,{"x:c([string])",
@@ -210,13 +216,13 @@ unit() ->
      ,{"x:y(z)->bla",
        unknown_action}
      ,{"a:b(X,y)when not is_atom(X)",
-       [{{a,b,2},{['$1',y],[{'not',{is_atom,'$1'}}],[]}}]}
+       {{a,b,2},[{['$1',y],[{'not',{is_atom,'$1'}}],[]}],[local]}}
      ,{"a:b(X,y)when not is_atom(X) -> return",
-       [{{a,b,2},{['$1',y],[{'not',{is_atom,'$1'}}],[{return_trace}]}}]}
+       {{a,b,2},[{['$1',y],[{'not',{is_atom,'$1'}}],[{return_trace}]}],[local]}}
      ,{"a:b(X,y)when element(1,X)==foo, (X==z)",
-       [{{a,b,2},{['$1',y],[{'==',{element,1,'$1'},foo},{'==','$1',z}],[]}}]}
+       {{a,b,2},[{['$1',y],[{'==',{element,1,'$1'},foo},{'==','$1',z}],[]}],[local]}}
     ,{"a:b(X,Y)when X==1,Y=/=a",
-       [{{a,b,2},{['$1','$2'],[{'==','$1',1},{'=/=','$2',a}],[]}}]}
+      {{a,b,2},[{['$1','$2'],[{'==','$1',1},{'=/=','$2',a}],[]}],[local]}}
     ]).
 
 

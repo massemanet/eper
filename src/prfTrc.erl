@@ -105,9 +105,11 @@ stop_trace(LD) ->
   unset_tps().
 
 start_trace(HostPid,Conf) ->
-  case {maybe_load_rtps(fetch(rtps,Conf)),is_message_trace(fetch(flags,Conf))} of
+  case {maybe_load_rtps(fetch(rtps,Conf)),
+        is_message_trace(fetch(flags,Conf))} of
     {[],false}-> {not_started,no_modules,HostPid};
-    {Rtps,_}  -> start_trace(from_list([{host_pid,HostPid},{conf,store(rtps,Rtps,Conf)}]))
+    {Rtps,_}  -> start_trace(from_list([{host_pid,HostPid},
+                                        {conf,store(rtps,Rtps,Conf)}]))
   end.
 
 maybe_load_rtps(Rtps) ->

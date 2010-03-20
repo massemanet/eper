@@ -30,6 +30,7 @@
 	     , cookie       = ''           % target node cookie
 	     , buffered     = no           % output buffering
              , arity        = false        % arity instead of args
+             , print_call   = true         % print calls (see `return_only')
              , print_form   = "~s~n"       % format for printing
 	     , print_file   = ""           % file to print to (standard_io)
              , print_re     = ""           % regexp that must match to print
@@ -258,25 +259,30 @@ maybe_print(Cnf) ->
   PF = the_print_fun(Cnf),
   Cnf#cnf{print_pid=spawn_link(fun()->printi(PF) end)}.
 
-the_print_fun(#cnf{file=[_|_]}) ->
+the_print_fun(Cnf) ->
+  PrintFun = mk_the_print_fun(Cnf),
+  fun(print_call)->Cnf#cnf.print_call;
+     (Str) -> PrintFun(Str)
+  end.
+
+mk_the_print_fun(#cnf{file=[_|_]}) ->
   fun(_) -> ok end;
-the_print_fun(#cnf{file="",print_re=RE,print_file=F,print_form=Form}) ->
-  add_filter(RE, print_fun(get_fd(F),Form)).
+mk_the_print_fun(#cnf{print_re="",print_file=F,print_form=Form}) ->
+  print_fun(get_fd(F),Form);
+mk_the_print_fun(Cnf = #cnf{print_re=RE}) ->
+  PF = mk_the_print_fun(Cnf#cnf{print_re=""}),
+  fun(Str) ->
+      case re:run(Str,RE) of
+        nomatch -> ok;
+        _       -> PF(Str)
+      end
+  end.
 
 get_fd("") -> standard_io;
 get_fd(FN) -> 
   case file:open(FN,[write]) of
     {ok,FD} -> FD;
     _ -> exit({cannot_open,FN})
-  end.
-
-add_filter("",PF) -> PF;
-add_filter(RE,PF) ->
-  fun(Str) -> 
-      case re:run(Str,RE) of
-        nomatch -> ok;
-        _       -> PF(Str)
-      end
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -329,20 +335,24 @@ chk_proc(X) -> exit({bad_proc,X}).
 chk_msgs(Msgs) when is_integer(Msgs) -> Msgs;
 chk_msgs(X) -> exit({bad_msgs,X}).
 
-chk_trc('send',{Flags,RTPs})                 -> {['send'|Flags],RTPs};
-chk_trc('receive',{Flags,RTPs})              -> {['receive'|Flags],RTPs};
-chk_trc('arity',{Flags,RTPs})                -> {['arity'|Flags],RTPs};
-chk_trc(RTP,{Flags,RTPs}) when is_tuple(RTP) -> {Flags,[chk_rtp(RTP)|RTPs]};
-chk_trc(X,_)                                 -> exit({bad_trc,X}).
+-define(is_string(Str), (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
+
+chk_trc('send',{Flags,RTPs})                   -> {['send'|Flags],RTPs};
+chk_trc('receive',{Flags,RTPs})                -> {['receive'|Flags],RTPs};
+chk_trc('arity',{Flags,RTPs})                  -> {['arity'|Flags],RTPs};
+chk_trc(RTP,{Flags,RTPs}) when ?is_string(RTP) -> {Flags,[chk_rtp(RTP)|RTPs]};
+chk_trc(RTP,{Flags,RTPs}) when is_tuple(RTP)   -> {Flags,[chk_rtp(RTP)|RTPs]};
+chk_trc(X,_)                                   -> exit({bad_trc,X}).
 
 -define(is_aal(M,F,MS), is_atom(M),is_atom(F),is_list(MS)).
 
-chk_rtp({M})                             -> chk_rtp({M,'_',[]});
-chk_rtp({M,F}) when is_atom(F)           -> chk_rtp({M,F,[]});
-chk_rtp({M,L}) when is_list(L)           -> chk_rtp({M,'_',L});
-chk_rtp({'_',_,_})                       -> exit(dont_wildcard_module);
-chk_rtp({M,F,MS}) when ?is_aal(M,F,MS)   -> {{M,F,'_'},ms(MS),[local]};
-chk_rtp(X)                               -> exit({bad_rtp,X}).
+chk_rtp(Str) when ?is_string(Str)      -> redbug_msc:transform(Str);
+chk_rtp({M})                           -> chk_rtp({M,'_',[]});
+chk_rtp({M,F}) when is_atom(F)         -> chk_rtp({M,F,[]});
+chk_rtp({M,L}) when is_list(L)         -> chk_rtp({M,'_',L});
+chk_rtp({'_',_,_})                     -> exit(dont_wildcard_module);
+chk_rtp({M,F,MS}) when ?is_aal(M,F,MS) -> {{M,F,'_'},ms(MS),[local]};
+chk_rtp(X)                             -> exit({bad_rtp,X}).
 
 ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
 
