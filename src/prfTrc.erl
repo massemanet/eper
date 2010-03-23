@@ -326,11 +326,12 @@ send_one(LD,Msg) -> LD#ld.where ! [msg(Msg)].
 flush(_,no) -> ok;
 flush(LD,Buffer) -> LD#ld.where ! map(fun msg/1, reverse(Buffer)).
 
-msg({'send',Pid,TS,{Msg,To}}) ->       {'send',{Msg,pi(To)},pi(Pid),ts(TS)};
-msg({'receive',Pid,TS,Msg}) ->         {'recv',Msg,         pi(Pid),ts(TS)};
-msg({'return_from',Pid,TS,{MFA,V}}) -> {'retn',{MFA,V},     pi(Pid),ts(TS)};
-msg({'call',Pid,TS,{MFA,B}}) ->        {'call',{MFA,B},     pi(Pid),ts(TS)};
-msg({'call',Pid,TS,MFA}) ->            {'call',{MFA,<<>>},  pi(Pid),ts(TS)}.
+msg({'send',Pid,TS,{Msg,To}})          -> {'send',{Msg,pi(To)},pi(Pid),ts(TS)};
+msg({'receive',Pid,TS,Msg})            -> {'recv',Msg,         pi(Pid),ts(TS)};
+msg({'return_from',Pid,TS,{MFA,V}})    -> {'retn',{MFA,V},     pi(Pid),ts(TS)};
+msg({'exception_from',Pid,TS,{MFA,V}}) -> {'retn',{MFA,V},     pi(Pid),ts(TS)};
+msg({'call',Pid,TS,{MFA,B}})           -> {'call',{MFA,B},     pi(Pid),ts(TS)};
+msg({'call',Pid,TS,MFA})               -> {'call',{MFA,<<>>},  pi(Pid),ts(TS)}.
 
 pi(P) when is_pid(P) ->
   try process_info(P, registered_name) of
