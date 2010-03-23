@@ -365,6 +365,7 @@ msf(X,_) -> exit({bad_match_spec,X}).
 
 mk_head(N) -> erlang:make_tuple(N,'_').
 
+slist(S) when ?is_string(S) -> [S];
 slist(L) when is_list(L) -> usort(L);
 slist(X) -> [X].
 
