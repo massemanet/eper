@@ -162,9 +162,11 @@ unset_tps() ->
   erlang:trace_pattern({'_','_','_'},false,[local]),
   erlang:trace_pattern({'_','_','_'},false,[global]).
 
-set_tps(TPs) -> foreach(fun set_tps_f/1,TPs).
+set_tps(TPs) ->
+  foreach(fun set_tps_f/1,TPs).
 
-set_tps_f({MFA,MatchSpec,Flags}) -> erlang:trace_pattern(MFA,MatchSpec,Flags).
+set_tps_f({MFA,MatchSpec,Flags}) -> 
+  erlang:trace_pattern(MFA,MatchSpec,Flags).
 
 mk_prc(all) -> all;
 mk_prc(Pid) when is_pid(Pid) -> Pid;

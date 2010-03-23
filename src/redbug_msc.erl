@@ -24,7 +24,7 @@ to_string(X)                    -> exit({illegal_input,X}).
 %% compiler
 %% returns {{Module,Function,Arity},[{Head,Cond,Body}],[Flag]}
 compile({M,F,'_',[],Actions}) ->
-  {{M,F,'_'},[{[],[],compile_acts(Actions)}],flags()};
+  {{M,F,'_'},[{'_',[],compile_acts(Actions)}],flags()};
 compile({M,F,Ari,[],Actions}) when is_integer(Ari) ->
   compile({M,F,lists:duplicate(Ari,{var,'_'}),[],Actions});
 compile({M,F,As,Gs,Actions}) when is_list(As) ->
@@ -180,13 +180,13 @@ unit() ->
   lists:foldr(
     fun(Str,O)->[unit(fun transform/1,Str)|O]end,[],
     [{"a",
-      {{a,'_','_'},[{[],[],[]}],[local]}}
+      {{a,'_','_'},[{'_',[],[]}],[local]}}
      ,{"a->stack",
-       {{a,'_','_'},[{[],[],[{message,{process_dump}}]}],[local]}}
+       {{a,'_','_'},[{'_',[],[{message,{process_dump}}]}],[local]}}
      ,{"a:b",
-       {{a,b,'_'},[{[],[],[]}],[local]}}
+       {{a,b,'_'},[{'_',[],[]}],[local]}}
      ,{"a:b->return",
-       {{a,b,'_'},[{[],[],[{return_trace}]}],[local]}}
+       {{a,b,'_'},[{'_',[],[{return_trace}]}],[local]}}
      ,{"a:b/2",
        {{a,b,2},[{['_','_'],[],[]}],[local]}}
      ,{"a:b/2->return",
@@ -197,8 +197,6 @@ unit() ->
        {{a,b,2},[{['_','_'],[],[]}],[local]}}
      ,{"a:b(X,X)",
        {{a,b,2},[{['$1','$1'],[],[]}],[local]}}
-     ,{"a:b(X,X) -> return;stack",
-       {{a,b,2},[{['$1','$1'],[],[{return_trace},{message,{process_dump}}]}],[local]}}
      ,{"a:b(X,y)",
        {{a,b,2},[{['$1',y],[],[]}],[local]}}
      ,{"a:b(X,1)",
@@ -217,12 +215,20 @@ unit() ->
        unknown_action}
      ,{"a:b(X,y)when not is_atom(X)",
        {{a,b,2},[{['$1',y],[{'not',{is_atom,'$1'}}],[]}],[local]}}
-     ,{"a:b(X,y)when not is_atom(X) -> return",
-       {{a,b,2},[{['$1',y],[{'not',{is_atom,'$1'}}],[{return_trace}]}],[local]}}
-     ,{"a:b(X,y)when element(1,X)==foo, (X==z)",
-       {{a,b,2},[{['$1',y],[{'==',{element,1,'$1'},foo},{'==','$1',z}],[]}],[local]}}
-    ,{"a:b(X,Y)when X==1,Y=/=a",
+     ,{"a:b(X,Y)when X==1,Y=/=a",
       {{a,b,2},[{['$1','$2'],[{'==','$1',1},{'=/=','$2',a}],[]}],[local]}}
+     ,{"a:b(X,y)when not is_atom(X) -> return",
+       {{a,b,2},
+        [{['$1',y],[{'not',{is_atom,'$1'}}],[{return_trace}]}],
+        [local]}}
+     ,{"a:b(X,y)when element(1,X)==foo, (X==z)",
+       {{a,b,2},
+        [{['$1',y],[{'==',{element,1,'$1'},foo},{'==','$1',z}],[]}],
+        [local]}}
+     ,{"a:b(X,X) -> return;stack",
+       {{a,b,2},
+        [{['$1','$1'],[],[{return_trace},{message,{process_dump}}]}],
+        [local]}}
     ]).
 
 
