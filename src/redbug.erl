@@ -70,18 +70,25 @@ help() ->
            , "  By default (i.e. if the 'file' opt is not given), messages"
            , "  are printed."
            , ""
-           , "Trc: list('send'|'receive'|{M}|{M,F}|{M,RMSs}|{M,F,RMSs})"
-           , "Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3}"
-           , "Target: node()"
-           , "RMSs: (restricted match specs): list(RMS)"
-           , "RMS: 'stack'|'return'|integer(Arity)|tuple(ArgDescriptor)"
-           , "ArgDescriptor: '_'|literal()"
+           , "Trc: list('send'|'receive'|string(RTP))"
+           , "RTP:  restricted trace pattern"
+           , "  the RTP has the form: \"<mfa> when <guards> -> <actions>\""
+           , "  where <mfa> can be;"
+           , "  \"mod\", \"mod:fun\" or \"mod:fun('_',atom,Var)\""
+           , "  <guard> is something like;" 
+           , "  \"X==1\" or \"is_atom(A)\""
+           , "  and <action> is;"
+           , "  \"return\" or \"stack\""
+           , ""
+           , "  E.g."
+           , "  ets:lookup(T,hostname) when is_integer(T) ->stack"
            , ""
            , "Opts: list({Opt,Val})"
            , "  general opts:"
            , "time         (15000)       stop trace after this many ms"
            , "msgs         (10)          stop trace after this many msgs"
            , "proc         (all)         (list of) Erlang process(es)"
+           , "                           all|pid()|atom(RegName)|{pid,I2,I3}"
            , "target       (node())      node to trace on"
            , "arity        (false)       print arity instead of arg list"
            , "  print-related opts"
@@ -387,16 +394,16 @@ outer(_,[]) -> ok;
 outer(PrintFun,[Msg|Msgs]) ->
   case Msg of
     {'call',{MFA,Bin},PI,TS} ->
-      PrintFun(flat("~s <~p> ~p~n",[ts(TS),PI,MFA])),
-      foreach(fun(L)->PrintFun(flat("  ~p~n",[L])) end, stak(Bin));
+      PrintFun(flat("~n~s <~p> ~p",[ts(TS),PI,MFA])),
+      foreach(fun(L)->PrintFun(flat("  ~p",[L])) end, stak(Bin));
     {'retn',{MFA,Val},PI,TS} -> 
-      PrintFun(flat("~s <~p> ~p -> ~p~n",[ts(TS),PI,MFA,Val]));
+      PrintFun(flat("~n~s <~p> ~p -> ~p",[ts(TS),PI,MFA,Val]));
     {'send',{MSG,To},PI,TS} -> 
-      PrintFun(flat("~s <~p> <~p> <<< ~p~n",[ts(TS),PI,To,MSG]));
+      PrintFun(flat("~n~s <~p> <~p> <<< ~p",[ts(TS),PI,To,MSG]));
     {'recv',MSG,PI,TS} -> 
-      PrintFun(flat("~s <~p> <<< ~p~n",[ts(TS),PI,MSG]));
-    MSG ->
-      PrintFun(flat("~p~n", [MSG]))
+      PrintFun(flat("~n~s <~p> <<< ~p",[ts(TS),PI,MSG]));
+    _ ->
+      PrintFun(flat("~n~p", [Msg]))
   end,
   outer(PrintFun,Msgs).
 
