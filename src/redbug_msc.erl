@@ -36,7 +36,7 @@ compile({M,F,As,Gs,Actions}) when is_list(As) ->
 flags() -> [local].
 
 compile_acts(As) ->
-  [ac_fun(A)|| A <- As].
+  lists:flatten([ac_fun(A)|| A <- As]).
 
 ac_fun("stack") -> {message,{process_dump}};
 ac_fun("return")-> {return_trace};
