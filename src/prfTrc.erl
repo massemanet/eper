@@ -310,16 +310,48 @@ maybe_exit(msg_count,{LD,Buff,0}) ->
   flush(LD,Buff), 
   exit(msg_count);
 maybe_exit(msg_queue,#ld{maxqueue=MQ}) ->
+  maybe_exit_queue(MQ);
+maybe_exit(msg_size,{#ld{maxsize=MS},{call,_,_,{MFA,B}}}) when is_binary(B)-> 
+  maybe_exit_call(MS,MFA,B);
+maybe_exit(msg_size,{#ld{maxsize=MS},{call,_,_,MFA}}) -> 
+  maybe_exit_call(MS,MFA,<<>>);
+maybe_exit(_,_) -> ok.
+
+%% check the message queue length
+maybe_exit_queue(MQ) ->
   case process_info(self(),message_queue_len) of
     {_,Q} when Q > MQ -> exit({msg_queue,Q});
     _ -> ok
+  end.
+
+%% can we handle the call trace msg, or is it too big?
+maybe_exit_call(MS,{_M,_F,A},B) ->
+  maybe_exit_stack(MS,B),
+  maybe_exit_args(MS,A).
+
+%% check the stack binary
+maybe_exit_stack(MS,B) ->
+  case MS < (Sz=size(B)) of
+    true -> exit({stack_size,Sz});
+    false-> ok
+  end.
+
+%% recurse through the args 
+%% exit if there is a long list or a large binary
+maybe_exit_args(MS,L) when is_list(L) -> 
+  case (Sz = length(L)) < MS of
+    true -> lists:foreach(fun(E)->maybe_exit_args(MS,E)end,L);
+    false-> exit({arg_length,Sz})
   end;
-maybe_exit(msg_size,{#ld{maxsize=MS},{call,_,_,{_,B}}}) when is_binary(B)-> 
-  case MS < (BS=size(B)) of
-    true -> exit({msg_size,BS});
-    _ -> ok
+maybe_exit_args(MS,B) when is_binary(B) ->
+  case (Sz = byte_size(B)) < MS of
+    true -> ok;
+    false-> exit({arg_size,Sz})
   end;
-maybe_exit(_,_) -> ok.
+maybe_exit_args(MS,T) when is_tuple(T) ->  
+  maybe_exit_args(MS,tuple_to_list(T));
+maybe_exit_args(_,_) ->
+  ok.
 
 send_one(LD,Msg) -> LD#ld.where ! [msg(Msg)].
 

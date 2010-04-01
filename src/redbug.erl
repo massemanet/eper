@@ -395,7 +395,7 @@ outer(PrintFun,[Msg|Msgs]) ->
   case Msg of
     {'call',{MFA,Bin},PI,TS} ->
       PrintFun(flat("~n~s <~p> ~p",[ts(TS),PI,MFA])),
-      foreach(fun(L)->PrintFun(flat("  ~p",[L])) end, stak(Bin));
+      foreach(fun(L)->PrintFun(flat("  ~s",[L])) end, stak(Bin));
     {'retn',{MFA,Val},PI,TS} -> 
       PrintFun(flat("~n~s <~p> ~p -> ~p",[ts(TS),PI,MFA,Val]));
     {'send',{MSG,To},PI,TS} -> 
@@ -435,16 +435,7 @@ munge(I,Out) ->
 
 mfaf(I) ->
   [_, C|_] = string:tokens(I,"()+"),
-  case string:tokens(C,":/ ") of
-    [M,F,A] ->
-      try {to_atom(M),to_atom(F),to_int(A)}
-      catch _:_ -> C
-      end;
-    ["unknown","function"] ->
-      unknown_function;
-    _ ->
-      C
-  end.
+  C.
 
 to_int(L) -> list_to_integer(L).
 to_atom(L) -> list_to_atom(L).
