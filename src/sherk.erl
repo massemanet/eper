@@ -37,12 +37,30 @@ scan(File,Patt,CBs,Seq) -> scan(File,Patt,CBs,Seq,Seq).
 scan(File,Patt,CBs,Min,Max) -> sherk_scan:go(File,Patt,CBs,Min,Max).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+glade_file() ->
+  take_first(fun file_exists/1,
+             [filename:join([my_path(),priv,glade,"sherk.glade"]),
+              filename:join([my_path(),src,"sherk.glade"])]).
+
+file_exists(F) ->
+  true = filelib:is_regular(F),
+  F.
+
+my_path() ->
+  filename:dirname(filename:dirname(code:which(?MODULE))).
+
+take_first(_,[]) -> exit({take_first,nothing});
+take_first(Fun,[H|T]) ->
+  try Fun(H)
+  catch _:_ -> take_first(Fun,T)
+  end.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init() ->
 
   %% start the GUI and load the glade file
   gtknode:start(sherk),
-  g('GN_glade_init',
-    [filename:join([code:priv_dir(eper),"glade","sherk.glade"])]),
+  g('GN_glade_init',[glade_file()]),
 
   %% check the trc source
   check_file(),
