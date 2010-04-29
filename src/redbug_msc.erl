@@ -25,6 +25,8 @@ to_string(X)                    -> exit({illegal_input,X}).
 %% returns {{Module,Function,Arity},[{Head,Cond,Body}],[Flag]}
 compile({M,F,'_',[],Actions}) ->
   {{M,F,'_'},[{'_',[],compile_acts(Actions)}],flags()};
+compile({_,_,'_',Gs,_}) ->
+  exit({guards_without_args,Gs});
 compile({M,F,Ari,[],Actions}) when is_integer(Ari) ->
   compile({M,F,lists:duplicate(Ari,{var,'_'}),[],Actions});
 compile({M,F,As,Gs,Actions}) when is_list(As) ->
@@ -108,17 +110,17 @@ parse(Str) ->
 split_fun(Str) ->
   fun() ->
       % strip off the actions, if any
-      case re:run(Str,"^(.+)->\\s*([a-z;]+)\$",[{capture,[1,2],list}]) of
+      case re:run(Str,"^(.+)->\\s*([a-z;]+)\\s*\$",[{capture,[1,2],list}]) of
         {match,[St,Action]} -> ok;
         nomatch             -> St=Str,Action=""
       end,
       % strip off the guards, if any
-      case re:run(St,"^(.+)when(.+)\$",[{capture,[1,2],list}]) of
+      case re:run(St,"^(.+[\\s)])+when\\s(.+)\$",[{capture,[1,2],list}]) of
         {match,[S,Guard]} -> ok;
         nomatch           -> S=St,Guard=""
       end,
       % add a wildcard F, if Body is just an atom (presumably a module)
-      case re:run(S,"^[a-zA-Z0-9_]+\$") of
+      case re:run(S,"^\\s*[a-zA-Z0-9_]+\\s*\$") of
         nomatch -> Body=S;
         _       -> Body=S++":'_'"
       end,
@@ -181,16 +183,18 @@ unit() ->
     fun(Str,O)->[unit(fun transform/1,Str)|O]end,[],
     [{"a",
       {{a,'_','_'},[{'_',[],[]}],[local]}}
+     ,{"a",
+       {{a,'_','_'},[{'_',[],[]}],[local]}}
      ,{"a->stack",
        {{a,'_','_'},[{'_',[],[{message,{process_dump}}]}],[local]}}
      ,{"a:b",
        {{a,b,'_'},[{'_',[],[]}],[local]}}
-     ,{"a:b->return",
-       {{a,b,'_'},[{'_',[],[{return_trace}]}],[local]}}
+     ,{"a:b->return ",
+       {{a,b,'_'},[{'_',[],[{exception_trace}]}],[local]}}
      ,{"a:b/2",
        {{a,b,2},[{['_','_'],[],[]}],[local]}}
      ,{"a:b/2->return",
-       {{a,b,2},[{['_','_'],[],[{return_trace}]}],[local]}}
+       {{a,b,2},[{['_','_'],[],[{exception_trace}]}],[local]}}
      ,{"a:b(X,Y)",
        {{a,b,2},[{['$1','$2'],[],[]}],[local]}}
      ,{"a:b(_,_)",
@@ -199,10 +203,14 @@ unit() ->
        {{a,b,2},[{['$1','$1'],[],[]}],[local]}}
      ,{"a:b(X,y)",
        {{a,b,2},[{['$1',y],[],[]}],[local]}}
+     ,{" a:foo()when a==b",
+       {{a,foo,0},[{[],[{'==',a,b}],[]}],[local]}}
      ,{"a:b(X,1)",
        {{a,b,2},[{['$1',1],[],[]}],[local]}}
      ,{"a:b(X,\"foo\")",
        {{a,b,2},[{['$1',"foo"],[],[]}],[local]}}
+     ,{" a:foo when a==b",
+       guards_without_args}
      ,{"a:b(X,y)when is_atom(Y)",
        unbound_variable}
      ,{"x:c([string])",
@@ -219,7 +227,7 @@ unit() ->
       {{a,b,2},[{['$1','$2'],[{'==','$1',1},{'=/=','$2',a}],[]}],[local]}}
      ,{"a:b(X,y)when not is_atom(X) -> return",
        {{a,b,2},
-        [{['$1',y],[{'not',{is_atom,'$1'}}],[{return_trace}]}],
+        [{['$1',y],[{'not',{is_atom,'$1'}}],[{exception_trace}]}],
         [local]}}
      ,{"a:b(X,y)when element(1,X)==foo, (X==z)",
        {{a,b,2},
@@ -227,7 +235,7 @@ unit() ->
         [local]}}
      ,{"a:b(X,X) -> return;stack",
        {{a,b,2},
-        [{['$1','$1'],[],[{return_trace},{message,{process_dump}}]}],
+        [{['$1','$1'],[],[{exception_trace},{message,{process_dump}}]}],
         [local]}}
     ]).
 
