@@ -14,18 +14,19 @@
     , collectors/0
     , config/2]).
 
--export(
-  [fwrite/2
-   , fwrite/3]).
-
--record(cld, {sort=cpu, items=19}).
+-record(cld,
+        {fd=standard_io,
+         sort=cpu,
+         items=19}).
 
 collectors() -> [prfPrc,prfSys].
 init(_Node) -> #cld{}.
 terminate(_LD) -> ok.
 
-config(LD, {sort,S}) when S==cpu; S==mem; S==msgq -> LD#cld{sort=S};
-config(LD,_) -> LD.
+config(LD,{sort,S}) when S==cpu; S==mem; S==msgq -> LD#cld{sort=S};
+config(LD,{fd,FD})                               -> LD#cld{fd=FD};
+config(LD,{items,Items})                         -> LD#cld{items=Items};
+config(LD,_)                                     -> LD.
 
 tick(LD,Data) ->
   case Data of
@@ -33,22 +34,12 @@ tick(LD,Data) ->
     _ -> LD
   end.
 
-fwrite(PrfSys,PrfPrc) ->
-  fwrite(PrfSys,PrfPrc,[]).
-
-fwrite(PrfSys,PrfPrc,Opts) ->
-  print(mk_cld(Opts,#cld{}),PrfSys,PrfPrc).
-
-mk_cld([],CLD) -> CLD;
-mk_cld([{sort ,S}|Opts],CLD) ->mk_cld(Opts,CLD#cld{sort =S});
-mk_cld([{items,I}|Opts],CLD) ->mk_cld(Opts,CLD#cld{items=I}).
-
-print(#cld{sort=Sort,items=Items},PrfSys,PrfPrc) ->
-  print_del(),
-  print_sys(PrfSys),
-  io:fwrite("~n",[]),
-  print_tags(),
-  print_procs(Items,PrfSys,which_sort(Sort,PrfPrc)).
+print(#cld{fd=FD,sort=Sort,items=Items},PrfSys,PrfPrc) ->
+  print_del(FD),
+  print_sys(FD,PrfSys),
+  io:fwrite(FD,"~n",[]),
+  print_tags(FD),
+  print_procs(FD,Items,PrfSys,which_sort(Sort,PrfPrc)).
 
 -define(SYSFORMAT, 
 	"~-20s size ~8sM, cpu%~4s, procs~7s, "
@@ -56,9 +47,9 @@ print(#cld{sort=Sort,items=Items},PrfSys,PrfPrc) ->
 	"memory[kB]:  proc~8s, atom~8s, bin~8s, code~8s, ets~8s~n").
 -define(SYSEMPTY, ["","","","","",0,0,0,"","","","",""]).
 
-print_sys(Sys) ->
-  io:fwrite("~s~n",[sys_str(Sys)]),
-  io:fwrite(memf(),memi(Sys)).
+print_sys(FD,Sys) ->
+  io:fwrite(FD,"~s~n",[sys_str(Sys)]),
+  io:fwrite(FD,memf(),memi(Sys)).
 memf() -> "memory[kB]:  proc~8s, atom~8s, bin~8s, code~8s, ets~8s~n".
 
 sys_str(Sys) ->
@@ -99,11 +90,13 @@ memi(Sys) ->
   catch _:_ -> ["","","","",""]
   end.
 
-print_del() -> io:fwrite("~s~n", [lists:duplicate(79, $-)]).
+print_del(FD) ->
+  io:fwrite(FD,"~s~n", [lists:duplicate(79, $-)]).
 
 -define(FORMAT, "~-11s ~-32s ~-19s~5s~6s~4s~n").
 -define(TAGS, ["pid","name","current","msgq","mem","cpu"]).
-print_tags() -> io:fwrite(?FORMAT, ?TAGS).
+print_tags(FD) ->
+  io:fwrite(FD,?FORMAT, ?TAGS).
 
 which_sort( cpu,PrfPrc) -> expand(lks(dreds,PrfPrc),lks(info,PrfPrc));
 which_sort(msgq,PrfPrc) -> expand(lks(msgq,PrfPrc),lks(info,PrfPrc));
@@ -113,10 +106,12 @@ which_sort( mem,PrfPrc) -> expand(lks(mem,PrfPrc),lks(info,PrfPrc)).
 expand(Pids,Infos) -> 
   lists:reverse([[{pid,Pid}|lks(Pid,Infos)] || Pid <- Pids]).
 
-print_procs(Items,PrfSys,Prcs) -> 
+print_procs(FD,Items,PrfSys,Prcs) -> 
   CpuPerRed = cpu_per_red(PrfSys),
-  [procsI(P,CpuPerRed) || P <- resize(Items,Prcs)].
+  [procsI(FD,P,CpuPerRed) || P <- resize(Items,Prcs)].
 
+resize(no_pad,Prcs) ->
+  Prcs;
 resize(Items,Prcs) ->
   case Items < length(Prcs) of
     true -> lists:sublist(Prcs,Items);
@@ -129,15 +124,16 @@ cpu_per_red(Sys) ->
     Reds -> 100*(lks(beam_user,Sys,1)+lks(beam_kernel,Sys,0))/Reds
   end.
 
-procsI(PP,CpuPerRed) ->
-  try io:fwrite(?FORMAT, [pidf(to_list(lks(pid,PP))),
-			  funf(reg(PP)), 
-			  funf(lks(current_function, PP)), 
-			  to_list(lks(message_queue_len, PP)),
-			  to_list(lks(memory,PP)/1024), 
-			  to_list(lks(dreductions,PP)*CpuPerRed)])
+procsI(FD,PP,CpuPerRed) ->
+  try
+    io:fwrite(FD,?FORMAT, [pidf(to_list(lks(pid,PP))),
+                           funf(reg(PP)), 
+                           funf(lks(current_function, PP)), 
+                           to_list(lks(message_queue_len, PP)),
+                           to_list(lks(memory,PP)/1024), 
+                           to_list(lks(dreductions,PP)*CpuPerRed)])
   catch _:_ ->
-      io:fwrite("~n",[])
+      io:fwrite(FD,"~n",[])
   end.
 
 reg(PP) ->    
