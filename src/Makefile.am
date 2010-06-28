@@ -5,7 +5,7 @@ erlbeamdir = $(ERLANG_INSTALL_LIB_DIR_eper)/ebin
 
 erlsrc_DATA = \
 	bread.erl bread_server.erl \
-	dtop.erl dtopConsumer.erl \
+	dtop.erl dtopConsumer.erl dtop_replay.erl \
 	gperf.erl gperfConsumer.erl gperfGtk.erl \
 	gen_serv.erl \
 	ntop.erl ntopConsumer.erl \
