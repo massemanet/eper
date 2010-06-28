@@ -41,16 +41,17 @@ print(#cld{fd=FD,sort=Sort,items=Items},PrfSys,PrfPrc) ->
   print_tags(FD),
   print_procs(FD,Items,PrfSys,which_sort(Sort,PrfPrc)).
 
--define(SYSFORMAT, 
-	"~-20s size ~8sM, cpu%~4s, procs~7s, "
-	"runq~4s  ~2.2.0w:~2.2.0w:~2.2.0w~n"
-	"memory[kB]:  proc~8s, atom~8s, bin~8s, code~8s, ets~8s~n").
--define(SYSEMPTY, ["","","","","",0,0,0,"","","","",""]).
-
 print_sys(FD,Sys) ->
   io:fwrite(FD,"~s~n",[sys_str(Sys)]),
   io:fwrite(FD,memf(),memi(Sys)).
-memf() -> "memory[kB]:  proc~8s, atom~8s, bin~8s, code~8s, ets~8s~n".
+
+memf() -> "memory:      proc~8s, atom~8s, bin~8s, code~8s, ets~8s~n".
+
+memi(Sys) ->
+  try [human(lks(T,Sys)) || T <- [processes,atom,binary,code,ets]]
+  catch _:_ -> ["","","","",""]
+  end.
+
 
 sys_str(Sys) ->
   {_, Time} = calendar:now_to_local_time(lks(now, Sys)),
@@ -58,16 +59,16 @@ sys_str(Sys) ->
   M	    = pad(element(2,Time),2,$0,left),
   S	    = pad(element(3,Time),2,$0,left),
   Node	    = to_list(lks(node, Sys)),
-  MEMbeam   = to_list(round(lks(beam_vss,Sys,0)/1048576)),
-  MEM	    = to_list(round(lks(total,Sys)/1048576)),
+  MEMbeam   = human(lks(beam_vss,Sys,0)),
+  MEM	    = human(lks(total,Sys)),
   CPUbeam   = to_list(100*(lks(beam_user,Sys,0)+lks(beam_kernel,Sys))),
   CPU       = to_list(100*(lks(user,Sys,0)+lks(kernel,Sys,0))),
-  Procs	    = to_list(lks(procs,Sys)),
-  RunQ	    = to_list(lks(run_queue, Sys)),
+  Procs	    = human(lks(procs,Sys)),
+  RunQ	    = human(lks(run_queue, Sys)),
 
   SYS = lists:sublist(lists:append(["size: "    ,MEM,
 				    "("         ,MEMbeam,
-				    ")M, cpu%: ",CPUbeam,
+				    "), cpu%: " ,CPUbeam,
 				    "("         ,CPU,
 				    "), procs: ",Procs,
 				    ", runq: "  ,RunQ,
@@ -85,18 +86,15 @@ pad(Item,Len,Pad,LeftRight) ->
     _ -> lists:sublist(I,Len)
   end.
 
-memi(Sys) ->
-  try [to_list(lks(T,Sys)/1024) || T <- [processes,atom,binary,code,ets]]
-  catch _:_ -> ["","","","",""]
-  end.
-
 print_del(FD) ->
   io:fwrite(FD,"~s~n", [lists:duplicate(79, $-)]).
 
--define(FORMAT, "~-11s ~-32s ~-19s~5s~6s~4s~n").
--define(TAGS, ["pid","name","current","msgq","mem","cpu"]).
+format() -> "~-13s ~-29s ~-17s~7s~7s~4s~n".
+
+tags() -> ["pid","name","current","msgq","mem","cpu"].
+
 print_tags(FD) ->
-  io:fwrite(FD,?FORMAT, ?TAGS).
+  io:fwrite(FD,format(),tags()).
 
 which_sort( cpu,PrfPrc) -> expand(lks(dreds,PrfPrc),lks(info,PrfPrc));
 which_sort(msgq,PrfPrc) -> expand(lks(msgq,PrfPrc),lks(info,PrfPrc));
@@ -126,12 +124,14 @@ cpu_per_red(Sys) ->
 
 procsI(FD,PP,CpuPerRed) ->
   try
-    io:fwrite(FD,?FORMAT, [pidf(to_list(lks(pid,PP))),
-                           funf(reg(PP)), 
-                           funf(lks(current_function, PP)), 
-                           to_list(lks(message_queue_len, PP)),
-                           to_list(lks(memory,PP)/1024), 
-                           to_list(lks(dreductions,PP)*CpuPerRed)])
+    io:fwrite(FD,
+              format(),
+              [pidf(to_list(lks(pid,PP))),
+               funf(reg(PP)), 
+               funf(lks(current_function, PP)), 
+               human(lks(message_queue_len, PP)),
+               human(lks(memory,PP)), 
+               to_list(lks(dreductions,PP)*CpuPerRed)])
   catch _:_ ->
       io:fwrite(FD,"~n",[])
   end.
@@ -148,6 +148,24 @@ pidf(Pid) ->
 
 funf({M, F, A}) -> to_list(M)++":"++to_list(F)++"/"++to_list(A);
 funf(Term) -> io_lib:fwrite("~p", [Term]).
+
+human(0)->
+  "0";
+human(I)->
+  case math:log10(I) of
+    M when 15=<M -> human(M-15,"P");
+    M when 12=<M -> human(M-12,"T");
+    M when  9=<M -> human(M-9,"G");
+    M when  6=<M -> human(M-6,"M");
+    M when  3=<M -> human(M-3,"k");
+    _            -> flat("~w",[I])
+  end.
+
+human(E,M) ->
+  flat("~.1f~s",[math:pow(10,E),M]).
+
+flat(Format,Args) -> 
+  lists:flatten(io_lib:fwrite(Format,Args)).
 
 to_list(A) when is_list(A) -> A;
 to_list(A) when is_pid(A) -> pid_to_list(A);
