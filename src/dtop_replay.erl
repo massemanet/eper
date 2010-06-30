@@ -14,24 +14,24 @@
 replay(TrcFile,Node) -> replay(TrcFile,Node,[]).
 
 replay(TrcFile,Node,Opts) -> 
-  try bread:trc(TrcFile,mk_dtop_fun(Node,Opts),mk_dtop_init(Node,Opts))
-  catch R -> R
-  end.
+  replay_trc:go(TrcFile,mk_dtop_fun(Node),mk_dtop_init(Node,Opts),Opts).
 
-mk_dtop_fun(Node,Opts) ->
-  Max = proplists:get_value(count,Opts,-1),
-  fun(_,{I,C,_}) when I=:=Max                         -> throw({max,C});
-     ({watchdog,N,_,ticker,D},{I,C,LD}) when N=:=Node -> {I+1,C+1,tick(LD,D)};
-     (_,{I,C,LD})                                     -> {I+1,C,LD}
+mk_dtop_fun(Node) ->
+  fun(done,{C,_})                                   -> {items,C};
+     ({watchdog,N,_,ticker,D},{C,LD}) when N=:=Node -> {C+1,tick(LD,D)};
+     (_,{C,LD})                                     -> {C,LD}
   end.
 
 mk_dtop_init(Node,Opts) ->
-  {0,0,dest_file(dtopConsumer:init(Node),Opts)}.
+  {0,conf(dtopConsumer:init(Node),Opts)}.
 
-dest_file(CLD,Opts) ->
-  try {ok,FD} = file:open(proplists:get_value(file,Opts,""),[write]),
-      dtopConsumer:config(dtopConsumer:config(CLD,{fd,FD}),{items,no_pad})
-  catch _:_ -> CLD
+conf(CLD,Opts) ->
+  dtopConsumer:config(maybe_file(CLD,Opts),{items,no_pad}).
+
+maybe_file(CLD,Opts) ->
+  case file:open(proplists:get_value(file,Opts,""),[write]) of
+    {ok,FD} -> dtopConsumer:config(CLD,{fd,FD});
+    _ -> CLD
   end.
 
 tick(LD,Data) ->

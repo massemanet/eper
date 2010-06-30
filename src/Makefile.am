@@ -16,6 +16,7 @@ erlsrc_DATA = \
 	sherk_tree.erl sherk_list.erl sherk_scan.erl sherk_aquire.erl \
 	sherk_target.erl sherk_ets.erl \
 	watchdog.erl watchdogConsumer.erl watchdogLogger.erl \
+	replay_trc.erl \
 	loggerConsumer.erl logReader.erl
 
 erlinc_DATA = \
