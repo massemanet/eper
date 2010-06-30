@@ -89,7 +89,7 @@ pad(Item,Len,Pad,LeftRight) ->
 print_del(FD) ->
   io:fwrite(FD,"~s~n", [lists:duplicate(79, $-)]).
 
-format() -> "~-13s ~-29s ~-17s~7s~7s~4s~n".
+format() -> "~-14s ~-28s ~-17s~7s~7s~4s~n".
 
 tags() -> ["pid","name","current","msgq","mem","cpu"].
 
