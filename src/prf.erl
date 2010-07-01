@@ -11,6 +11,7 @@
 
 %% prf internal
 -export([log/2,ticker_odd/0,ticker_even/0]).
+-export([human/1]).
 
 -define(TICK,2000).
 
@@ -49,3 +50,22 @@ incr(Tick,Offset) ->
 log(ProcInfo,Term) when not is_list(Term) -> log(ProcInfo,[Term]);
 log(ProcInfo,List) ->
     error_logger:info_report([{in,CF}||{current_function,CF}<-ProcInfo]++List).
+
+%%make ints human readable
+human(0)->
+  "0";
+human(I)->
+  case math:log10(I) of
+    M when 15=<M -> human(M-15,"P");
+    M when 12=<M -> human(M-12,"T");
+    M when  9=<M -> human(M-9,"G");
+    M when  6=<M -> human(M-6,"M");
+    M when  3=<M -> human(M-3,"k");
+    _            -> flat("~w",[I])
+  end.
+
+human(E,M) ->
+  flat("~.1f~s",[math:pow(10,E),M]).
+
+flat(Format,Args) -> 
+  lists:flatten(io_lib:fwrite(Format,Args)).
