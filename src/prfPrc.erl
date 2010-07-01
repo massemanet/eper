@@ -6,6 +6,20 @@
 %%%
 %%% Created :  8 Dec 2003 by Mats Cronqvist <qthmacr@duna283>
 %%%-------------------------------------------------------------------
+%% collect info about an erlang process.
+%% uses erlang:process_info/2
+%%
+%% registered_name      atom | []
+%% initial_call         {M,F,A}
+%% current_function     {M,F,A}
+%% last_calls           [{M,F,A}]
+%% reductions           integer()
+%% message_queue_len    integer()
+%% memory               bytes
+%% stack_size           bytes
+%% heap_size            bytes
+%% total_heap_size      bytes
+%%%-------------------------------------------------------------------
 -module(prfPrc).
 
 -export([collect/1,config/2]).
@@ -19,7 +33,8 @@
 
 -define(ITEMS,6).
 -define(SORT_ITEMS,[reductions,memory,message_queue_len]).
--define(INFO_ITEMS,[current_function,initial_call,registered_name,last_calls]).
+-define(INFO_ITEMS,[current_function,initial_call,registered_name,last_calls,
+                    stack_size,heap_size,total_heap_size]).
 -define(TAGS,?SORT_ITEMS++?INFO_ITEMS).
 
 config(State,_ConfigData) -> State.
@@ -117,6 +132,12 @@ pid_info(Pid,Tags) when is_list(Tags) ->
   catch _:_ -> []
   end.
 
+pidinfo(Pid, Type = stack_size) ->
+  {Type,8*element(2,process_info(Pid, Type))};
+pidinfo(Pid, Type = heap_size) ->
+  {Type,8*element(2,process_info(Pid, Type))};
+pidinfo(Pid, Type = total_heap_size) ->
+  {Type,8*element(2,process_info(Pid, Type))};
 pidinfo(Pid, Type = last_calls) ->
   try 
     case process_info(Pid,last_calls) of
