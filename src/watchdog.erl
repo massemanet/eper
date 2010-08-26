@@ -290,9 +290,7 @@ expand_ps([{T,P}|Es]) when is_port(P)-> poi({T,P})++expand_ps(Es);
 expand_ps([E|Es]) -> [E|expand_ps(Es)].
 
 pii({T,Pid}) -> 
-  Tags = [message_queue_len,current_function,initial_call,
-          registered_name,last_calls],
-  [{T,Pid} | prfPrc:pid_info(Pid, Tags)].
+  [{T,Pid} | prfPrc:pid_info(Pid)].
 
 poi({T,Port}) -> 
   {Name,Stats} = prfNet:port_info(Port),

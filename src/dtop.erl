@@ -7,7 +7,9 @@
 -module(dtop).
 -author('Mats Cronqvist').
 
--export([start/0,start/1,start/2,stop/0,sort/1]).
+-export([start/0,start/1,start/2,
+         stop/0,
+         sort/1,file/1]).
 
 start() -> start(node()).
 
@@ -21,3 +23,10 @@ start(Node,Proxy) when is_atom(Node),is_atom(Proxy) ->
 stop() -> prf:stop(dtop).
 
 sort(Sort) -> prf:config(dtop,consumer,{sort,Sort}).
+
+file(Filename) ->
+  try {ok,FD} = file:open(Filename,[write]),
+      prf:config(dtop,consumer,{fd,FD}),
+      prf:config(dtop,consumer,{items,no_pad})
+  catch _:R -> {error,{R,Filename}}
+  end.

@@ -38,7 +38,7 @@ xml(Filename,Fun,Acc) ->
   fold(Filename,Fun,Acc,[xml]).
 
 term(Filename,Fun,Acc) ->
- fold(Filename,Fun,Acc,[term]).
+  fold(Filename,Fun,Acc,[term]).
 
 trc(Filename,Fun,Acc) ->
  fold(Filename,Fun,Acc,[trc]).

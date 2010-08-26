@@ -102,6 +102,7 @@ loop(St) ->
   receive
     {timeout, _, {tick}} -> 
       prf:ticker_odd(),
+      erlang:garbage_collect(self()),
       ?MODULE:loop(collect_and_send(St));
     {subscribe, {Pid,Collectors}} -> 
       ?MODULE:loop(subscr(St, Pid, Collectors));
