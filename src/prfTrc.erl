@@ -338,18 +338,14 @@ maybe_exit_stack(MS,B) ->
 
 %% recurse through the args 
 %% exit if there is a long list or a large binary
-maybe_exit_args(MS,L) when is_list(L) -> 
-  case (Sz = length(L)) < MS of
-    true -> lists:foreach(fun(E)->maybe_exit_args(MS,E)end,L);
-    false-> exit({arg_length,Sz})
-  end;
-maybe_exit_args(MS,B) when is_binary(B) ->
-  case (Sz = byte_size(B)) < MS of
-    true -> ok;
-    false-> exit({arg_size,Sz})
-  end;
 maybe_exit_args(MS,T) when is_tuple(T) ->  
   maybe_exit_args(MS,tuple_to_list(T));
+maybe_exit_args(MS,L) when length(L) < MS -> 
+  lists:foreach(fun(E)->maybe_exit_args(MS,E)end,L);
+maybe_exit_args(MS,L) when MS =< length(L) -> 
+  exit({arg_length,length(L)});
+maybe_exit_args(MS,B) when MS < byte_size(B) -> 
+  exit({arg_size,byte_size(B)});
 maybe_exit_args(_,_) ->
   ok.
 
