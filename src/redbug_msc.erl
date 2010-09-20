@@ -72,6 +72,13 @@ unpack_var({Type,Val},_) ->
 compile_args(As) ->
   lists:foldl(fun ca_fun/2,{[],[]},As).
 
+ca_fun({tuple,Es},{Vars,O}) ->
+  {Vs,Ps} = lists:foldr(fun(E,{V0,P0})-> {V,P}=ca_fun(E,{V0,[]}),
+                                         {V0++V,P++P0}
+                        end,
+                        {Vars,[]},
+                        Es),
+  {Vs,O++[list_to_tuple(Ps)]};
 ca_fun({var,'_'},{Vars,O}) -> 
   {Vars,O++['_']};
 ca_fun({var,Var},{Vars,O}) -> 
