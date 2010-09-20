@@ -216,6 +216,8 @@ unit() ->
        {{a,b,2},[{['$1',1],[],[]}],[local]}}
      ,{"a:b(X,\"foo\")",
        {{a,b,2},[{['$1',"foo"],[],[]}],[local]}}
+     ,{"x:y({A,{B,A}},A)",
+       {{x,y,2},[{[{'$1',{'$2','$1'}},'$1'],[],[]}],[local]}}
      ,{" a:foo when a==b",
        guards_without_args}
      ,{"a:b(X,y)when is_atom(Y)",
