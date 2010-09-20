@@ -42,7 +42,7 @@ do(File,Fun,Acc,Opts) ->
       case hms_from_now(element(3,Item)) of
         T when End < T  -> throw(Fun(done,Fun(Item,Acc)));
         T when Beg =< T -> {N+1,Fun(Item,Acc)};
-        _               -> {N+1,Acc}
+        _               -> {N,Acc}
       end;
      (_,{N,Acc}) -> {N,Acc}
   end.
