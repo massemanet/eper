@@ -52,9 +52,10 @@ log(ProcInfo,List) ->
     error_logger:info_report([{in,CF}||{current_function,CF}<-ProcInfo]++List).
 
 %%make ints human readable
-human(0)->
+human(X) when not is_number(X) -> X;
+human(I) when I =< 0 ->
   "0";
-human(I)->
+human(I) ->
   case math:log10(I) of
     M when 15=<M -> human(M-15,"P");
     M when 12=<M -> human(M-12,"T");
