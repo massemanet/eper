@@ -33,7 +33,7 @@ do(File,Fun,Acc,Opts) ->
   end.
 
 %% {watchdog,kred@mero,{1277,765403,871058},sysMon,[{tag,long_gc},...]}
- mk_fun(Fun,Opts) ->
+mk_fun(Fun,Opts) ->
   Max = proplists:get_value(count,Opts,-1),
   Nod = proplists:get_value(node,Opts,all),
   {Beg,End} = times(Opts),
