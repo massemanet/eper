@@ -284,17 +284,17 @@ make_report(Trigger,LD) ->
 reporter(Trigger,TriggerData) ->
   {?MODULE,node(),now(),Trigger,TriggerData}.
 
-expand_ps([]) -> [];
-expand_ps([{T,P}|Es]) when is_pid(P)-> pii({T,P})++expand_ps(Es);
-expand_ps([{T,P}|Es]) when is_port(P)-> poi({T,P})++expand_ps(Es);
-expand_ps([E|Es]) -> [E|expand_ps(Es)].
+expand_ps([])                         -> [];
+expand_ps([{T,P}|Es]) when is_pid(P)  -> pii({T,P})++expand_ps(Es);
+expand_ps([{T,P}|Es]) when is_port(P) -> poi({T,P})++expand_ps(Es);
+expand_ps([E|Es])                     -> [E|expand_ps(Es)].
 
 pii({T,Pid}) -> 
-  [{T,Pid} | prfPrc:pid_info(Pid)].
+  [{T,Pid},{pid_info,prfPrc:pid_info(Pid)}].
 
 poi({T,Port}) -> 
   {Name,Stats} = prfNet:port_info(Port),
-  [{T,Port},{name,Name}|Stats].
+  [{T,Port},{port_name,Name},{port_info,Stats}].
 
 flush() ->    
   receive {monitor,_,_,_} -> flush()
