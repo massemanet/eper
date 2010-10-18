@@ -42,7 +42,13 @@ main(Args) ->
 
 top_start(Module, Options, [NodeStr]) ->
     Node = init_net_kernel(Options, NodeStr),
-    wait_for(Module:start(Node));
+    case {net_kernel:hidden_connect_node(Node), net_adm:ping(Node)} of
+        {true, pong} ->
+            wait_for(Module:start(Node));
+        {_, pang} ->
+            io:format("Node ~p not responding to pings.\n", [Node]),
+            halt(1)
+    end;
 top_start(Module, _Options, _OtherArgs) ->
     io:format("Expected '~p' to be followed by exactly one nodename.\n", [Module]),
     usage().
