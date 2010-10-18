@@ -1,6 +1,6 @@
 
 all:
-	./rebar compile
+	./rebar compile escriptize
 
 clean:
 	./rebar clean
