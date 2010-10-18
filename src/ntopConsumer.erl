@@ -66,7 +66,7 @@ name({tcp,{Host,Port}}) -> Host++[$:|integer_to_list(Port)];
 name({udp,Port}) -> [$:|integer_to_list(Port)];
 name({node,NodeName}) -> NodeName;
 name({driver,Dr}) -> Dr;
-name(X) -> X.
+name(X) -> io_lib:format("~p", [X]).
 
 ok(recv_oct) -> true;
 ok(recv_cnt) -> true;
