@@ -142,9 +142,11 @@ reg(PP) ->
     Val -> Val
   end.
 
-pidf(Pid) -> 
-  {match,B,L} = regexp:match(Pid,"<[0-9]*"),
-  [$<,$0|string:substr(Pid,B+L)].
+pidf(Pid) ->
+  %% Rewrite pid string to look like it's a local PID
+  {match, [Partial]} = re:run(Pid, "[0-9]+.([0-9]+.[0-9]+)",
+                              [{capture, all_but_first, list}]),
+  lists:concat(["<0.", Partial, ">"]).
 
 funf({M, F, A}) -> to_list(M)++":"++to_list(F)++"/"++to_list(A);
 funf(Term) -> io_lib:fwrite("~p", [Term]).
