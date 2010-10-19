@@ -22,5 +22,5 @@ read(FD,Cont) ->
     {error,R} -> exit({error_reading,R})
   end.
 
-chop(<<Size:32,Bin:Size/binary,Size2:32,Bin2:Size2/binary,Cont/binary>>) ->
+chop(<<Size:32,Bin:Size/binary,Size2:32,Bin2:Size2/binary,_Cont/binary>>) ->
   throw({ok,binary_to_term(Bin),binary_to_term(Bin2)}).
