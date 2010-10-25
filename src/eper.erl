@@ -3,7 +3,7 @@
 -export([main/1]).
 
 getopt_spec() ->
-    [{command,    undefined,  undefined, atom,      "(dtop | ntop)"},
+    [{command,    undefined,  undefined, atom,      "(dtop <node> | ntop <node>)"},
      {cookie,     $c,        "cookie",   atom,      "Erlang cookie to use for connecting to remote node."},
      {help,       undefined, "help",     undefined, "Display usage"},
      {nettick,    undefined, "nettick",  integer,   "net_ticktime kernel setting"},
