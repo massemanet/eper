@@ -21,7 +21,7 @@ dnl Specify the files to instantiate.
 AC_CONFIG_FILES([ \
 	Makefile \
 	src/Makefile \
-	bin/Makefile \
+        priv/bin/Makefile \
 	])
 
 AC_OUTPUT

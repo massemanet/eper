@@ -1,4 +1,4 @@
-SUBDIRS = src bin
+SUBDIRS = src priv/bin
 
 clean-local:
 	-find . -name "*~" -exec rm {} \;
