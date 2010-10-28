@@ -14,7 +14,7 @@ AC_ERLANG_SUBST_ROOT_DIR
 AC_ERLANG_SUBST_LIB_DIR
 AC_ERLANG_CHECK_LIB(erl_interface)
 AC_ERLANG_SUBST_INSTALL_LIB_SUBDIR(AC_PACKAGE_TARNAME, AC_PACKAGE_VERSION)
-erlcflags="+warn_unused_import +warn_obsolete_guard +debug_info"
+erlcflags="+debug_info"
 AC_SUBST([ERLCFLAGS], [$erlcflags])
 
 dnl Specify the files to instantiate.

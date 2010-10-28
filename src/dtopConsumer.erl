@@ -143,8 +143,8 @@ reg(PP) ->
   end.
 
 pidf(Pid) -> 
-  {match,B,L} = regexp:match(Pid,"<[0-9]*"),
-  [$<,$0|string:substr(Pid,B+L)].
+  [_,A,B] = string:tokens(Pid,"."),
+  lists:append(["<0.",A,".",B]).
 
 funf({M, F, A}) -> to_list(M)++":"++to_list(F)++"/"++to_list(A);
 funf(Term) -> io_lib:fwrite("~p", [Term]).
