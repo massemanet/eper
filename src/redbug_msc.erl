@@ -72,6 +72,12 @@ unpack_var({Type,Val},_) ->
 compile_args(As) ->
   lists:foldl(fun ca_fun/2,{[],[]},As).
 
+ca_fun({list,Es},{Vars,O}) ->
+  {Vs,Ps} = ca_fun_list(Es,Vars),
+  {Vs,O++[Ps]};
+ca_fun({tuple,Es},{Vars,O}) ->
+  {Vs,Ps} = ca_fun_list(Es,Vars),
+  {Vs,O++[list_to_tuple(Ps)]};
 ca_fun({var,'_'},{Vars,O}) -> 
   {Vars,O++['_']};
 ca_fun({var,Var},{Vars,O}) -> 
@@ -83,6 +89,13 @@ ca_fun({var,Var},{Vars,O}) ->
 ca_fun({Type,Val},{Vars,O}) -> 
   assert_type(Type,Val),
   {Vars,O++[Val]}.
+
+ca_fun_list(Es,Vars) ->
+  lists:foldr(fun(E,{V0,P0})-> {V,P}=ca_fun(E,{V0,[]}),
+                               {lists:usort(V0++V),P++P0}
+              end,
+              {Vars,[]},
+              Es).
 
 assert_type(Type,Val) -> 
   case lists:member(Type,[integer,atom,string]) of
@@ -158,9 +171,14 @@ guard({op,1,Op,One,Two})        -> {Op,guard(One),guard(Two)};% unary op
 guard({op,1,Op,One})            -> {Op,guard(One)};           % binary op
 guard(Guard)                    -> arg(Guard).                % variable
 
-arg({cons,_,_,_})   -> exit({syntax_error,"lists not allowed in arg list"});
+arg({nil,_})        -> {list,[]};
+arg(L={cons,_,_,_}) -> {list,arg_list(L)};
 arg({tuple,1,Args}) -> {tuple,[arg(A)||A<-Args]};
 arg({T,1,Var})      -> {T,Var}.
+
+arg_list({cons,_,H,T}) -> [arg(H)|arg_list(T)];
+arg_list({nil,_})      -> [].
+%% non-proper list should be handled here.
 
 actions_fun(Str) ->
   fun() ->
@@ -171,7 +189,7 @@ assert(Fun,Tag) ->
   try Fun()
   catch 
     _:{_,{error,{1,erl_parse,L}}}-> exit({{syntax_error,lists:flatten(L)},Tag});
-    _:R                          -> exit({R,Tag})
+    _:R                          -> exit({R,Tag,erlang:get_stacktrace()})
   end.
 
 
@@ -209,12 +227,16 @@ unit() ->
        {{a,b,2},[{['$1',1],[],[]}],[local]}}
      ,{"a:b(X,\"foo\")",
        {{a,b,2},[{['$1',"foo"],[],[]}],[local]}}
+     ,{"x:y({A,{B,A}},A)",
+       {{x,y,2},[{[{'$1',{'$2','$1'}},'$1'],[],[]}],[local]}}
+     ,{"x:y(A,[A,{B,[B,A]},A],B)",
+       {{x,y,3},[{['$1',['$1',{'$2',['$2','$1']},'$1'],'$2'],[],[]}],[local]}}
      ,{" a:foo when a==b",
        guards_without_args}
      ,{"a:b(X,y)when is_atom(Y)",
        unbound_variable}
      ,{"x:c([string])",
-       {syntax_error,"lists not allowed in arg list"}}
+       {{x,c,1},[{[[string]],[],[]}],[local]}}
      ,{"x(s)",
        this_is_too_confusing}
      ,{"x:c(S)when S==x;S==y",
@@ -243,6 +265,7 @@ unit() ->
 unit(Method,{Str,MS}) ->
   try MS=Method(Str),Str
   catch 
-    _:{MS,_} -> Str;
-    C:R      -> {C,R,Str,erlang:get_stacktrace()}
+    _:{MS,_,_} -> Str;
+    _:{MS,_}   -> Str;
+    C:R        -> {C,R,Str,erlang:get_stacktrace()}
   end.

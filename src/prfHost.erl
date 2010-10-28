@@ -26,8 +26,12 @@ start(Name,Node,Consumer,Proxy)
   assert_proxy(Proxy),
   SpawnFun = fun()->init(Consumer,Node,Proxy) end,
   case whereis(Name) of
-    undefined -> register(Name, spawner(SpawnFun));
-    Pid -> Pid
+    undefined ->
+          Pid = spawner(SpawnFun),
+          true = register(Name, Pid),
+          Pid;
+    Pid ->
+          Pid
   end.
 
 spawner(F) ->

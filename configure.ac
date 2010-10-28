@@ -1,4 +1,4 @@
-AC_INIT(Various Erlang performance related tools, 0.52,
+AC_INIT(Various Erlang performance related tools, 0.60,
              mats.cronqvist()gmail.com, eper)
 
 dnl Require autoconf version >=2.59c. first one with erlang macros
@@ -21,7 +21,7 @@ dnl Specify the files to instantiate.
 AC_CONFIG_FILES([ \
 	Makefile \
 	src/Makefile \
-	bin/Makefile \
+        priv/bin/Makefile \
 	])
 
 AC_OUTPUT
