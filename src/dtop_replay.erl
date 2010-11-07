@@ -13,8 +13,15 @@
 
 replay(TrcFile,Node) -> replay(TrcFile,Node,[]).
 
-replay(TrcFile,Node,Opts) -> 
+replay(TrcFile,OldNode,Opts) -> 
+  Node = ck_node(OldNode),
   replay_trc:go(TrcFile,mk_dtop_fun(Node),mk_dtop_init(Node,Opts),Opts).
+
+ck_node(Node) ->
+  case string:tokens(atom_to_list(Node),"@") of
+    [Host] -> list_to_atom("kred@"++Host);
+    _      -> Node
+  end.
 
 mk_dtop_fun(Node) ->
   fun(done,{C,_})                                   -> {items,C};
