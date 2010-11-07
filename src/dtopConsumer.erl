@@ -61,7 +61,7 @@ sys_str(Sys) ->
   Node	    = to_list(lks(node, Sys)),
   MEMbeam   = prf:human(lks(beam_vss,Sys,0)),
   MEM	    = prf:human(lks(total,Sys)),
-  CPUbeam   = to_list(100*(lks(beam_user,Sys,0)+lks(beam_kernel,Sys))),
+  CPUbeam   = to_list(100*(lks(beam_user,Sys,0)+lks(beam_kernel,Sys,0))),
   CPU       = to_list(100*(lks(user,Sys,0)+lks(kernel,Sys,0))),
   Procs	    = prf:human(lks(procs,Sys)),
   RunQ	    = prf:human(lks(run_queue, Sys)),
@@ -143,8 +143,8 @@ reg(PP) ->
   end.
 
 pidf(Pid) -> 
-  {match,B,L} = regexp:match(Pid,"<[0-9]*"),
-  [$<,$0|string:substr(Pid,B+L)].
+  [_,A,B] = string:tokens(Pid,"."),
+  lists:append(["<0.",A,".",B]).
 
 funf({M, F, A}) -> to_list(M)++":"++to_list(F)++"/"++to_list(A);
 funf(Term) -> io_lib:fwrite("~p", [Term]).
@@ -158,9 +158,9 @@ to_list(A) when is_integer(A) -> integer_to_list(A).
 
 lks(Tag,TVs,Def) ->
   try lks(Tag,TVs) 
-  catch not_found -> Def
+  catch {not_found, _} -> Def
   end.
 
-lks(_, [])              -> throw(not_found);
+lks(Tag, [])            -> throw({not_found, Tag});
 lks(Tag, [{Tag,Val}|_]) -> Val;
 lks(Tag, [_|List])      -> lks(Tag, List).

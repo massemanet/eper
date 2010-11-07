@@ -74,7 +74,7 @@ help() ->
            , "RTP:  restricted trace pattern"
            , "  the RTP has the form: \"<mfa> when <guards> -> <actions>\""
            , "  where <mfa> can be;"
-           , "  \"mod\", \"mod:fun\", \"mod:fun/3\" or \"mod:fun('_',atom,Var)\""
+           , "  \"mod\", \"mod:fun\", \"mod:fun/3\" or \"mod:fun('_',atom,X)\""
            , "  <guard> is something like;" 
            , "  \"X==1\" or \"is_atom(A)\""
            , "  and <action> is;"

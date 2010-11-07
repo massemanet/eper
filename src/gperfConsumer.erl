@@ -65,20 +65,20 @@ load(Max,Sys) ->
   User = lks(user,Sys),
   Kern = lks(kernel,Sys),
   IoWt = lks(iowait,Sys),
-  [max(1,dv(Beam,Max)),
-   max(1,dv(User,Max)),
-   max(1,dv(User+Kern,Max)),
-   max(1,dv(User+Kern+IoWt,Max))].
+  [mn(1,dv(Beam,Max)),
+   mn(1,dv(User,Max)),
+   mn(1,dv(User+Kern,Max)),
+   mn(1,dv(User+Kern+IoWt,Max))].
 
 mem(Max,Sys) ->
-  [max(1,dv(lks(beam_vss,Sys),Max)),
-   max(1,dv(lks(total,Sys),Max)),
-   max(1,dv(lks(ets,Sys)+lks(processes,Sys),Max)),
-   max(1,dv(lks(processes,Sys),Max))].
+  [mn(1,dv(lks(beam_vss,Sys),Max)),
+   mn(1,dv(lks(total,Sys),Max)),
+   mn(1,dv(lks(ets,Sys)+lks(processes,Sys),Max)),
+   mn(1,dv(lks(processes,Sys),Max))].
 
 net(Max,Sys) -> 
-  [max(1,dv(lks(io_in,Sys),Max)),
-   max(1,dv(lks(io_out,Sys),Max))].
+  [mn(1,dv(lks(io_in,Sys),Max)),
+   mn(1,dv(lks(io_out,Sys),Max))].
 
 lks(Tag,List) ->
   case lists:keysearch(Tag,1,List) of
@@ -89,5 +89,5 @@ lks(Tag,List) ->
 dv(_,0) -> 0;
 dv(A,B) -> A/B.
 
-max(R,V) when V < R -> V;
-max(R,_) -> R.
+mn(R,V) when V < R -> V;
+mn(R,_) -> R.
