@@ -19,8 +19,8 @@ replay(TrcFile,OldNode,Opts) ->
 
 ck_node(Node) ->
   case string:tokens(atom_to_list(Node),"@") of
-    [Host] -> list_to_atom("kred@"++Host);
-    _      -> Node
+    [_,_] -> Node;
+    _     -> exit({not_a_node,Node})
   end.
 
 mk_dtop_fun(Node) ->
