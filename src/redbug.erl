@@ -33,9 +33,9 @@
              , print_call   = true         % print calls (see `return_only')
              , print_form   = "~s~n"       % format for printing
 	     , print_file   = ""           % file to print to (standard_io)
+             , print_msec   = false        % print milliseconds in timestamps?
              , print_p      = 999999       % Limit for "~P" formatting depth
              , print_re     = ""           % regexp that must match to print
-             , print_msec   = false        % print milliseconds in timestamps?
 	     , max_queue    = 5000         % max # of msgs before suicide
 	     , max_msg_size = 50000        % max message size before suicide
              , file         = ""           % file to write trace msgs to
@@ -99,9 +99,9 @@ help() ->
            , "buffered     (no)          buffer messages till end of trace"
            , "print_form   (\"~s~n\")      print msgs using this format"
            , "print_file   (standard_io) print to this file"
+           , "print_msec   (false)       print milliseconds on timestamps"
            , "print_p      (999999)      formatting depth for \"~P\""
            , "print_re     (\"\")          print only strings that match this"
-           , "print_msec   (false)       print milliseconds on timestamp"
            , "  trc file related opts"
            , "file         (none)        use a trc file based on this name"
            , "file_size    (1)           size of each trc file"
