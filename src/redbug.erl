@@ -35,6 +35,7 @@
 	     , print_file   = ""           % file to print to (standard_io)
              , print_p      = 999999       % Limit for "~P" formatting depth
              , print_re     = ""           % regexp that must match to print
+             , print_msec   = false        % print milliseconds in timestamps?
 	     , max_queue    = 5000         % max # of msgs before suicide
 	     , max_msg_size = 50000        % max message size before suicide
              , file         = ""           % file to write trace msgs to
@@ -100,6 +101,7 @@ help() ->
            , "print_file   (standard_io) print to this file"
            , "print_p      (999999)      formatting depth for \"~P\""
            , "print_re     (\"\")          print only strings that match this"
+           , "print_msec   (false)       print milliseconds on timestamp"
            , "  trc file related opts"
            , "file         (none)        use a trc file based on this name"
            , "file_size    (1)           size of each trc file"
@@ -264,9 +266,9 @@ maybe_new_target(Cnf = #cnf{target=Target}) ->
     false-> Cnf#cnf{target=to_atom(Str++"@"++element(2,inet:gethostname()))}
   end.
 
-maybe_print(Cnf) ->
+maybe_print(#cnf{print_p = Print_p, print_msec = MsecP} = Cnf) ->
   PF = the_print_fun(Cnf),
-  Cnf#cnf{print_pid=spawn_link(fun()->printi(PF,Cnf#cnf.print_p) end)}.
+  Cnf#cnf{print_pid=spawn_link(fun()->printi(PF,Print_p,MsecP) end)}.
 
 the_print_fun(Cnf) ->
   PrintFun = mk_the_print_fun(Cnf),
@@ -379,37 +381,38 @@ slist(L) when is_list(L) -> usort(L);
 slist(X) -> [X].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-printi(PrintFun,FmtP_Depth) ->
+printi(PrintFun,FmtP_Depth,MsecP) ->
   receive 
     {trace_consumer,TC} -> 
       erlang:monitor(process,TC),
-      printl(PrintFun,FmtP_Depth)
+      printl(PrintFun,FmtP_Depth,MsecP)
   end.
 
-printl(PrintFun,FmtP_Depth) ->
+printl(PrintFun,FmtP_Depth,MsecP) ->
   receive
     {'DOWN',_,_,_,R} -> io:fwrite("quitting: ~p~n",[R]);
-    X                -> outer(PrintFun,FmtP_Depth,X), printl(PrintFun,FmtP_Depth)
+    X                -> outer(PrintFun,FmtP_Depth,MsecP,X), printl(PrintFun,FmtP_Depth,MsecP)
   end.
 
-outer(_,_,[]) -> ok;
-outer(PrintFun,FmtP_Depth,[Msg|Msgs]) ->
+outer(_,_,_,[]) -> ok;
+outer(PrintFun,FmtP_Depth,MsecP,[Msg|Msgs]) ->
   case Msg of
     {'call',{MFA,Bin},PI,TS} ->
-      PrintFun(flat("~n~s <~p> ~P",[ts(TS),PI,MFA,FmtP_Depth])),
+      PrintFun(flat("~n~s <~p> ~P",[ts(TS,MsecP),PI,MFA,FmtP_Depth])),
       foreach(fun(L)->PrintFun(flat("  ~P",[L,FmtP_Depth])) end, stak(Bin));
     {'retn',{MFA,Val},PI,TS} -> 
-      PrintFun(flat("~n~s <~p> ~p -> ~P",[ts(TS),PI,MFA,Val,FmtP_Depth]));
+      PrintFun(flat("~n~s <~p> ~p -> ~P",[ts(TS,MsecP),PI,MFA,Val,FmtP_Depth]));
     {'send',{MSG,To},PI,TS} -> 
-      PrintFun(flat("~n~s <~p> <~p> <<< ~P",[ts(TS),PI,To,MSG,FmtP_Depth]));
+      PrintFun(flat("~n~s <~p> <~p> <<< ~P",[ts(TS,MsecP),PI,To,MSG,FmtP_Depth]));
     {'recv',MSG,PI,TS} -> 
-      PrintFun(flat("~n~s <~p> <<< ~P",[ts(TS),PI,MSG,FmtP_Depth]));
+      PrintFun(flat("~n~s <~p> <<< ~P",[ts(TS,MsecP),PI,MSG,FmtP_Depth]));
     _ ->
       PrintFun(flat("~n~P", [Msg,FmtP_Depth]))
   end,
-  outer(PrintFun,FmtP_Depth,Msgs).
+  outer(PrintFun,FmtP_Depth,MsecP,Msgs).
 
-ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
+ts({H,M,S,_Us},false) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]);
+ts({H,M,S,Us},_) -> flat("~2.2.0w:~2.2.0w:~2.2.0w.~3.3.0w",[H,M,S,Us div 1000]).
 
 flat(Form,List) -> flatten(io_lib:fwrite(Form,List)).
 
