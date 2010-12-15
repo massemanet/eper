@@ -33,6 +33,7 @@
              , print_call   = true         % print calls (see `return_only')
              , print_form   = "~s~n"       % format for printing
 	     , print_file   = ""           % file to print to (standard_io)
+             , print_p      = 999999       % Limit for "~P" formatting depth
              , print_re     = ""           % regexp that must match to print
 	     , max_queue    = 5000         % max # of msgs before suicide
 	     , max_msg_size = 50000        % max message size before suicide
@@ -97,6 +98,7 @@ help() ->
            , "buffered     (no)          buffer messages till end of trace"
            , "print_form   (\"~s~n\")      print msgs using this format"
            , "print_file   (standard_io) print to this file"
+           , "print_p      (999999)      formatting depth for \"~P\""
            , "print_re     (\"\")          print only strings that match this"
            , "  trc file related opts"
            , "file         (none)        use a trc file based on this name"
@@ -264,7 +266,7 @@ maybe_new_target(Cnf = #cnf{target=Target}) ->
 
 maybe_print(Cnf) ->
   PF = the_print_fun(Cnf),
-  Cnf#cnf{print_pid=spawn_link(fun()->printi(PF) end)}.
+  Cnf#cnf{print_pid=spawn_link(fun()->printi(PF,Cnf#cnf.print_p) end)}.
 
 the_print_fun(Cnf) ->
   PrintFun = mk_the_print_fun(Cnf),
@@ -377,35 +379,35 @@ slist(L) when is_list(L) -> usort(L);
 slist(X) -> [X].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-printi(PrintFun) ->
+printi(PrintFun,FmtP_Depth) ->
   receive 
     {trace_consumer,TC} -> 
       erlang:monitor(process,TC),
-      printl(PrintFun)
+      printl(PrintFun,FmtP_Depth)
   end.
 
-printl(PrintFun) ->
+printl(PrintFun,FmtP_Depth) ->
   receive
     {'DOWN',_,_,_,R} -> io:fwrite("quitting: ~p~n",[R]);
-    X                -> outer(PrintFun,X), printl(PrintFun)
+    X                -> outer(PrintFun,FmtP_Depth,X), printl(PrintFun,FmtP_Depth)
   end.
 
-outer(_,[]) -> ok;
-outer(PrintFun,[Msg|Msgs]) ->
+outer(_,_,[]) -> ok;
+outer(PrintFun,FmtP_Depth,[Msg|Msgs]) ->
   case Msg of
     {'call',{MFA,Bin},PI,TS} ->
-      PrintFun(flat("~n~s <~p> ~p",[ts(TS),PI,MFA])),
-      foreach(fun(L)->PrintFun(flat("  ~s",[L])) end, stak(Bin));
+      PrintFun(flat("~n~s <~p> ~P",[ts(TS),PI,MFA,FmtP_Depth])),
+      foreach(fun(L)->PrintFun(flat("  ~P",[L,FmtP_Depth])) end, stak(Bin));
     {'retn',{MFA,Val},PI,TS} -> 
-      PrintFun(flat("~n~s <~p> ~p -> ~p",[ts(TS),PI,MFA,Val]));
+      PrintFun(flat("~n~s <~p> ~p -> ~P",[ts(TS),PI,MFA,Val,FmtP_Depth]));
     {'send',{MSG,To},PI,TS} -> 
-      PrintFun(flat("~n~s <~p> <~p> <<< ~p",[ts(TS),PI,To,MSG]));
+      PrintFun(flat("~n~s <~p> <~p> <<< ~P",[ts(TS),PI,To,MSG,FmtP_Depth]));
     {'recv',MSG,PI,TS} -> 
-      PrintFun(flat("~n~s <~p> <<< ~p",[ts(TS),PI,MSG]));
+      PrintFun(flat("~n~s <~p> <<< ~P",[ts(TS),PI,MSG,FmtP_Depth]));
     _ ->
-      PrintFun(flat("~n~p", [Msg]))
+      PrintFun(flat("~n~P", [Msg,FmtP_Depth]))
   end,
-  outer(PrintFun,Msgs).
+  outer(PrintFun,FmtP_Depth,Msgs).
 
 ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
 
