@@ -9,7 +9,8 @@
 
 % API
 -export(
-   [start/0,stop/0,state/0
+   [config/2
+    ,start/0,stop/0,state/0
     ,add_send_subscriber/4,add_log_subscriber/1,add_proc_subscriber/1
     ,delete_subscriber/1,clear_subscribers/0
     ,add_trigger/2,delete_trigger/1
@@ -117,6 +118,10 @@ send_to_wd(Term) ->
     error:badarg   -> {error,watchdog_not_started};
     _:R            -> {error,R}
   end.
+
+config(prfPrc,{max_procs,MaxProcs}) ->
+  prfTarg:config({prfPrc,{max_procs,MaxProcs}}).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init([]) ->
   LD = #ld{prfState=prfTarg:subscribe(node(),self(),[prfSys,prfPrc])},
