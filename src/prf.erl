@@ -53,8 +53,7 @@ log(ProcInfo,List) ->
 
 %%make ints human readable
 human(X) when not is_number(X) -> X;
-human(I) when I =< 0 ->
-  "0";
+human(I) when I =< 0 -> I;
 human(I) ->
   case math:log10(I) of
     M when 15=<M -> human(M-15,"P");
