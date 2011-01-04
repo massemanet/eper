@@ -25,7 +25,8 @@
 -export([collect/1,config/2]).
 -export([pid_info/1,pid_info/2]).
 
--record(cst,{old_info=get_info()}).
+-record(cst,{old_info = get_info()
+             , extra_items = []}).
 
 %%% reductions,message_queue_len,memory
 %%% current_function,initial_call,registered_name
@@ -44,7 +45,7 @@ collect(init) ->
   collect(#cst{});
 collect(Cst) -> 
   Info = get_info(),
-  {Cst#cst{old_info=Info}, {?MODULE,select(Cst#cst.old_info,Info)}}.
+  {Cst#cst{old_info=Info}, {?MODULE,select(Cst,Info)}}.
 
 get_info() ->
   %% hardcoded 999, because it's really not a good idea to up it
@@ -58,7 +59,7 @@ get_info() ->
 %%% PidInfo is a sorted list of {Pid,Info}
 %%% Info is a list of tagged tuples {atom(),number()}
 
-select({Then,Olds},{Now,Curs}) ->
+select(Cst = #cst{old_info={Then,Olds}},{Now,Curs}) ->
   {DredL,DmemL,MemL,MsgqL} = topl(Olds,Curs,outf(Then,Now),empties()),
   PidInfo = lists:usort([I || {_,I} <-lists:append([DredL,DmemL,MemL,MsgqL])]),
   [{node,node()},
@@ -67,12 +68,15 @@ select({Then,Olds},{Now,Curs}) ->
    {dmem,e1e2(DmemL)},
    {mem,e1e2(MemL)},
    {msgq,e1e2(MsgqL)},
-   {info,complete(PidInfo)}].
+   {info,complete(PidInfo,Cst)}].
 
 e1e2(List) -> [E || {_,{E,_}} <- List].
 
-complete(List) ->
-  [{Pid,Info++pid_info(Pid,?INFO_ITEMS)}||{Pid,Info}<-List].
+complete(List,#cst{extra_items=X}) ->
+  [{Pid,
+    Info++
+      pid_info(Pid,?INFO_ITEMS)++
+      extra_items(Pid,X)} || {Pid,Info} <- List].
 
 topl([],_,_,Out) -> Out;
 topl(_,[],_,Out) -> Out;
@@ -120,6 +124,17 @@ mem([_,{memory,Mem}|_])	-> Mem.
 
 msgq([]) -> 0;
 msgq([_,_,{message_queue_len,Msgq}]) -> Msgq.
+
+%% callbacks for app-specific info
+extra_items(Pid,Items) -> 
+  lists:append([extra_item(Pid,I) || I <- Items]).
+
+extra_item(Pid,{M,F}) when is_pid(Pid) ->
+  try M:F(Pid)
+  catch _:_ -> []
+  end;
+extra_item(_,_) -> 
+  [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% pid_info/1
