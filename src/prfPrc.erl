@@ -41,12 +41,17 @@
 
 config(State,{items,Items}) when is_number(Items) -> State#cst{items=Items};
 config(State,{max_procs,MP}) when is_number(MP) -> State#cst{max_procs=MP};
+config(State,{add_extra,M,F}) -> add_extra(State,{M,F});
+config(State,{rm_extra,M,F}) -> rm_extra(State,{M,F});
 config(State,_ConfigData) -> State.
 
+add_extra(S=#cst{extra_items=X},MF) -> S#cst{extra_items=lists:usort([MF|X])}.
+rm_extra (S=#cst{extra_items=X},MF) -> S#cst{extra_items=X--[MF]}.
+
 %%% returns {State, Data}
-collect(init) -> 
+collect(init) ->
   collect({cst,get_info(#cst{})});
-collect(Cst = #cst{items=Items})-> 
+collect(Cst = #cst{items=Items})->
   Info = get_info(Cst),
   {Cst#cst{old_info=Info}, {?MODULE,select(Cst,Info,Items)}};
 collect({cst,OldInfo}) ->
@@ -55,7 +60,7 @@ collect({cst,OldInfo}) ->
 get_info(Cst) ->
   case Cst#cst.max_procs < erlang:system_info(process_count) of
     true -> {now(),[]};
-    false-> {now(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]} 
+    false-> {now(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]}
   end.
 
 %%% Dreds, Dmems, Mems and Msgqs are sorted lists of pids
