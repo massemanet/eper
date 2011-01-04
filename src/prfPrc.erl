@@ -25,32 +25,35 @@
 -export([collect/1,config/2]).
 -export([pid_info/1,pid_info/2]).
 
--record(cst,{old_info = get_info()
-             , extra_items = []}).
+-record(cst,{items=6
+             , max_procs=3000
+             , extra_items = []
+             , old_info=[]}).
 
 %%% reductions,message_queue_len,memory
 %%% current_function,initial_call,registered_name
 %%% N.B. 'reductions' is reductions/sec
 
--define(ITEMS,6).
 -define(SORT_ITEMS,[reductions,memory,message_queue_len]).
 -define(INFO_ITEMS,[current_function,initial_call,registered_name,last_calls,
                     stack_size,heap_size,total_heap_size]).
 -define(TAGS,?SORT_ITEMS++?INFO_ITEMS).
 
+config(State,{items,Items}) when is_number(Items) -> State#cst{items=Items};
+config(State,{max_procs,MP}) when is_number(MP) -> State#cst{max_procs=MP};
 config(State,_ConfigData) -> State.
 
 %%% returns {State, Data}
 collect(init) -> 
-  collect(#cst{});
-collect(Cst) -> 
-  Info = get_info(),
-  {Cst#cst{old_info=Info}, {?MODULE,select(Cst,Info)}}.
+  collect({cst,get_info(#cst{})});
+collect(Cst = #cst{items=Items})-> 
+  Info = get_info(Cst),
+  {Cst#cst{old_info=Info}, {?MODULE,select(Cst,Info,Items)}};
+collect({cst,OldInfo}) ->
+  collect((#cst{})#cst{old_info=OldInfo}).
 
-get_info() ->
-  %% hardcoded 999, because it's really not a good idea to up it
-  %% trust me...
-  case 999 < erlang:system_info(process_count) of
+get_info(Cst) ->
+  case Cst#cst.max_procs < erlang:system_info(process_count) of
     true -> {now(),[]};
     false-> {now(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]} 
   end.
@@ -59,8 +62,8 @@ get_info() ->
 %%% PidInfo is a sorted list of {Pid,Info}
 %%% Info is a list of tagged tuples {atom(),number()}
 
-select(Cst = #cst{old_info={Then,Olds}},{Now,Curs}) ->
-  {DredL,DmemL,MemL,MsgqL} = topl(Olds,Curs,outf(Then,Now),empties()),
+select(Cst = #cst{old_info={Then,Olds}},{Now,Curs},Items) ->
+  {DredL,DmemL,MemL,MsgqL} = topl(Olds,Curs,outf(Then,Now,Items),empties()),
   PidInfo = lists:usort([I || {_,I} <-lists:append([DredL,DmemL,MemL,MsgqL])]),
   [{node,node()},
    {now,now()},
@@ -86,28 +89,28 @@ topl([{P,Io}|Os],[{P,Ic}|Cs],Outf,Out) -> topl(Os,Cs,Outf,Outf(P,Io,Ic,Out)).
 
 empties() -> {[],[],[],[]}.
 
-outf(Then,Now) ->  
+outf(Then,Now,Items) ->  
   NowDiff = timer:now_diff(Now,Then)/1000000,
-  fun(P,Io,Ic,Out) -> out(P,NowDiff,Io,Ic,Out) end.
+  fun(P,Io,Ic,Out) -> out(P,NowDiff,Io,Ic,Out,Items) end.
 
-out(P,NowDiff,Io,Ic,O={Odred,Omem,Odmem,Omsgq}) -> 
+out(P,NowDiff,Io,Ic,O={Odred,Omem,Odmem,Omsgq},Items) -> 
   try
     Dred = dred(NowDiff,Io,Ic),
     Dmem = dmem(NowDiff,Io,Ic),
     Info = {P,[{dreductions,Dred},{dmemory,Dmem}|Ic]}, 
-    {new_topl(Odred,{Dred,Info}),
-     new_topl(Odmem,{Dmem,Info}),
-     new_topl(Omem,{mem(Ic),Info}),
-     new_topl(Omsgq,{msgq(Ic),Info})}
+    {new_topl(Odred,{Dred,Info},Items),
+     new_topl(Odmem,{Dmem,Info},Items),
+     new_topl(Omem,{mem(Ic),Info},Items),
+     new_topl(Omsgq,{msgq(Ic),Info},Items)}
   catch 
     _:_ -> O
   end.
 
-new_topl(Top,{Item,_}) when 0 =:= Item; 0.0 =:= Item -> 
+new_topl(Top,{Item,_},_Items) when 0 =:= Item; 0.0 =:= Item -> 
   Top;
-new_topl(Top,El) when length(Top) < ?ITEMS -> 
+new_topl(Top,El,Items) when length(Top) < Items -> 
   lists:sort([El|Top]);
-new_topl(Top,El) -> 
+new_topl(Top,El,_Items) -> 
   case El < hd(Top) of
     true -> Top;
     false-> tl(lists:sort([El|Top]))

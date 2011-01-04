@@ -52,7 +52,6 @@ memi(Sys) ->
   catch _:_ -> ["","","","",""]
   end.
 
-
 sys_str(Sys) ->
   {_, Time} = calendar:now_to_local_time(lks(now, Sys)),
   H	    = pad(element(1,Time),2,$0,left),

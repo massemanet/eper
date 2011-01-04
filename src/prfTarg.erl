@@ -4,7 +4,7 @@
 %%%-------------------------------------------------------------------
 -module(prfTarg).
 
--export([subscribe/3,unsubscribe/2]).
+-export([config/1,subscribe/3,unsubscribe/2]).
 -export([init/0,loop/1]).		 %internal; otp r5 compatible!
 
 -import(net_kernel,[get_net_ticktime/0]).
@@ -16,6 +16,12 @@
 -include("log.hrl").
 
 %%% interface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+config(ConfData) -> 
+  case whereis(prfTarg) of
+    underfined -> not_started;
+    Pid -> Pid ! {config,ConfData}
+  end.
+
 subscribe(Node, Pid, Collectors) -> 
   {PID,Tick} = assert(Node,Collectors),
   PID ! {subscribe, {Pid,Collectors}}, 
