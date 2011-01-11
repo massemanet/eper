@@ -53,8 +53,8 @@ log(ProcInfo,List) ->
 
 %%make ints human readable
 human(X) when not is_number(X) -> X;
-human(I) when I =< 0 -> I;
-human(I) ->
+human(I) when I < 0 -> "-"++human(-I);
+human(I) when 0 < I ->
   case math:log10(I) of
     M when 15=<M -> human(M-15,"P");
     M when 12=<M -> human(M-12,"T");
@@ -62,10 +62,11 @@ human(I) ->
     M when  6=<M -> human(M-6,"M");
     M when  3=<M -> human(M-3,"k");
     _            -> flat("~w",[I])
-  end.
+  end;
+human(_) -> "0".
 
 human(E,M) ->
   flat("~.1f~s",[math:pow(10,E),M]).
 
-flat(Format,Args) -> 
+flat(Format,Args) ->
   lists:flatten(io_lib:fwrite(Format,Args)).
