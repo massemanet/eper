@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : sherk_tree.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 21 Aug 2006 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -34,32 +34,32 @@ callgraph(Pid) ->
     Gf = fun(Key,Data,Out) -> graphf(Tot,Key,Data,Out) end,
     make_tree(LS, Gf, fun sortgf/1).
 
-sortpf(L) -> 
+sortpf(L) ->
     sort(fun({_,[_,_,_,T1],_},{_,[_,_,_,T2],_}) -> T2<T1 end,L).
 
-procsf(_Tot,Pid,[Garb,Time],[]) when is_pid(Pid) -> 
+procsf(_Tot,Pid,[Garb,Time],[]) when is_pid(Pid) ->
     [to_str(Pid),1,Garb,Time];
-procsf(_Tot,_Rg,[Garb,Time],[Tag,N,G,T]) -> 
+procsf(_Tot,_Rg,[Garb,Time],[Tag,N,G,T]) ->
     [Tag,N+1,G+Garb,T+Time];
-procsf(_Tot,Reg,[Garb,Time],[]) -> 
+procsf(_Tot,Reg,[Garb,Time],[]) ->
     [to_str(Reg),1,Garb,Time].
 
-sortgf(L) -> 
+sortgf(L) ->
     sort(fun({_,[_,_,_,CT1],_},{_,[_,_,_,CT2],_}) -> CT2<CT1 end, L).
 
-graphf(_Tot,MFA,{Time,Calls},[]) -> 
+graphf(_Tot,MFA,{Time,Calls},[]) ->
     [to_str(MFA),Calls,Time,Time];
-graphf(_Tot,_,{Time,_},[Tag,Calls,T,CT]) -> 
+graphf(_Tot,_,{Time,_},[Tag,Calls,T,CT]) ->
     [Tag,Calls,T,CT+Time].
 
 called(Pid,Stak) ->
     lup(sherk_prof,{{stack,calls},Pid,Stak}).
 
-reg(P) -> 
-    case ets:lookup(sherk_scan,P) of 
-        [] -> unknown; 
-        [{P,{M,F,A}}] when is_list(A) -> {M,F,length(A)}; 
-        [{P,R}] -> R 
+reg(P) ->
+    case ets:lookup(sherk_scan,P) of
+        [] -> unknown;
+        [{P,{M,F,A}}] when is_list(A) -> {M,F,length(A)};
+        [{P,R}] -> R
     end.
 
 garb(Pid) ->
@@ -68,7 +68,7 @@ garb(Pid) ->
         V -> V
     end.
 
-%%%merg({R,T,P},[{Ti,R,TP}|Tail]) -> [{T+Ti,R,[{T,P}|TP]}|Tail]; 
+%%%merg({R,T,P},[{Ti,R,TP}|Tail]) -> [{T+Ti,R,[{T,P}|TP]}|Tail];
 %%%merg({R,T,P},O) -> [{T,R,[{T,P}]}|O].
 
 %%%subtree(TP,T) ->
@@ -83,9 +83,9 @@ tree_ins([],_,_,_,[]) ->
     [];
 tree_ins([K|Ks],Data,Df,Sf,Tree) ->
     case lists:keysearch(K,1,Tree) of
-        false -> 
+        false ->
             Sf([{K,Df(K,Data,[]),tree_ins(Ks,Data,Df,Sf,[])}|Tree]);
-        {value,{K,OData,OTree}} -> 
+        {value,{K,OData,OTree}} ->
             Sf(krep(Tree,{K,Df(K,Data,OData),tree_ins(Ks,Data,Df,Sf,OTree)}))
     end.
 

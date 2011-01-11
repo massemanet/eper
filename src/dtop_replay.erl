@@ -13,7 +13,7 @@
 
 replay(TrcFile,Node) -> replay(TrcFile,Node,[]).
 
-replay(TrcFile,OldNode,Opts) -> 
+replay(TrcFile,OldNode,Opts) ->
   Node = ck_node(OldNode),
   replay_trc:go(TrcFile,mk_dtop_fun(Node),mk_dtop_init(Node,Opts),Opts).
 

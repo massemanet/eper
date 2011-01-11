@@ -54,34 +54,34 @@ memi(Sys) ->
 
 sys_str(Sys) ->
   {_, Time} = calendar:now_to_local_time(lks(now, Sys)),
-  H	    = pad(element(1,Time),2,$0,left),
-  M	    = pad(element(2,Time),2,$0,left),
-  S	    = pad(element(3,Time),2,$0,left),
-  Node	    = to_list(lks(node, Sys)),
+  H         = pad(element(1,Time),2,$0,left),
+  M         = pad(element(2,Time),2,$0,left),
+  S         = pad(element(3,Time),2,$0,left),
+  Node      = to_list(lks(node, Sys)),
   MEMbeam   = prf:human(lks(beam_vss,Sys,0)),
-  MEM	    = prf:human(lks(total,Sys)),
+  MEM       = prf:human(lks(total,Sys)),
   CPUbeam   = to_list(100*(lks(beam_user,Sys,0)+lks(beam_kernel,Sys,0))),
   CPU       = to_list(100*(lks(user,Sys,0)+lks(kernel,Sys,0))),
-  Procs	    = prf:human(lks(procs,Sys)),
-  RunQ	    = prf:human(lks(run_queue, Sys)),
+  Procs     = prf:human(lks(procs,Sys)),
+  RunQ      = prf:human(lks(run_queue, Sys)),
 
   SYS = lists:sublist(lists:append(["size: "    ,MEM,
-				    "("         ,MEMbeam,
-				    "), cpu%: " ,CPUbeam,
-				    "("         ,CPU,
-				    "), procs: ",Procs,
-				    ", runq: "  ,RunQ,
-				    ", ",H,":",M,":",S]),79),
+                                    "("         ,MEMbeam,
+                                    "), cpu%: " ,CPUbeam,
+                                    "("         ,CPU,
+                                    "), procs: ",Procs,
+                                    ", runq: "  ,RunQ,
+                                    ", ",H,":",M,":",S]),79),
   pad(Node,79-length(SYS),$ , right)++SYS.
 
 pad(Item,Len,Pad,LeftRight) ->
   I = to_list(Item),
   case length(I) of
     L when L=:=Len -> I;
-    L when L<Len -> case LeftRight of 
-		      left -> lists:duplicate(Len-L,Pad)++I;
-		      right-> I++lists:duplicate(Len-L,Pad)
-		    end;
+    L when L<Len -> case LeftRight of
+                      left -> lists:duplicate(Len-L,Pad)++I;
+                      right-> I++lists:duplicate(Len-L,Pad)
+                    end;
     _ -> lists:sublist(I,Len)
   end.
 
@@ -100,10 +100,10 @@ which_sort(msgq,PrfPrc) -> expand(lks(msgq,PrfPrc),lks(info,PrfPrc));
 which_sort(dmem,PrfPrc) -> expand(lks(dmem,PrfPrc),lks(info,PrfPrc));
 which_sort( mem,PrfPrc) -> expand(lks(mem,PrfPrc),lks(info,PrfPrc)).
 
-expand(Pids,Infos) -> 
+expand(Pids,Infos) ->
   lists:reverse([[{pid,Pid}|lks(Pid,Infos)] || Pid <- Pids]).
 
-print_procs(FD,Items,PrfSys,Prcs) -> 
+print_procs(FD,Items,PrfSys,Prcs) ->
   CpuPerRed = cpu_per_red(PrfSys),
   [procsI(FD,P,CpuPerRed) || P <- resize(Items,Prcs)].
 
@@ -126,22 +126,22 @@ procsI(FD,PP,CpuPerRed) ->
     io:fwrite(FD,
               format(),
               [pidf(to_list(lks(pid,PP))),
-               funf(reg(PP)), 
-               funf(lks(current_function, PP)), 
+               funf(reg(PP)),
+               funf(lks(current_function, PP)),
                prf:human(lks(message_queue_len, PP)),
-               prf:human(lks(memory,PP)), 
+               prf:human(lks(memory,PP)),
                to_list(lks(dreductions,PP)*CpuPerRed)])
   catch _:_ ->
       io:fwrite(FD,"~n",[])
   end.
 
-reg(PP) ->    
+reg(PP) ->
   case lks(registered_name, PP) of
     [] -> lks(initial_call, PP);
     Val -> Val
   end.
 
-pidf(Pid) -> 
+pidf(Pid) ->
   [_,A,B] = string:tokens(Pid,"."),
   lists:append(["<0.",A,".",B]).
 
@@ -156,7 +156,7 @@ to_list(A) when is_tuple(A) -> tuple_to_list(A);
 to_list(A) when is_integer(A) -> integer_to_list(A).
 
 lks(Tag,TVs,Def) ->
-  try lks(Tag,TVs) 
+  try lks(Tag,TVs)
   catch {not_found, _} -> Def
   end.
 

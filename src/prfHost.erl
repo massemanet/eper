@@ -1,16 +1,16 @@
 %%%-------------------------------------------------------------------
 %%% File    : prfHost.erl
 %%% Author  : Mats Cronqvist <qthmacr@duna283>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  2 Dec 2003 by Mats Cronqvist <qthmacr@duna283>
 %%%-------------------------------------------------------------------
 -module(prfHost).
 
 -export([start/3,start/4,stop/1,config/3]).
--export([loop/1]).				%internal
+-export([loop/1]).                              %internal
 
--record(ld, {node, server=[], collectors, config=[], 
+-record(ld, {node, server=[], collectors, config=[],
              proxy, consumer, consumer_data, data=[]}).
 
 -define(LOOP, ?MODULE:loop).
@@ -22,7 +22,7 @@
 
 start(Name,Node,Consumer) -> start(Name,Node,Consumer,no_proxy).
 start(Name,Node,Consumer,Proxy)
-  when is_atom(Name),is_atom(Node),is_atom(Consumer),is_atom(Proxy) -> 
+  when is_atom(Name),is_atom(Node),is_atom(Consumer),is_atom(Proxy) ->
   assert_proxy(Proxy),
   SpawnFun = fun()->init(Consumer,Node,Proxy) end,
   case whereis(Name) of
@@ -36,7 +36,7 @@ spawner(F) ->
     false-> spawn_link(F)
   end.
 
-stop(Name) -> 
+stop(Name) ->
   case whereis(Name) of
     Pid when is_pid(Pid) -> Name ! {self(),stop}, receive stopped -> ok end;
     _ -> ok
@@ -71,31 +71,31 @@ init(Consumer, Node, Proxy) ->
     no_proxy when Collectors=:=watchdog ->
       exit(specify_proxy);
     no_proxy ->
-      loop(#ld{node = Node, 
-	       proxy = [],
-	       consumer = Consumer, 
-	       collectors = subscribe(Node,Collectors),
-	       consumer_data = Consumer:init(Node)});
+      loop(#ld{node = Node,
+               proxy = [],
+               consumer = Consumer,
+               collectors = subscribe(Node,Collectors),
+               consumer_data = Consumer:init(Node)});
     _ ->
       loop(#ld{node = Proxy,
-	       proxy = {Node,Collectors},
-	       consumer = Consumer, 
-	       collectors = subscribe(Proxy,[prfDog]),
-	       consumer_data = Consumer:init(Node)})
+               proxy = {Node,Collectors},
+               consumer = Consumer,
+               collectors = subscribe(Proxy,[prfDog]),
+               consumer_data = Consumer:init(Node)})
   end.
 
 loop(LD) ->
   receive
-    {Stopper,stop} -> 
+    {Stopper,stop} ->
       ?log(stopping),
       do_stop(LD),
       Stopper ! stopped;
-    {timeout, _, {tick}} when LD#ld.server == [] -> 
+    {timeout, _, {tick}} when LD#ld.server == [] ->
       prf:ticker_even(),
       subscribe(LD#ld.node,LD#ld.collectors),
       Cdata = (LD#ld.consumer):tick(LD#ld.consumer_data, []),
       ?LOOP(LD#ld{consumer_data = Cdata});
-    {timeout, _, {tick}} -> 
+    {timeout, _, {tick}} ->
       prf:ticker_even(),
       {Data,NLD} = get_data(LD),
       Cdata = (NLD#ld.consumer):tick(NLD#ld.consumer_data, de_proxy(LD,Data)),
@@ -126,12 +126,12 @@ loop(LD) ->
 de_proxy(_,[]) -> [];
 de_proxy(LD,Data) ->
   case LD#ld.proxy of
-    []		    -> Data;
+    []              -> Data;
     {Node,watchdog} -> dog_data(Data,Node);
     {Node,Colls}    -> de_colls(Colls,dog_data(Data,Node))
   end.
 
-de_colls(Colls,DogData) -> 
+de_colls(Colls,DogData) ->
   F0 = fun({_,Ev},_) -> Ev=:=ticker end,
   CD = orddict:filter(F0,DogData),
   F1 = fun(C,_) -> lists:member(C,Colls) end,
@@ -157,31 +157,31 @@ do_stop(LD) ->
   prfTarg:unsubscribe(LD#ld.node, self()),
   (LD#ld.consumer):terminate(LD#ld.consumer_data).
 
-get_data(LD) -> 
+get_data(LD) ->
   case {get_datas(LD#ld.node), LD#ld.data} of
-    {[],[]}		-> {[],LD};
-    {[],[Data]}		-> {Data,LD#ld{data=[]}};
-    {[Data],_}		-> {Data,LD#ld{data=[]}};
-    {[Data,D2|_],_}	-> {Data,LD#ld{data=[D2]}}
+    {[],[]}             -> {[],LD};
+    {[],[Data]}         -> {Data,LD#ld{data=[]}};
+    {[Data],_}          -> {Data,LD#ld{data=[]}};
+    {[Data,D2|_],_}     -> {Data,LD#ld{data=[D2]}}
   end.
 
-get_datas(Node) -> 
+get_datas(Node) ->
   receive {{data, Node}, Data} -> [Data|get_datas(Node)]
   after 0 -> []
   end.
 
 subscribe(Node, Collectors) ->
   Self = self(),
-  spawn(fun() -> 
-            %% this runs in its own process since it can block 
+  spawn(fun() ->
+            %% this runs in its own process since it can block
             %% nettick_time seconds (if the target is hung)
             try prfTarg:subscribe(Node, Self, Collectors) of
-              {Pid,Tick} -> 
-		maybe_change_ticktime(Tick),
+              {Pid,Tick} ->
+                maybe_change_ticktime(Tick),
                 Self ! {subscribe, {ok, Pid}}
             catch
               _:R -> Self ! {subscribe, {failed,R}}
-            end 
+            end
         end),
   Collectors.
 

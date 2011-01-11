@@ -13,7 +13,7 @@ go(File) ->
   go(File,[{count,3}]).
 
 go(File,Opts) ->
-  go(File,fun(done,O)->lists:reverse(O);(X,O)->[X|O]end,[],Opts).  
+  go(File,fun(done,O)->lists:reverse(O);(X,O)->[X|O]end,[],Opts).
 
 go(File,Fun,Acc) ->
   go(File,Fun,Acc,[{count,3}]).
@@ -38,7 +38,7 @@ mk_fun(Fun,Opts) ->
   Nod = proplists:get_value(node,Opts,all),
   {Beg,End} = times(Opts),
   fun(Item,{N,Acc}) when N =:= Max-> throw(Fun(done,Fun(Item,Acc)));
-     (Item,{N,Acc}) when element(2,Item)=:=Nod; Nod=:=all -> 
+     (Item,{N,Acc}) when element(2,Item)=:=Nod; Nod=:=all ->
       case hms_from_now(element(3,Item)) of
         T when End < T  -> throw(Fun(done,Fun(Item,Acc)));
         T when Beg =< T -> {N+1,Fun(Item,Acc)};
@@ -49,7 +49,7 @@ mk_fun(Fun,Opts) ->
 
 times(Opts) ->
   case proplists:lookup(time,Opts) of
-    none -> 
+    none ->
       B = proplists:get_value(start_time,Opts,"00:00:00"),
       E = proplists:get_value(stop_time,Opts,"23:59:59")
   end,
@@ -64,4 +64,3 @@ hms_from_string(Str) ->
     [H,M]   -> {H,M,0};
     [H,M,S] -> {H,M,S}
   end.
-

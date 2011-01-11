@@ -114,7 +114,7 @@ parse_option_long(OptSpecList, OptAcc, ArgAcc, ArgPos, Args, OptStr, OptArg) ->
             case lists:keysearch(Long, ?OPT_LONG, OptSpecList) of
                 {value, {Name, _Short, Long, undefined, _Help}} ->
                     parse(OptSpecList, [Name | OptAcc], ArgAcc, ArgPos, Args);
-                
+
                 {value, {_Name, _Short, Long, _ArgSpec, _Help} = OptSpec} ->
                     % The option argument string is empty, but the option requires
                     % an argument, so we look into the next string in the list.
@@ -217,7 +217,7 @@ parse_option_next_arg(OptSpecList, OptAcc, ArgAcc, ArgPos, [] = Args, {Name, _Sh
         _ ->
             throw({error, {missing_option_arg, Name}})
     end.
-    
+
 
 %% @doc Find the option for the discrete argument in position specified in the
 %%      Pos argument.
@@ -318,7 +318,7 @@ is_arg_true(Arg) ->
     (Arg =:= "on") orelse (Arg =:= "enabled") orelse
     (Arg =:= "1").
 
-    
+
 -spec is_arg_false(string()) -> boolean().
 is_arg_false(Arg) ->
     (Arg =:= "false") orelse (Arg =:= "f") orelse
@@ -362,7 +362,7 @@ is_float_arg([_Head | _Tail]) ->
     false;
 is_float_arg([]) ->
     true.
-  
+
 
 %% @doc  Show a message on stdout indicating the command line options and
 %%       arguments that are supported by the program.
@@ -441,8 +441,8 @@ usage_options(OptSpecList) ->
     lists:flatten(lists:reverse(usage_options_reverse(OptSpecList, []))).
 
 usage_options_reverse([{Name, Short, Long, _ArgSpec, Help} | Tail], Acc) ->
-    Prefix = 
-        case Long of 
+    Prefix =
+        case Long of
             undefined ->
                 case Short of
                     % Neither short nor long form (non-option argument).

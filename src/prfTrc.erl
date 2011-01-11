@@ -2,7 +2,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : prfTrc.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 18 Jan 2007 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -52,9 +52,9 @@ assert(Reg) ->
 %% trace control process
 %%% LD = idle | {host_pid,timer,consumer,conf}
 %%% Conf = {time,flags,rtps,procs,where}
-%%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} | 
+%%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} |
 %%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
-%%%         {file,File,Size,Count} | 
+%%%         {file,File,Size,Count} |
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init() ->
@@ -64,7 +64,7 @@ init() ->
 idle() ->
   receive
     {start,{HostPid,Conf}} -> ?ACTIVE(start_trace(HostPid,Conf));
-    {stop,{HostPid,_}}     -> HostPid ! {prfTrc,{not_started,idle,self()}}, 
+    {stop,{HostPid,_}}     -> HostPid ! {prfTrc,{not_started,idle,self()}},
                               ?IDLE();
     {'EXIT',_,exiting}     -> ?IDLE();
     X                      -> ?log({weird_in,X}), ?IDLE()
@@ -82,14 +82,14 @@ active(LD) ->
     {'EXIT',HostPid,_}  -> remote_stop(Cons,LD),?WAIT_FOR_LOCAL(Cons);
     {local_stop,R}      -> local_stop(HostPid,LD,R),?WAIT_FOR_LOCAL(Cons);
     {'EXIT',Cons,R}     -> local_stop(HostPid,LD,R),?IDLE();
-    X                   -> ?log({weird_in,X}), ?ACTIVE(LD) 
+    X                   -> ?log({weird_in,X}), ?ACTIVE(LD)
   end.
 
 wait_for_local(Consumer) when is_pid(Consumer) ->
-  receive 
+  receive
     {'EXIT',Consumer,_} -> ?IDLE();
     X                   -> ?log({weird_in,X}), ?WAIT_FOR_LOCAL(Consumer)
-  end. 
+  end.
 
 local_stop(HostPid, LD, R) ->
   stop_trace(LD),
@@ -116,21 +116,21 @@ maybe_load_rtps(Rtps) ->
   lists:foldl(fun maybe_load_rtp/2, [], Rtps).
 
 maybe_load_rtp({{M,F,A},_MatchSpec,_Flags} = Rtp,O) ->
-  try 
+  try
     case code:which(M) of
       preloaded         -> ok;
       non_existing      -> throw(non_existing_module);
       L when is_list(L) -> [c:l(M) || false == code:is_loaded(M)]
     end,
     [Rtp|O]
-  catch 
+  catch
     _:R -> ?log({no_such_function,{R,{M,F,A}}}), O
   end.
 
 is_message_trace(Flags) ->
   (lists:member(send,Flags) orelse lists:member('receive',Flags)).
 
-start_trace(LD) -> 
+start_trace(LD) ->
   Conf = fetch(conf,LD),
   HostPid = fetch(host_pid,LD),
   link(HostPid),
@@ -145,9 +145,9 @@ start_trace(LD) ->
   store(consumer,Consumer,LD).
 
 family(Daddy) ->
-  try D = whereis(Daddy), 
-      [D|element(2,process_info(D,links))] 
-  catch _:_->[] 
+  try D = whereis(Daddy),
+      [D|element(2,process_info(D,links))]
+  catch _:_->[]
   end.
 
 untrace(Pids,Flags) ->
@@ -165,14 +165,14 @@ unset_tps() ->
 set_tps(TPs) ->
   foreach(fun set_tps_f/1,TPs).
 
-set_tps_f({MFA,MatchSpec,Flags}) -> 
+set_tps_f({MFA,MatchSpec,Flags}) ->
   erlang:trace_pattern(MFA,MatchSpec,Flags).
 
 mk_prc(all) -> all;
 mk_prc(Pid) when is_pid(Pid) -> Pid;
 mk_prc({pid,P1,P2}) when is_integer(P1), is_integer(P2) -> c:pid(0,P1,P2);
-mk_prc(Reg) when is_atom(Reg) -> 
-  case whereis(Reg) of 
+mk_prc(Reg) when is_atom(Reg) ->
+  case whereis(Reg) of
     undefined -> exit({no_such_process, Reg});
     Pid when is_pid(Pid) -> Pid
   end.
@@ -225,20 +225,20 @@ consumer_ip(Port,QueueSize,Time) ->
   spawn_link(fun() -> init_local_port(Conf) end).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  local consumer process for port-style tracing. 
+%%%  local consumer process for port-style tracing.
 %%%  writes trace messages directly to an erlang port.
 %%%  flushes and quits when;
 %%%    it gets a stop from the controller
 %%%    timeout
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-init_local_port(Conf) -> 
+init_local_port(Conf) ->
   erlang:start_timer(fetch(time,Conf),self(),fetch(daddy,Conf)),
   Port = mk_port(Conf),
   loop_local_port(store(port,Port,Conf)).
 
 loop_local_port(Conf) ->
   Daddy = fetch(daddy, Conf),
-  receive 
+  receive
     {show_port,Pid}   -> Pid ! fetch(port,Conf),
                          loop_local_port(Conf);
     stop              -> dbg:flush_trace_port(),
@@ -250,7 +250,7 @@ loop_local_port(Conf) ->
 
 mk_port(Conf) ->
   case fetch(style,Conf) of
-    ip -> 
+    ip ->
       Port = fetch(port_no,Conf),
       QueueSize = fetch(queue_size,Conf),
       (dbg:trace_port(ip,{Port, QueueSize}))();
@@ -263,7 +263,7 @@ mk_port(Conf) ->
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  local consumer process for pid-style tracing. 
+%%%  local consumer process for pid-style tracing.
 %%%  buffers trace messages, and flushes them when;
 %%%    it gets a stop from the controller
 %%%    reaches count=0
@@ -271,10 +271,10 @@ mk_port(Conf) ->
 %%%    message queue too long
 %%%    a trace message is too big
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% 
+%%
 -record(ld,{daddy,where,count,maxqueue,maxsize}).
 
-init_local_pid(Conf) -> 
+init_local_pid(Conf) ->
   erlang:start_timer(fetch(time,Conf),self(),fetch(daddy,Conf)),
   loop_lp({#ld{daddy=fetch(daddy,Conf),
                where=fetch(where,Conf),
@@ -289,7 +289,7 @@ buffering(no) -> no.
 loop_lp({LD,Buff,Count}=State) ->
   maybe_exit(msg_queue,LD),
   maybe_exit(msg_count,{LD,Buff,Count}),
-  receive 
+  receive
     {timeout,_,Daddy}         -> Daddy ! {local_stop,timeout},
                                  flush(LD,Buff),exit(timeout);
     stop                      -> flush(LD,Buff),exit(local_done);
@@ -306,14 +306,14 @@ msg(LD,Buff,Count,Item) ->
 buff(no,LD,Item) -> send_one(LD,Item),no;
 buff(Buff,_LD,Item) -> [Item|Buff].
 
-maybe_exit(msg_count,{LD,Buff,0}) -> 
-  flush(LD,Buff), 
+maybe_exit(msg_count,{LD,Buff,0}) ->
+  flush(LD,Buff),
   exit(msg_count);
 maybe_exit(msg_queue,#ld{maxqueue=MQ}) ->
   maybe_exit_queue(MQ);
-maybe_exit(msg_size,{#ld{maxsize=MS},{call,_,_,{MFA,B}}}) when is_binary(B)-> 
+maybe_exit(msg_size,{#ld{maxsize=MS},{call,_,_,{MFA,B}}}) when is_binary(B)->
   maybe_exit_call(MS,MFA,B);
-maybe_exit(msg_size,{#ld{maxsize=MS},{call,_,_,MFA}}) -> 
+maybe_exit(msg_size,{#ld{maxsize=MS},{call,_,_,MFA}}) ->
   maybe_exit_call(MS,MFA,<<>>);
 maybe_exit(_,_) -> ok.
 
@@ -336,15 +336,15 @@ maybe_exit_stack(MS,B) ->
     false-> ok
   end.
 
-%% recurse through the args 
+%% recurse through the args
 %% exit if there is a long list or a large binary
-maybe_exit_args(MS,T) when is_tuple(T) ->  
+maybe_exit_args(MS,T) when is_tuple(T) ->
   maybe_exit_args(MS,tuple_to_list(T));
-maybe_exit_args(MS,L) when length(L) < MS -> 
+maybe_exit_args(MS,L) when length(L) < MS ->
   lists:foreach(fun(E)->maybe_exit_args(MS,E)end,L);
-maybe_exit_args(MS,L) when MS =< length(L) -> 
+maybe_exit_args(MS,L) when MS =< length(L) ->
   exit({arg_length,length(L)});
-maybe_exit_args(MS,B) when MS < byte_size(B) -> 
+maybe_exit_args(MS,B) when MS < byte_size(B) ->
   exit({arg_size,byte_size(B)});
 maybe_exit_args(_,_) ->
   ok.
@@ -370,10 +370,10 @@ pi(P) when is_pid(P) ->
             end;
       {_,Nam} -> Nam;
       undefined -> dead
-  catch 
+  catch
     error:badarg -> node(P)
   end;
-pi(P) when is_port(P) -> 
+pi(P) when is_port(P) ->
   {name,N} = erlang:port_info(P,name),
   [Hd|_] = string:tokens(N," "),
   reverse(hd(string:tokens(reverse(Hd),"/")));

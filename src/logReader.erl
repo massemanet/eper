@@ -15,10 +15,10 @@ read(FN) ->
   after file:close(FD)
   end.
 
-read(FD,Cont) -> 
+read(FD,Cont) ->
   case file:read(FD,1048576) of
     {ok,Bin}  -> read(FD,chop(<<Cont/binary,Bin/binary>>));
-    eof	      -> throw(done);
+    eof       -> throw(done);
     {error,R} -> exit({error_reading,R})
   end.
 

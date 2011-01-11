@@ -43,9 +43,9 @@ config(State,{max_procs,MP}) when is_number(MP) -> State#cst{max_procs=MP};
 config(State,_ConfigData) -> State.
 
 %%% returns {State, Data}
-collect(init) -> 
+collect(init) ->
   collect({cst,get_info(#cst{})});
-collect(Cst = #cst{items=Items})-> 
+collect(Cst = #cst{items=Items})->
   Info = get_info(Cst),
   {Cst#cst{old_info=Info}, {?MODULE,select(Cst#cst.old_info,Info,Items)}};
 collect({cst,OldInfo}) ->
@@ -54,7 +54,7 @@ collect({cst,OldInfo}) ->
 get_info(Cst) ->
   case Cst#cst.max_procs < erlang:system_info(process_count) of
     true -> {now(),[]};
-    false-> {now(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]} 
+    false-> {now(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]}
   end.
 
 %%% Dreds, Dmems, Mems and Msgqs are sorted lists of pids
@@ -85,28 +85,28 @@ topl([{P,Io}|Os],[{P,Ic}|Cs],Outf,Out) -> topl(Os,Cs,Outf,Outf(P,Io,Ic,Out)).
 
 empties() -> {[],[],[],[]}.
 
-outf(Then,Now,Items) ->  
+outf(Then,Now,Items) ->
   NowDiff = timer:now_diff(Now,Then)/1000000,
   fun(P,Io,Ic,Out) -> out(P,NowDiff,Io,Ic,Out,Items) end.
 
-out(P,NowDiff,Io,Ic,O={Odred,Omem,Odmem,Omsgq},Items) -> 
+out(P,NowDiff,Io,Ic,O={Odred,Omem,Odmem,Omsgq},Items) ->
   try
     Dred = dred(NowDiff,Io,Ic),
     Dmem = dmem(NowDiff,Io,Ic),
-    Info = {P,[{dreductions,Dred},{dmemory,Dmem}|Ic]}, 
+    Info = {P,[{dreductions,Dred},{dmemory,Dmem}|Ic]},
     {new_topl(Odred,{Dred,Info},Items),
      new_topl(Odmem,{Dmem,Info},Items),
      new_topl(Omem,{mem(Ic),Info},Items),
      new_topl(Omsgq,{msgq(Ic),Info},Items)}
-  catch 
+  catch
     _:_ -> O
   end.
 
-new_topl(Top,{Item,_},_Items) when 0 =:= Item; 0.0 =:= Item -> 
+new_topl(Top,{Item,_},_Items) when 0 =:= Item; 0.0 =:= Item ->
   Top;
-new_topl(Top,El,Items) when length(Top) < Items -> 
+new_topl(Top,El,Items) when length(Top) < Items ->
   lists:sort([El|Top]);
-new_topl(Top,El,_Items) -> 
+new_topl(Top,El,_Items) ->
   case El < hd(Top) of
     true -> Top;
     false-> tl(lists:sort([El|Top]))
@@ -119,7 +119,7 @@ red([]) -> 0;
 red([{reductions,Reds}|_]) -> Reds.
 
 mem([]) -> 0;
-mem([_,{memory,Mem}|_])	-> Mem.
+mem([_,{memory,Mem}|_]) -> Mem.
 
 msgq([]) -> 0;
 msgq([_,_,{message_queue_len,Msgq}]) -> Msgq.
@@ -130,7 +130,7 @@ msgq([_,_,{message_queue_len,Msgq}]) -> Msgq.
 pid_info(Pid) when is_pid(Pid) ->
   pid_info(Pid,?TAGS).
 
-pid_info(Pid,Tags) when is_list(Tags) -> 
+pid_info(Pid,Tags) when is_list(Tags) ->
   try [pidinfo(Pid,T) || T <- Tags]
   catch _:_ -> []
   end.
@@ -142,7 +142,7 @@ pidinfo(Pid, Type = heap_size) ->
 pidinfo(Pid, Type = total_heap_size) ->
   {Type,8*element(2,process_info(Pid, Type))};
 pidinfo(Pid, Type = last_calls) ->
-  try 
+  try
     case process_info(Pid,last_calls) of
       {_,false} -> process_flag(Pid,save_calls,16),{Type,[]};
       {_,Calls} -> {Type,lists:usort(Calls)}
@@ -157,15 +157,15 @@ pidinfo(Pid, Type = registered_name) ->
   end;
 pidinfo(Pid, Type = initial_call) ->
   case process_info(Pid, Type) of
-    {Type,{proc_lib,init_p,5}} -> 
+    {Type,{proc_lib,init_p,5}} ->
       case proc_lib:translate_initial_call(Pid) of
-	{dets,init,2} -> {Type,{dets, element(2, dets:pid2name(Pid))}};
-	IC -> {Type,IC}
+        {dets,init,2} -> {Type,{dets, element(2, dets:pid2name(Pid))}};
+        IC -> {Type,IC}
       end;
     {Type,{dets, do_open_file, 11}}->{Type,pinf_dets(Pid)};%gone in R12
     XX -> XX
   end;
-pidinfo(Pid, Type) -> 
+pidinfo(Pid, Type) ->
   process_info(Pid, Type).
 
 pinf_dets(Pid) ->

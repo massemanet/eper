@@ -78,15 +78,15 @@ ca_fun({list,Es},{Vars,O}) ->
 ca_fun({tuple,Es},{Vars,O}) ->
   {Vs,Ps} = ca_fun_list(Es,Vars),
   {Vs,O++[list_to_tuple(Ps)]};
-ca_fun({var,'_'},{Vars,O}) -> 
+ca_fun({var,'_'},{Vars,O}) ->
   {Vars,O++['_']};
-ca_fun({var,Var},{Vars,O}) -> 
+ca_fun({var,Var},{Vars,O}) ->
   case proplists:get_value(Var,Vars) of
     undefined -> V = list_to_atom("\$"++integer_to_list(length(Vars)+1));
     V -> ok
   end,
   {[{Var,V}|Vars],O++[V]};
-ca_fun({Type,Val},{Vars,O}) -> 
+ca_fun({Type,Val},{Vars,O}) ->
   assert_type(Type,Val),
   {Vars,O++[Val]}.
 
@@ -97,14 +97,14 @@ ca_fun_list(Es,Vars) ->
               {Vars,[]},
               Es).
 
-assert_type(Type,Val) -> 
+assert_type(Type,Val) ->
   case lists:member(Type,[integer,atom,string]) of
     true -> ok;
     false-> exit({bad_type,{Type,Val}})
   end.
-      
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% parser  
+%% parser
 %% accepts strings like;
 %%   "a","a:b","a:b/2","a:b(X,y)",
 %%   "a:b(X,Y)when is_record(X,rec) and Y==0, (X==z)"
@@ -155,11 +155,11 @@ body_fun(Str) ->
      end
   end.
 
-guards_fun(Str) -> 
+guards_fun(Str) ->
   fun() ->
       case Str of
         "" -> [];
-        _ -> 
+        _ ->
           {done,{ok,Toks,1},[]} = erl_scan:tokens([],Str++". ",1),
           {ok,Guards} = erl_parse:parse_exprs(Toks),
           [guard(G)||G<-Guards]
@@ -187,7 +187,7 @@ actions_fun(Str) ->
 
 assert(Fun,Tag) ->
   try Fun()
-  catch 
+  catch
     _:{_,{error,{1,erl_parse,L}}}-> exit({{syntax_error,lists:flatten(L)},Tag});
     _:R                          -> exit({R,Tag,erlang:get_stacktrace()})
   end.
@@ -264,7 +264,7 @@ unit() ->
 
 unit(Method,{Str,MS}) ->
   try MS=Method(Str),Str
-  catch 
+  catch
     _:{MS,_,_} -> Str;
     _:{MS,_}   -> Str;
     C:R        -> {C,R,Str,erlang:get_stacktrace()}

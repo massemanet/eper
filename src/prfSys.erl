@@ -20,37 +20,37 @@
 %%   else
 %%     - return an empty list
 %%
-%% returns a list of tagged tuples 
+%% returns a list of tagged tuples
 %%
 %% tag                  [unit]    source
 %% node                 [atom()]  erlang:node()
-%% now			[now()]   erlang:now()
-%% procs	        [count]   erlang:system_info(process_count)
-%% context_switches	[count/s] erlang:statistics(context_switches)
-%% gcs	                [count/s] erlang:statistics(garbage_collection)
-%% gc_reclaimed	        [byte/s]  erlang:statistics(garbage_collection)
-%% io_in		[byte/s]  erlang:statistics(io)
-%% io_out		[byte/s]  erlang:statistics(io)
-%% reductions		[count/s] erlang:statistics(reductions)
-%% run_queue		[count]   erlang:statistics(run_queue)
-%% total		[byte]    erlang:memory()
-%% processes		[byte]    erlang:memory()
-%% processes_used	[byte]    erlang:memory()
-%% system		[byte]    erlang:memory()
-%% atom			[byte]    erlang:memory()
-%% atom_used		[byte]    erlang:memory()
-%% binary		[byte]    erlang:memory()
-%% code			[byte]    erlang:memory()
-%% ets			[byte]    erlang:memory()
-%% user			[frac]    /proc/stat
-%% nice			[frac]    /proc/stat
-%% kernel		[frac]    /proc/stat
-%% idle			[frac]    /proc/stat
-%% iowait		[frac]    /proc/stat
+%% now                  [now()]   erlang:now()
+%% procs                [count]   erlang:system_info(process_count)
+%% context_switches     [count/s] erlang:statistics(context_switches)
+%% gcs                  [count/s] erlang:statistics(garbage_collection)
+%% gc_reclaimed         [byte/s]  erlang:statistics(garbage_collection)
+%% io_in                [byte/s]  erlang:statistics(io)
+%% io_out               [byte/s]  erlang:statistics(io)
+%% reductions           [count/s] erlang:statistics(reductions)
+%% run_queue            [count]   erlang:statistics(run_queue)
+%% total                [byte]    erlang:memory()
+%% processes            [byte]    erlang:memory()
+%% processes_used       [byte]    erlang:memory()
+%% system               [byte]    erlang:memory()
+%% atom                 [byte]    erlang:memory()
+%% atom_used            [byte]    erlang:memory()
+%% binary               [byte]    erlang:memory()
+%% code                 [byte]    erlang:memory()
+%% ets                  [byte]    erlang:memory()
+%% user                 [frac]    /proc/stat
+%% nice                 [frac]    /proc/stat
+%% kernel               [frac]    /proc/stat
+%% idle                 [frac]    /proc/stat
+%% iowait               [frac]    /proc/stat
 %% ctxt                 [frac]    /proc/stat
-%% beam_user,		[frac]    /proc/self/stat
-%% beam_kernel,		[frac]    /proc/self/stat
-%% beam_vss		[byte]    /proc/self/stat
+%% beam_user,           [frac]    /proc/self/stat
+%% beam_kernel,         [frac]    /proc/self/stat
+%% beam_vss             [byte]    /proc/self/stat
 %% beam_rss             [pages]   /proc/self/stat
 %% beam_minflt          [count/s] /proc/self/stat
 %% beam_majflt          [count/s] /proc/self/stat
@@ -62,11 +62,11 @@
 -export([collect/1,config/2]).
 
 -record(cst,{strategy=strategy(), node=node(), total_ram=0, cores=1,
-	     cache=[], now=now()}).
+             cache=[], now=now()}).
 
 -define(RATES,[context_switches,gcs,gc_reclaimed,io_in,io_out,reductions,
-	       user,nice,kernel,idle,iowait,
-	       beam_user,beam_kernel,beam_minflt,beam_majflt]).
+               user,nice,kernel,idle,iowait,
+               beam_user,beam_kernel,beam_minflt,beam_majflt]).
 
 %%% returns {State, Data}
 collect(init) ->
@@ -96,21 +96,21 @@ stats() ->
    {gcs,GCs},
    {gc_reclaimed,GCwords*4},
    {io_in,IoIn},
-   {io_out,IoOut},	
+   {io_out,IoOut},
    {reductions,Reds},
    {run_queue,RunQ} |
    erlang:memory()].
 
 new_cst(Cst,Data) ->
   Cst#cst{cache=[D || {Tag,_}=D <- Data, lists:member(Tag,?RATES)],
-	  now=lks(now,Data)}.
+          now=lks(now,Data)}.
 
 rates(#cst{cache=Cache,now=Now},Data) ->
   [diff(Cache,D,delta_t(Now,Data)) || D <- Data].
 
 diff(Cache,{Tag,Val},DeltaT)->
   try {Tag,(Val-lks(Tag,Cache))/DeltaT}
-  catch 
+  catch
     no_tag -> {Tag,Val};
     _:_ -> {Tag,0}
   end.
@@ -155,7 +155,7 @@ proc_stat(FDs) ->
     _ -> User=Nice=Kernel=Idle=Iowait=0
   end,
   lists:zip([user,nice,kernel,idle,iowait],
-	    [to_sec(J) || J <- [User,Nice,Kernel,Idle,Iowait]]).
+            [to_sec(J) || J <- [User,Nice,Kernel,Idle,Iowait]]).
 
 proc_self_stat(FDss) ->
 %%% pid,comm,state,ppid,pgrp,session,tty_nr,tpgid,flags,
@@ -169,9 +169,9 @@ proc_self_stat(FDss) ->
     _ -> Minflt=Majflt=Utime=Stime=Vsize=Rss=0
   end,
   lists:zip([beam_user,beam_kernel,beam_vss,beam_rss,beam_minflt,beam_majflt],
-	    [to_sec(Utime),to_sec(Stime),to_int(Vsize),
-	     to_int(Rss), %% in pages...
-	     to_int(Minflt),to_int(Majflt)]).
+            [to_sec(Utime),to_sec(Stime),to_int(Vsize),
+             to_int(Rss), %% in pages...
+             to_int(Minflt),to_int(Majflt)]).
 
 to_sec(J) ->
   to_int(J)/100. %should use a better transform jiffies->secs
@@ -197,8 +197,8 @@ total_ram() ->
   case file:open("/proc/meminfo",[read]) of
     {ok,FD} ->
       try {ok,Str} = file:pread(FD,0,30),
-	  ["MemTotal:",T,"kB"|_] = string:tokens(Str," \n"),
-	  list_to_integer(T)*1024
+          ["MemTotal:",T,"kB"|_] = string:tokens(Str," \n"),
+          list_to_integer(T)*1024
       catch _:_ -> 0
       after file:close(FD)
       end;

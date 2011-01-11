@@ -2,7 +2,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : redbg.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 24 Jan 2007 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -26,20 +26,20 @@
 -record(cnf,{time         = 15000          % ms
              , msgs         = 10           % unit
              , proc         = all          % list of procs (or 'all')
-	     , target       = node()       % target node
-	     , cookie       = ''           % target node cookie
-	     , buffered     = no           % output buffering
+             , target       = node()       % target node
+             , cookie       = ''           % target node cookie
+             , buffered     = no           % output buffering
              , arity        = false        % arity instead of args
              , print_call   = true         % print calls (see `return_only')
              , print_form   = "~s~n"       % format for printing
-	     , print_file   = ""           % file to print to (standard_io)
+             , print_file   = ""           % file to print to (standard_io)
              , print_re     = ""           % regexp that must match to print
-	     , max_queue    = 5000         % max # of msgs before suicide
-	     , max_msg_size = 50000        % max message size before suicide
+             , max_queue    = 5000         % max # of msgs before suicide
+             , max_msg_size = 50000        % max message size before suicide
              , file         = ""           % file to write trace msgs to
              , file_size    = 1            % file size (per file [Mb])
              , file_count   = 8            % number of files in wrap log
- 
+
              , trc          = []           % cannot be set by user
              , print_pid    = []           % cannot be set by user
              , trc_pid      = []           % cannot be set by user
@@ -62,7 +62,7 @@ help() ->
            , "  'trace messages' when certain events (such as a particular"
            , "  function being called) occur."
            , "  The trace messages are either printed (i.e. human readable)"
-           , "  to a file or to the screen; or written to a trc file." 
+           , "  to a file or to the screen; or written to a trc file."
            , "  Using a trc file puts less stress on the system, but"
            , "  there is no way to count the messages (so the msgs opt"
            , "  is ignored), and the files can only be read by special tools"
@@ -75,7 +75,7 @@ help() ->
            , "  the RTP has the form: \"<mfa> when <guards> -> <actions>\""
            , "  where <mfa> can be;"
            , "  \"mod\", \"mod:fun\", \"mod:fun/3\" or \"mod:fun('_',atom,X)\""
-           , "  <guard> is something like;" 
+           , "  <guard> is something like;"
            , "  \"X==1\" or \"is_atom(A)\""
            , "  and <action> is;"
            , "  \"return\" and/or \"stack\" (separated by \";\")"
@@ -110,7 +110,7 @@ help() ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 unix([Node,Time,Msgs,Trc])      -> unix([Node,Time,Msgs,Trc,"all"]);
 unix([Node,Time,Msgs,Trc,Proc]) ->
-  try 
+  try
     Cnf = #cnf{time = to_int(Time),
                msgs   = to_int(Msgs),
                trc    = to_term(Trc),
@@ -119,10 +119,10 @@ unix([Node,Time,Msgs,Trc,Proc]) ->
     self() ! {start,Cnf},
     init(),
     maybe_halt(0)
-  catch 
+  catch
     exit:exiting ->
       maybe_halt(0);
-    C:R -> 
+    C:R ->
       io:fwrite("~p~n",[{C,R,erlang:get_stacktrace()}]),
       maybe_halt(1)
   end;
@@ -168,10 +168,10 @@ start(Trc,{Tag,Val})                   -> start(Trc, [{Tag,Val}]);
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 start(Trc,Props) when is_list(Props) ->
   case whereis(redbug) of
-    undefined -> 
+    undefined ->
       Cnf = make_cnf(Trc,Props),
       assert_cookie(Cnf),
-      try 
+      try
         register(redbug, spawn(fun init/0)),
         redbug ! {start,Cnf},
         ok
@@ -185,7 +185,7 @@ assert_cookie(#cnf{cookie=''}) -> ok;
 assert_cookie(Cnf) -> erlang:set_cookie(Cnf#cnf.target,Cnf#cnf.cookie).
 
 %% turn the proplist inta a #cnf{}
-make_cnf(Trc,Props) -> 
+make_cnf(Trc,Props) ->
   make_cnf(Props,#cnf{trc=Trc},record_info(fields,cnf)).
 
 make_cnf([],Cnf,_) -> Cnf;
@@ -193,7 +193,7 @@ make_cnf([{Tag,Val}|Props],Cnf,Tags) ->
   make_cnf(Props,setelement(findex(Tag,Tags)+1,Cnf,Val),Tags).
 
 findex(Tag,[])       -> exit({field_not_allowed,Tag});
-findex(Tag,[Tag|_])  -> 1; 
+findex(Tag,[Tag|_])  -> 1;
 findex(Tag,[_|Tags]) -> findex(Tag,Tags)+1.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% the main redbug process
@@ -201,11 +201,11 @@ findex(Tag,[_|Tags]) -> findex(Tag,Tags)+1.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init() ->
   process_flag(trap_exit,true),
-  receive 
-    {start,Cnf} -> 
-      try 
-	starting(do_start(Cnf))
-      catch 
+  receive
+    {start,Cnf} ->
+      try
+        starting(do_start(Cnf))
+      catch
         C:R -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
       end
   end,
@@ -225,7 +225,7 @@ running(Cnf = #cnf{trc_pid=TrcPid,print_pid=PrintPid}) ->
   maybe_alert_printer(Cnf),
   receive
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}}),
-		   stopping(Cnf);
+                   stopping(Cnf);
     {prfTrc,{stopping,_,_}}         -> stopping(Cnf);
     {'EXIT',TrcPid,_}               -> stopping(Cnf);
     {prfTrc,{not_started,R,TrcPid}} -> ?log([{not_started,R}]);
@@ -286,7 +286,7 @@ mk_the_print_fun(Cnf = #cnf{print_re=RE}) ->
   end.
 
 get_fd("") -> standard_io;
-get_fd(FN) -> 
+get_fd(FN) ->
   case file:open(FN,[write]) of
     {ok,FD} -> FD;
     _ -> exit({cannot_open,FN})
@@ -296,9 +296,9 @@ get_fd(FN) ->
 %%% pack the cnf record into a proplist for prf consumption
 %%% Proplist = list({Tag,Val})
 %%% Tag = time | flags | rtps | procs | where
-%%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} | 
+%%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} |
 %%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
-%%%         {file,File,Size,Count} | 
+%%%         {file,File,Size,Count} |
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pack(Cnf) ->
@@ -326,7 +326,7 @@ conf_term(Cnf) ->
     Cnf#cnf.max_msg_size}}.
 
 maybe_arity(#cnf{arity=true},Flags) -> [arity|Flags];
-maybe_arity(_,Flags)                -> Flags.  
+maybe_arity(_,Flags)                -> Flags.
 
 chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> exit({bad_time,X}).
@@ -378,8 +378,8 @@ slist(X) -> [X].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 printi(PrintFun) ->
-  receive 
-    {trace_consumer,TC} -> 
+  receive
+    {trace_consumer,TC} ->
       erlang:monitor(process,TC),
       printl(PrintFun)
   end.
@@ -396,11 +396,11 @@ outer(PrintFun,[Msg|Msgs]) ->
     {'call',{MFA,Bin},PI,TS} ->
       PrintFun(flat("~n~s <~p> ~p",[ts(TS),PI,MFA])),
       foreach(fun(L)->PrintFun(flat("  ~s",[L])) end, stak(Bin));
-    {'retn',{MFA,Val},PI,TS} -> 
+    {'retn',{MFA,Val},PI,TS} ->
       PrintFun(flat("~n~s <~p> ~p -> ~p",[ts(TS),PI,MFA,Val]));
-    {'send',{MSG,To},PI,TS} -> 
+    {'send',{MSG,To},PI,TS} ->
       PrintFun(flat("~n~s <~p> <~p> <<< ~p",[ts(TS),PI,To,MSG]));
-    {'recv',MSG,PI,TS} -> 
+    {'recv',MSG,PI,TS} ->
       PrintFun(flat("~n~s <~p> <<< ~p",[ts(TS),PI,MSG]));
     _ ->
       PrintFun(flat("~n~p", [Msg]))
@@ -418,9 +418,9 @@ stak(Bin) ->
 munge(I,Out) ->
   case reverse(I) of
     "..."++_ -> [truncated|Out];
-    _ -> 
+    _ ->
       case string:str(I, "Return addr") of
-        0 -> 
+        0 ->
           case string:str(I, "cp = ") of
             0 -> Out;
             _ -> [mfaf(I)|Out]
@@ -441,7 +441,7 @@ to_int(L) -> list_to_integer(L).
 to_atom(L) -> list_to_atom(L).
 
 to_term("_") -> '_';
-to_term(Str) -> 
+to_term(Str) ->
   {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "["++Str++"]. ", 1),
   case erl_parse:parse_term(Toks) of
     {ok, [Term]} -> Term;

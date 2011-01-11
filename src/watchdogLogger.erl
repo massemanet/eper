@@ -17,7 +17,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 collectors() -> watchdog.
 
-init(Node) -> 
+init(Node) ->
   FN = os:getenv("HOME")++"/log-"++atom_to_list(Node)++".gz",
   case file:open(FN,[write,compressed,raw]) of
     {ok,FD} -> ?log({opened,FN}),#cld{node=Node, fd=FD};
@@ -27,7 +27,7 @@ init(Node) ->
 terminate(_LD) -> ok.
 config(LD,_Data) -> ?log({loopdata,LD}), LD.
 
-tick(LD, In) -> 
+tick(LD, In) ->
   Bin = term_to_binary(In),
   Size = byte_size(Bin),
   case file:write(LD#cld.fd,<<Size:32,Bin/binary>>) of

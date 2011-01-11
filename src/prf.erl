@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : prf.erl
 %%% Author  : Mats Cronqvist <etxmacr@axdt212>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 11 Dec 2006 by Mats Cronqvist <etxmacr@axdt212>
 %%%-------------------------------------------------------------------
@@ -38,7 +38,7 @@ stop(Name) -> prfHost:stop(Name).
 config(Name,Type,Data) -> prfHost:config(Name,Type,Data).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% prf internal 
+%%% prf internal
 ticker_even()-> erlang:start_timer(incr(?TICK,0), self(),{tick}).
 ticker_odd() -> erlang:start_timer(incr(?TICK,?TICK div 2), self(),{tick}).
 

@@ -39,10 +39,10 @@ start(Mod) ->
 start(Mod,Args) ->
   gen_server:start_link({local, Mod}, ?MODULE, {Mod,Args}, []).
 
-stop(Mod) -> 
+stop(Mod) ->
   cast(Mod,stop).
 
-shutdown(Mod) -> 
+shutdown(Mod) ->
   cast(Mod,shutdown).
 
 get_state(Mod,Field) ->
@@ -71,19 +71,19 @@ unlink() ->
 init({Mod,Args}) ->
   safer(#ld{mod=Mod,args=Args},init,[Args]).
 
-terminate(Reason,LD) -> 
+terminate(Reason,LD) ->
   safer(LD,terminate,[Reason,LD#ld.cld]).
 
-code_change(OldVsn,LD,Info) -> 
+code_change(OldVsn,LD,Info) ->
   safer(LD,code_change,[OldVsn,LD#ld.cld,Info]).
 
-handle_cast(Msg,LD) -> 
+handle_cast(Msg,LD) ->
   safer(LD,handle_cast,[Msg,LD#ld.cld]).
 
-handle_call(Msg,From,LD) -> 
+handle_call(Msg,From,LD) ->
   safer(LD,handle_call,[Msg,From,LD#ld.cld]).
 
-handle_info(Msg,LD) -> 
+handle_info(Msg,LD) ->
   safer(LD,handle_info,[Msg,LD#ld.cld]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -100,8 +100,8 @@ safer(LD,F,As) ->
   case erlang:function_exported(LD#ld.mod,F,length(As)) of
     false-> safe_default(F,LD);
     true ->
-      try safe_reply(F,LD,apply(LD#ld.mod,F,As)) 
-      catch 
+      try safe_reply(F,LD,apply(LD#ld.mod,F,As))
+      catch
         error:R ->
           ?log([R,{mfa,{LD#ld.mod,F,As}},erlang:get_stacktrace()]),
           safe_default(F,LD);
@@ -128,10 +128,10 @@ last(L) -> hd(lists:reverse(L)).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utilities
 
-print_term(Term) -> 
+print_term(Term) ->
   print_term(group_leader(),Term).
 
-print_term(FD,Term) -> 
+print_term(FD,Term) ->
   case node(FD) == node() of
     true -> error_logger:info_report(Term);
     false-> io:fwrite(FD," ~p~n",[Term])
@@ -139,14 +139,14 @@ print_term(FD,Term) ->
 
 expand_recs(M,List) when is_list(List) ->
   [expand_recs(M,L)||L<-List];
-expand_recs(M,Tup) when is_tuple(Tup) -> 
+expand_recs(M,Tup) when is_tuple(Tup) ->
   case tuple_size(Tup) of
     L when L < 1 -> Tup;
     L ->
       try Fields = M:rec_info(element(1,Tup)),
           L = length(Fields)+1,
           lists:zip(Fields,expand_recs(M,tl(tuple_to_list(Tup))))
-      catch _:_ -> 
+      catch _:_ ->
           list_to_tuple(expand_recs(M,tuple_to_list(Tup)))
       end
   end;
@@ -154,6 +154,6 @@ expand_recs(_,Term) ->
   Term.
 
 cast(Mod,What) ->
-  try gen_server:cast(Mod,What) 
+  try gen_server:cast(Mod,What)
   catch exit:{noproc,_} -> ok
   end.

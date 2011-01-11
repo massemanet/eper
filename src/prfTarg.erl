@@ -5,7 +5,7 @@
 -module(prfTarg).
 
 -export([config/1,subscribe/3,unsubscribe/2]).
--export([init/0,loop/1]).		 %internal; otp r5 compatible!
+-export([init/0,loop/1]).                %internal; otp r5 compatible!
 
 -import(net_kernel,[get_net_ticktime/0]).
 -import(orddict,[new/0,store/3,fold/3,map/2,find/2,is_key/2,append/3]).
@@ -16,46 +16,46 @@
 -include("log.hrl").
 
 %%% interface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-config(ConfData) -> 
+config(ConfData) ->
   case whereis(prfTarg) of
     underfined -> not_started;
     Pid -> Pid ! {config,ConfData}
   end.
 
-subscribe(Node, Pid, Collectors) -> 
+subscribe(Node, Pid, Collectors) ->
   {PID,Tick} = assert(Node,Collectors),
-  PID ! {subscribe, {Pid,Collectors}}, 
+  PID ! {subscribe, {Pid,Collectors}},
   {PID,Tick}.
 
-unsubscribe(Node, Pid) -> 
+unsubscribe(Node, Pid) ->
   {Node,?MODULE} ! {unsubscribe, {Pid}}.
 
 %%% runs on host %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 assert(Node,Collectors) ->
-  assert_loaded(Node,Collectors), 
+  assert_loaded(Node,Collectors),
   assert_started(Node).
 
 assert_loaded(Node, Collectors) ->
-  lists:foreach(fun(M) -> ass_loaded(Node,M) end, 
-		[prf,prf_crypto,?MODULE|Collectors]).
+  lists:foreach(fun(M) -> ass_loaded(Node,M) end,
+                [prf,prf_crypto,?MODULE|Collectors]).
 
 ass_loaded(nonode@nohost, Mod) -> {module,Mod}=c:l(Mod);
 ass_loaded(Node, Mod) ->
   case rpc:call(Node,Mod,module_info,[compile]) of
-    {badrpc,{'EXIT',{undef,_}}} -> 		%no code
+    {badrpc,{'EXIT',{undef,_}}} ->              %no code
       netload(Node, Mod),
       ass_loaded(Node, Mod);
     {badrpc,_} ->
       ok;
     CompInfo when is_list(CompInfo) ->
       case {ftime(CompInfo), ftime(Mod:module_info(compile))} of
-	{interpreted,_} ->
-	  ok;
-	{TargT, HostT} when TargT < HostT -> %old code on target
-	  netload(Node, Mod),
-	  ass_loaded(Node, Mod);
-	_ -> 
-	  ok
+        {interpreted,_} ->
+          ok;
+        {TargT, HostT} when TargT < HostT -> %old code on target
+          netload(Node, Mod),
+          ass_loaded(Node, Mod);
+        _ ->
+          ok
       end
   end.
 
@@ -67,7 +67,7 @@ ftime([]) -> interpreted;
 ftime([{time,T}|_]) -> T;
 ftime([_|T]) -> ftime(T).
 
-assert_started(nonode@nohost) -> 
+assert_started(nonode@nohost) ->
   starter(spawn(?MODULE, init, []));
 assert_started(Node) ->
   case net_adm:ping(Node) of
@@ -80,7 +80,7 @@ assert_started(Node) ->
 starter(Pid) ->
   Ref = erlang:monitor(process,Pid),
   Pid ! {start,self()},
-  receive 
+  receive
     {ack, Pid, Tick} -> erlang:demonitor(Ref), {Pid,Tick};
     {'DOWN', Ref, process, Pid, {use_me, PID,Tick}} -> {PID,Tick}
   end.
@@ -91,14 +91,14 @@ init() ->
   erlang:group_leader(whereis(user),self()),
   receive {start,Pid} -> ok end,
   case whereis(?MODULE) of   %to avoid register error msg...
-    undefined -> 
+    undefined ->
       case catch register(?MODULE, self()) of
-	{'EXIT', {badarg, _}} ->       %somebody beat us to it
-	  exit({use_me, whereis(?MODULE),get_net_ticktime()});
-	true -> 
-	  Pid ! {ack, self(),get_net_ticktime()},
-	  prf:ticker_odd(),
-	  loop(#st{})
+        {'EXIT', {badarg, _}} ->       %somebody beat us to it
+          exit({use_me, whereis(?MODULE),get_net_ticktime()});
+        true ->
+          Pid ! {ack, self(),get_net_ticktime()},
+          prf:ticker_odd(),
+          loop(#st{})
       end;
     PID ->
       exit({use_me, PID,get_net_ticktime()})
@@ -106,13 +106,13 @@ init() ->
 
 loop(St) ->
   receive
-    {timeout, _, {tick}} -> 
+    {timeout, _, {tick}} ->
       prf:ticker_odd(),
       erlang:garbage_collect(self()),
       ?MODULE:loop(collect_and_send(St));
-    {subscribe, {Pid,Collectors}} -> 
+    {subscribe, {Pid,Collectors}} ->
       ?MODULE:loop(subscr(St, Pid, Collectors));
-    {unsubscribe, {Pid}} -> 
+    {unsubscribe, {Pid}} ->
       ?MODULE:loop(unsubscr(St, Pid));
     {'EXIT', Pid, _} ->
       ?MODULE:loop(unsubscr(St, Pid));
@@ -122,7 +122,7 @@ loop(St) ->
       F = fun(M,#collector{subscribers=S},A) -> [{mod,M},{subsc,S}|A] end,
       ?log([{pid,self()} | fold(F,[],St#st.collectors)]),
       ?MODULE:loop(St);
-    stop -> 
+    stop ->
       ok
   end.
 
@@ -140,21 +140,21 @@ subscr(St, Pid, Cs) ->
   {Pid,Collectors} = lists:foldl(fun subs/2, {Pid,St#st.collectors}, Cs),
   St#st{collectors=Collectors}.
 
-subs(C, {Pid, Collectors}) -> 
+subs(C, {Pid, Collectors}) ->
   {Pid,store(C,collector(Collectors,Pid,C),Collectors)}.
 
 collector(Colls,Pid,C) ->
   case find(C, Colls) of
     {ok, Coll = #collector{subscribers=Subs}} ->
       Coll#collector{subscribers=lists:umerge(Subs,[Pid])};
-    error -> 
+    error ->
       #collector{subscribers=[Pid]}
   end.
 
 unsubscr(St = #st{collectors = Colls}, Pid) ->
   St#st{collectors=map(fun(_K,V)->unsubs(Pid,V) end, Colls)}.
 
-unsubs(Pid,C) -> 
+unsubs(Pid,C) ->
   C#collector{subscribers=C#collector.subscribers--[Pid]}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -168,7 +168,7 @@ cns(Colls) ->
 
 cns(Module,Coll,{Colls,Datas}) ->
   case Coll#collector.subscribers of
-    [] -> 
+    [] ->
       {Colls,Datas};
     Subs ->
       {NState, Data} = (Module):collect(Coll#collector.state),

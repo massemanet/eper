@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : sherk_target.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created :  5 Sep 2006 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -27,8 +27,8 @@ init() ->
   end.
 
 loop(LD) ->
-  receive 
-    stop -> ok 
+  receive
+    stop -> ok
   end,
   stop_trace(LD),
   send_files(LD).
@@ -39,7 +39,7 @@ start(LD) ->
   set_tps(fetch(rtps,LD)),
   start_trace(LD).
 
-start_trace(LD) -> 
+start_trace(LD) ->
   Cons = consumer(fetch(dest,LD)),
   send2port(Cons,{trace_info,dict:to_list(LD)}),
   Flags = [{tracer,Cons}|fetch(flags,LD)],
@@ -52,11 +52,11 @@ consumer(Dest) ->
   send2port(Port,{port_info,[{P,pi(P)} || P <- erlang:ports()]}),
   Port.
 
-mk_port({file,{0,File}}) -> 
+mk_port({file,{0,File}}) ->
   (dbg:trace_port(file,File))();
-mk_port({file,{Size,File}}) -> 
+mk_port({file,{Size,File}}) ->
   (dbg:trace_port(file,{File, wrap, ".trc", Size, 8}))();
-mk_port({ip,Port,QueSize}) -> 
+mk_port({ip,Port,QueSize}) ->
   (dbg:trace_port(ip,{Port, QueSize}))().
 
 set_tps(TPs) -> foreach(fun set_tps_f/1,TPs).
@@ -100,7 +100,7 @@ check_proc(X) ->
 
 chk_tracer(P) ->
   case erlang:trace_info(P,tracer) of
-    {tracer,[]} 	-> ok;
+    {tracer,[]}         -> ok;
     {tracer,Tracer} -> exit({already_traced,tracer_info(Tracer)})
   end.
 
@@ -110,8 +110,8 @@ tracer_info(Tracer) when is_port(Tracer) -> erlang:port_info(Tracer).
 mk_prc(all) -> all;
 mk_prc(Pid) when is_pid(Pid) -> Pid;
 mk_prc({pid,P1,P2}) when is_integer(P1), is_integer(P2) -> c:pid(0,P1,P2);
-mk_prc(Reg) when is_atom(Reg) -> 
-  case whereis(Reg) of 
+mk_prc(Reg) when is_atom(Reg) ->
+  case whereis(Reg) of
     undefined -> exit({no_such_process, Reg});
     Pid when is_pid(Pid) -> Pid
   end.
@@ -136,19 +136,19 @@ send_chunks(File, Daddy) ->
 send_chunks({ok, Bin}, Get, Put) ->
   Put(Bin),
   send_chunks(Get(),Get,Put);
-send_chunks(eof, _, Put) -> 
+send_chunks(eof, _, Put) ->
   Put(eof);
 send_chunks({error, Reason}, _, Put) ->
   Put({error, Reason}).
 
-rm(File) -> 
+rm(File) ->
   %%io:fwrite("delete ~p~n",[File]),
   file:delete(File).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pi(P) when is_pid(P) ->
   case process_info(P, registered_name) of
-    [] -> 
+    [] ->
       case process_info(P, initial_call) of
         {_, {proc_lib,init_p,_}} -> proc_lib:translate_initial_call(P);
         {_,MFA} -> MFA;
@@ -157,12 +157,12 @@ pi(P) when is_pid(P) ->
     {_,Nam} -> Nam;
     undefined -> dead
   end;
-pi(P) when is_port(P) -> 
+pi(P) when is_port(P) ->
   case erlang:port_info(P,name) of
-    {name,N} -> 
+    {name,N} ->
       [Hd|_] = string:tokens(N," "),
       reverse(hd(string:tokens(reverse(Hd),"/")));
-    undefined -> 
+    undefined ->
       "dead"
   end.
 
