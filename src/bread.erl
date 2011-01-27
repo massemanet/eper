@@ -46,7 +46,7 @@ trc(Filename,Fun,Acc) ->
 fold(Filename,Fun,Acc,Opts) ->
   Type = take_first(Opts,[line,sax,xml,term,trc]),
   case file:open(Filename, [read, raw, binary]) of
-    {ok, FD} -> 
+    {ok, FD} ->
       try fold(read(FD),FD,wrap(Fun,Type),chunker(Type),?state(Acc,?tail_0()))
       after file:close(FD)
       end;
@@ -68,7 +68,7 @@ term_f(Fun) ->
       catch {parsing_failed,R} -> ?log([{parse_error,R},{string,TermBin}]),O
       end
   end.
-  
+
 to_term(Bin) ->
   try
     {ok,Ts,_} = erl_scan:string(binary_to_list(Bin)),
@@ -81,7 +81,7 @@ to_term(Bin) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% SAX funs
 sax_f(Fun) ->
-  fun(RawXML,O) -> 
+  fun(RawXML,O) ->
       try [erlsom:sax(encoding(RawXML),[],sax_if(Fun))|O]
       catch error:R -> ?log([{bt,erlang:get_stacktrace()},{doc,RawXML}]),
                        exit(R)
@@ -116,7 +116,7 @@ fold(eof,_,Fun,Chunker,State) ->
   ?state(Acc,Tail) = folder(Chunker,Fun,state_eof(State)),
   [?log([{trailing,Tail}]) || not is_empty(Tail)],
   Acc;
-fold({ok,Chunk},FD,Fun,Chunker,State) -> 
+fold({ok,Chunk},FD,Fun,Chunker,State) ->
   fold(read(FD),FD,Fun,Chunker,folder(Chunker,Fun,add_chunk(Chunk,State))).
 
 folder(Chunker,Fun,?state(Acc,Tail)) ->
@@ -152,7 +152,7 @@ chunker(trc) ->
          ?log([{garbarge_at_eof,byte_size(R)}]),
          {cont,?tail_0()}
      end;
-     (?tail(Bin,Off)) -> 
+     (?tail(Bin,Off)) ->
       case Bin of
         <<_:Off/binary,0,S:32/integer,B:S/binary,_/binary>> ->
           {ok,binary_to_term(B),?tail(Bin,Off+5+S)};
@@ -167,7 +167,7 @@ chunker(Type) ->
         {_,T} when ?is_empty(T) -> {cont,?tail_0()};
         {_,Trail}      -> {ok,Trail,?tail_0()}
       end;
-     (Tail=?tail(Bin,Off)) -> 
+     (Tail=?tail(Bin,Off)) ->
       case re:run(Bin,Patt,[{offset,Off},{capture,[1]}]) of
         nomatch         -> {cont,Tail};
         {match,[{O,L}]} -> {ok,snip(Bin,O,L),?tail(Bin,O+L)}

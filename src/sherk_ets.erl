@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : sherk_ets.erl
 %%% Author  : Mats Cronqvist <etxmacr@cbe2077>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 14 Feb 2002 by Mats Cronqvist <etxmacr@cbe2077>
 %%%-------------------------------------------------------------------
@@ -27,17 +27,17 @@ new(Tab, Opts) ->
   kill(Tab),
   Mama = self(),
   Ref = make_ref(),
-  E = fun() -> register(?TAB(Tab),self()), 
-               ets:new(Tab,Opts), 
+  E = fun() -> register(?TAB(Tab),self()),
+               ets:new(Tab,Opts),
                Mama ! Ref,
-               receive {quit, P} -> P ! Tab end 
+               receive {quit, P} -> P ! Tab end
       end,
   spawn(E),
   receive Ref -> ok end,
   Tab.
 
 kill(Tab) ->
-  try 
+  try
     ?TAB(Tab) ! {quit, self()},
     receive Tab -> ok end
   catch _:_ -> ok
@@ -105,7 +105,7 @@ f2t(File) ->
       end
   end.
 
-do_tabs(eof,_FD,O) -> 
+do_tabs(eof,_FD,O) ->
   O;
 do_tabs({Name,Opts},FD,O) ->
   new(Name,Opts),
@@ -114,14 +114,14 @@ do_tabs({Name,Opts},FD,O) ->
 
 get_tab_header(FD) ->
   try f2t_f(FD)
-  catch 
+  catch
     throw:eof -> eof;
     _:X -> exit({bad_header,X})
   end.
-       
+
 
 f2t(FD,Tab,N) ->
-  try 
+  try
     ets:insert(Tab,f2t_f(FD)),
     f2t(FD,Tab,N+1)
   catch
@@ -133,7 +133,7 @@ f2t_f(FD) ->
   case file:read(FD,4) of
     eof -> throw(eof);
     {ok,<<0:32/integer>>} -> throw(delimiter);
-    {ok,<<Size:32/integer>>} -> 
+    {ok,<<Size:32/integer>>} ->
       case file:read(FD,Size) of
         {ok,Bin} -> binary_to_term(Bin);
         R -> exit({error_reading_term,R})

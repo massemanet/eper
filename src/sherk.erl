@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : sherk.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 14 Aug 2006 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -75,10 +75,10 @@ init() ->
 
   %% init calls treeview
   CallList = {init_list_store([string,integer,integer]),
-	      init_tree_view_cols([{0,"MFA"},{1,"calls"},{2,"%"}])},
+              init_tree_view_cols([{0,"MFA"},{1,"calls"},{2,"%"}])},
   CallTree = {init_tree_store([string,integer,integer,integer]),
-	      init_tree_view_cols([{0,"MFA"},{1,"calls"},
-				   {2,"time"},{3,"cumtime"}])},
+              init_tree_view_cols([{0,"MFA"},{1,"calls"},
+                                   {2,"time"},{3,"cumtime"}])},
 
   %% init procs treeview
   ProcsTree = init_tree_store([string,integer,integer,integer]),
@@ -89,13 +89,13 @@ init() ->
   init_combobox(ProcsTree),
 
   loop(from_list([{targs         ,[]},
-		  {bad_targs     ,[]},
-		  {aq_mon        ,undefined},
-		  {proxy         ,node()},
-		  {orig_ticktime ,net_kernel:get_net_ticktime()},
-		  {targ_mon      ,query_targs(node())},
-		  {call_list     ,CallList},
-		  {call_tree     ,CallTree}])).
+                  {bad_targs     ,[]},
+                  {aq_mon        ,undefined},
+                  {proxy         ,node()},
+                  {orig_ticktime ,net_kernel:get_net_ticktime()},
+                  {targ_mon      ,query_targs(node())},
+                  {call_list     ,CallList},
+                  {call_tree     ,CallTree}])).
 
 loop(LD) ->
   AqMon = fetch(aq_mon,LD),
@@ -162,22 +162,22 @@ show_ld(LD) ->
   LD.
 
 check_file() ->
-  try 
+  try
     Dir = g('Gtk_file_chooser_get_filename',[main_filechoose]),
     sherk_tab:check_file(Dir),
     g('Gtk_widget_set_sensitive',[go_button,true])
-  catch 
+  catch
     _:_ -> g('Gtk_widget_set_sensitive',[go_button,false])
   end.
 
 
 conf(LD) ->
-  try 
+  try
     NLD = proxy(LD),
     hide(conf_window),
     NLD
   catch
-    _:_ -> 
+    _:_ ->
       g('Gtk_widget_set_sensitive',[conf_window,false]),
       show(bad_proxy_window),
       LD
@@ -185,20 +185,20 @@ conf(LD) ->
 
 proxy(LD) ->
   case list_to_atom(g('Gtk_entry_get_text',[conf_proxy_entry])) of
-    '' -> 
+    '' ->
       Proxy = node(),
       Cookie = erlang:get_cookie(),
       Tick = fetch(orig_ticktime,LD);
-    Proxy -> 
+    Proxy ->
       Cookie = list_to_atom(g('Gtk_entry_get_text',[conf_cookie_entry])),
       erlang:set_cookie(Proxy,Cookie),
       Tick = rpc:call(Proxy,net_kernel,get_net_ticktime,[])
   end,
   net_kernel:set_net_ticktime(Tick),
   store(cookie,Cookie,
-	store(proxy,Proxy,
-	      store(targs,[],
-		    store(bad_targs,[],LD)))).
+        store(proxy,Proxy,
+              store(targs,[],
+                    store(bad_targs,[],LD)))).
 
 bad_proxy_cancel() ->
   g('Gtk_widget_set_sensitive',[conf_window,true]),
@@ -209,7 +209,7 @@ bad_proxy_ok() ->
   hide(conf_window),
   hide(bad_proxy_window).
 
-aq_go(LD) -> 
+aq_go(LD) ->
   g('Gtk_widget_set_sensitive',[aq_radiobutton_call,false]),
   g('Gtk_widget_set_sensitive',[aq_radiobutton_proc,false]),
   g('Gtk_widget_set_sensitive',[aq_filechoose,false]),
@@ -224,15 +224,15 @@ aq_go(LD) ->
   RTPs = aq_get_rtps(Flags),
   Dest = {file,aq_get_dest(),0,"/tmp"},
   ?log([{time,Time},
-	{flags,Flags},
-	{rTPs,RTPs},
-	{procs,Procs},
-	{targs,Targs},
-	{dest,Dest}]),
+        {flags,Flags},
+        {rTPs,RTPs},
+        {procs,Procs},
+        {targs,Targs},
+        {dest,Dest}]),
   P = sherk_aquire:go(Time,Flags,RTPs,Procs,Targs,Dest),
   store(aq_mon,erlang:monitor(process,P),LD).
 
-aq_stop(LD) -> 
+aq_stop(LD) ->
   sherk_aquire:stop(),
   do_aq_stop(LD,aq_stop_wait(fetch(aq_mon,LD))).
 
@@ -241,14 +241,14 @@ aq_stop_wait(Monitor) ->
     {'DOWN',Monitor,_Type,_Object,Info} -> Info
   end.
 
-do_aq_stop(LD,Reason) -> 
+do_aq_stop(LD,Reason) ->
   ?log([{aquire_finshed,Reason}]),
   g('Gtk_widget_set_sensitive',[aq_radiobutton_call,true]),
   g('Gtk_widget_set_sensitive',[aq_radiobutton_proc,true]),
   g('Gtk_widget_set_sensitive',[aq_filechoose,true]),
   g('Gtk_widget_set_sensitive',[aq_time_entry,true]),
   g('Gtk_widget_set_sensitive',[aq_treeview,true]),
-  g('Gtk_widget_set_sensitive',[aq_stop_button,false]),    
+  g('Gtk_widget_set_sensitive',[aq_stop_button,false]),
   aq_check(),
   store(aq_mon,undefined,LD).
 
@@ -259,7 +259,7 @@ aq_check() ->
     [_|_] = get_selected_data(aq_treeview,0),
     _ = list_to_integer(g('Gtk_entry_get_text',[aq_time_entry])),
     g('Gtk_widget_set_sensitive',[aq_go_button,true])
-  catch 
+  catch
     _:_ -> g('Gtk_widget_set_sensitive',[aq_go_button,false])
   end.
 
@@ -315,7 +315,7 @@ chk_targs(LD,{Pid,Nodes,EpmdStr}) when is_pid(Pid) ->
     EpmdTargs = [list_to_atom(CP++"@"++Host) || CP <-CPs],
     Targs = usort(Nodes++EpmdTargs)--[node()],
     foldl(fun new_target/2, LD, (Targs--OldTargs)--BadTargs)
-  catch 
+  catch
     _:R -> ?log([{r,R},{pid,Pid},{nodes,Nodes},{epmd,EpmdStr}]),LD
   end.
 
@@ -393,15 +393,15 @@ call_combo(LD) ->
   set_active_treeview(Model, Path),
   update_call(LD,Model,Path).
 
-update_call(LD,Model,Path) -> 
+update_call(LD,Model,Path) ->
   show(call_window),
   [PidStr] = get_data(Model,0,[Path]),
   case g('Gtk_toggle_button_get_active',[call_heavy_radio]) of
-    true -> 
+    true ->
       init_tree_view(call_treeview,fetch(call_list,LD)),
       List = sherk_list:go({call,PidStr}),
       update_treeview_list(call_treeview,List);
-    false-> 
+    false->
       init_tree_view(call_treeview,fetch(call_tree,LD)),
       Tree = sherk_tree:go({callgraph,PidStr}),
       update_treeview_tree(call_treeview,Tree)
@@ -418,7 +418,7 @@ init_tree_view(TreeView,{Model,Cols}) ->
 remove_cols(TreeVw) ->
   case g('Gtk_tree_view_get_column',[TreeVw,0]) of
     'NULL' -> ok;
-    Col -> 
+    Col ->
       g('Gtk_tree_view_remove_column',[TreeVw,Col]),
       remove_cols(TreeVw)
   end.
@@ -488,11 +488,11 @@ update_treeview_tree(View,Tree) ->
   g('Gtk_widget_thaw_child_notify',[View]),
   show(View).
 
-tree_insert(Store,Tree) -> 
+tree_insert(Store,Tree) ->
   g(flatten(tree_insert(Store,[0],Tree))).
 
 tree_insert(_Store,_Path,[]) -> [];
-tree_insert(Store,Path,[{_,Row,SubTree}|T]) -> 
+tree_insert(Store,Path,[{_,Row,SubTree}|T]) ->
   [update_iter(Path, Store),
    tree_insert_row(Store,0,Row),
    tree_insert(Store,[0|Path],SubTree),

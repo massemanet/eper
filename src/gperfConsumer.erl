@@ -2,7 +2,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : gperfConsumer.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 17 May 2005 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -21,7 +21,7 @@ init(Node) -> #ld{node = Node}.
 
 terminate(_LD) -> ok.
 
-tick(LD, Data) -> 
+tick(LD, Data) ->
   NLD = update_ld(LD, Data),
   gperf ! {tick, {ltime(NLD#ld.data),info(NLD)}},
   NLD.
@@ -47,11 +47,11 @@ info(LD) ->
 dump_ld(LD) ->
   ?log(lists:zip(record_info(fields,ld),tl(tuple_to_list(LD)))).
 
-update_ld(LD,[]) -> 
+update_ld(LD,[]) ->
   LD#ld{data=[]};
-update_ld(LD,[{prfSys,Sys}]) -> 
+update_ld(LD,[{prfSys,Sys}]) ->
   LD#ld{data=Sys};
-update_ld(LD,[X]) -> 
+update_ld(LD,[X]) ->
   ?log({unrecognized_data,X}), LD.
 
 ltime(Sys) ->
@@ -76,7 +76,7 @@ mem(Max,Sys) ->
    mn(1,dv(lks(ets,Sys)+lks(processes,Sys),Max)),
    mn(1,dv(lks(processes,Sys),Max))].
 
-net(Max,Sys) -> 
+net(Max,Sys) ->
   [mn(1,dv(lks(io_in,Sys),Max)),
    mn(1,dv(lks(io_out,Sys),Max))].
 

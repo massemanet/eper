@@ -46,7 +46,7 @@ print_port(Name,Data) ->
                                  [str("~8w", [V]) || {I,V}<-Data, ok(I)],
                                  str("~n",[])])]).
 
-net(NetN,NetO) -> 
+net(NetN,NetO) ->
   {_,O} = fold(fun foldf/3,{NetO,new()},NetN),
   O.
 
@@ -56,7 +56,7 @@ foldf(Key,Val,{KVs,O}) ->
   end.
 
 zipsub([],[]) -> [];
-zipsub([{K,V1}|R1],[{K,V2}|R2]) when is_integer(V1),is_integer(V2)-> 
+zipsub([{K,V1}|R1],[{K,V2}|R2]) when is_integer(V1),is_integer(V2)->
   [{K,V1-V2}|zipsub(R1,R2)];
 zipsub([{K,V}|R1],[{K,V}|R2]) -> [{K,V}|zipsub(R1,R2)].
 

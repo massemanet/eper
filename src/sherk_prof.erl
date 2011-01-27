@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : sherk_prof.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 30 Aug 2006 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -12,20 +12,20 @@
 
 -include("log.hrl").
 
-go(Msg, Seq, initial) 	     -> go(Msg, Seq, init());
+go(Msg, Seq, initial)        -> go(Msg, Seq, init());
 go(end_of_trace, Seq, State) -> terminate(Seq,State), State;
-go(Msg, Seq, State) 	     -> handler(Msg) ! {msg,Seq,Msg}, State.
+go(Msg, Seq, State)          -> handler(Msg) ! {msg,Seq,Msg}, State.
 
 init() ->
   ?log([{starting,?MODULE}]),
   sherk_ets:new(sherk_prof),
   {start,now()}.
 
-terminate(Seq,{start,Start}) -> 
+terminate(Seq,{start,Start}) ->
   ?log([{finishing,sherk_prof},
-	{seq,Seq},
-	{time,timer:now_diff(now(),Start)/1000000},
-	{procs,length(ets:match(sherk_prof,{{handler,'$1'},'_'}))}]),
+        {seq,Seq},
+        {time,timer:now_diff(now(),Start)/1000000},
+        {procs,length(ets:match(sherk_prof,{{handler,'$1'},'_'}))}]),
   TermFun = fun({{handler,_},Pid},_) -> Pid ! quit; (_,_) -> ok end,
   ets:foldl(TermFun,[],sherk_prof).
 
@@ -34,18 +34,18 @@ handler({_,{Pid,_},_,_}) -> assert_handler(Pid).
 
 assert_handler(Pid) ->
   case sherk_ets:lup(sherk_prof,{handler,Pid}) of
-    [] -> 
+    [] ->
       P = spawn_link(fun handler/0),
       P ! {pid,Pid},
       ets:insert(sherk_prof,{{handler,Pid},P}),
       P;
-    HandlerPid -> 
+    HandlerPid ->
       HandlerPid
   end.
 
 -record(s,{gc=no,fd=no,in=no,ts,pid,stack=[]}).
 
-handler() -> 
+handler() ->
   receive
     {pid,Pid} -> hloop(#s{pid=Pid});
     quit -> ok
@@ -83,18 +83,18 @@ out(Tag,S,TS) ->
     false ->
       ?log([not_running,{tag,Tag},{state,S}]),
       S;
-    true -> 
+    true ->
       case S#s.ts of
-	undefined -> 
-	  ?log([no_time,{state,S}]);
-	_ -> 
-	  T = timer:now_diff(TS,S#s.ts),
-	  MFA = hd(S#s.stack),
-	  upd({total,time}, T),
-	  upd({{pid,time}, S#s.pid}, T),
-	  upd({{func,time}, MFA}, T),
-	  upd({{func,time}, S#s.pid, MFA}, T),
-	  upd({{stack,time}, S#s.pid, S#s.stack}, T)
+        undefined ->
+          ?log([no_time,{state,S}]);
+        _ ->
+          T = timer:now_diff(TS,S#s.ts),
+          MFA = hd(S#s.stack),
+          upd({total,time}, T),
+          upd({{pid,time}, S#s.pid}, T),
+          upd({{func,time}, MFA}, T),
+          upd({{func,time}, S#s.pid, MFA}, T),
+          upd({{stack,time}, S#s.pid, S#s.stack}, T)
       end,
       S#s{ts=TS}
   end.
@@ -122,7 +122,7 @@ exIt(S,TS) ->
 
 push_stack(MFA,S) ->
   case S#s.stack of
-    [MFA|_] -> 
+    [MFA|_] ->
       S;
     Stack ->
       Trunced = truncate([MFA|Stack]),
@@ -147,8 +147,8 @@ truncate([MFA|Stack] = X) ->
     true ->
       {H,[MFA|T]} = lists:splitwith(fun(E)->E/=MFA end,Stack),
       case prefix(H,T) of
-	true -> [MFA|T];
-	false -> X
+        true -> [MFA|T];
+        false -> X
       end;
     false -> X
   end.
@@ -160,7 +160,7 @@ erase_bad_stack(S) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 
-stk(S,MFA) -> 
+stk(S,MFA) ->
   case S#s.stack of
     [] -> S#s{stack=[arity(MFA)]};
     _ -> S
@@ -172,7 +172,7 @@ arity(MFA) -> MFA.
 is_running(#s{gc=no,fd=no,in=yes}) -> true;
 is_running(_) -> false.
 
-upd(Key) -> 
+upd(Key) ->
   upd(Key,1).
 upd(Key,Inc) ->
   sherk_ets:upd(sherk_prof,Key,Inc).

@@ -21,7 +21,7 @@ collect(LD) ->
   assert(),
   {LD,{?MODULE,gen_server:call(?MODULE,get_data)}}.
 
-config(LD,Data) -> 
+config(LD,Data) ->
   ?log([unknown,{data,Data}]),
   LD.
 
@@ -39,7 +39,7 @@ sock_opts() -> [binary, {reuseaddr,true}, {active,false}, {packet,4}].
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% user code
 
-do_init(Args) -> 
+do_init(Args) ->
   #ld{args=Args, acceptor=accept(producer,56669,sock_opts())}.
 
 do_terminate(_LD,_Reason) -> ok.
@@ -55,7 +55,7 @@ do_info(LD,{new_socket,producer,Sock}) ->
   %% we accepted a socket towards a producer.
   inet:setopts(Sock,[{active,once}]),
   LD#ld{socket=[Sock|LD#ld.socket]};
-do_info(LD,{tcp,Sock,Bin}) -> 
+do_info(LD,{tcp,Sock,Bin}) ->
   case lists:member(Sock,LD#ld.socket) of
     true ->
       %% got data from a known socket. this is good
@@ -72,7 +72,7 @@ do_info(LD,{tcp_closed, Sock}) ->
 do_info(LD,{tcp_error, Sock, Reason}) ->
   ?log([{tcp_error,Reason},{socket,Sock}]),
   LD;
-do_info(LD,Msg) -> 
+do_info(LD,Msg) ->
   ?log([{unrec,Msg}|expand_recs(LD)]),
   LD.
 

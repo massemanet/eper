@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : redbugConsumer.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 23 Jan 2007 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------

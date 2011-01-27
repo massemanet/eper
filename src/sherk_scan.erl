@@ -1,7 +1,7 @@
 %%%----------------------------------------------------------------------
 %%% File    : shrerk_scan.erl
 %%% Author  : Mats Cronqvist <etxmacr@avc386>
-%%% Purpose : 
+%%% Purpose :
 %%% Created : 27 Feb 2006 by Mats Cronqvist <etxmacr@avc386>
 %%%----------------------------------------------------------------------
 
@@ -21,27 +21,27 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%  go(FileName, Patt, CBs, Min, Max)
 %%%  scans a trace file for messages. filters on sequence number and
-%%%  a pattern. if the sequence number is between Min and Max, and the 
+%%%  a pattern. if the sequence number is between Min and Max, and the
 %%%  message matches Patt, the massage is passed to the funs in CBs.
 %%%
 %%%  Filename - string()
-%%%  Patt - list(term(P))|term(P) - all terms P must match the message. 
+%%%  Patt - list(term(P))|term(P) - all terms P must match the message.
 %%%    funs, ports, refs and pids ar turned into atoms.
 %%%  CBs - list(function()) -  CB|list(CB)
 %%%  CB - fun(F)|atom(M)|{fun(F),term(Init)}|{atom(M),term(Init)}
-%%%  M - if M is '', the default callback is called. it will write the 
-%%%    trace message to a file (if Init is a string) or the screen. 
+%%%  M - if M is '', the default callback is called. it will write the
+%%%    trace message to a file (if Init is a string) or the screen.
 %%%    otherwise, M:go(Msg,Seq,State) is called
 %%%  Msg - the trace message
 %%%  Seq - the trace message sequence number
-%%%  State - the callback functions state 
+%%%  State - the callback functions state
 %%%  Init - the initial value of State. defaults to 'initial'
 %%%  Min - integer() - min sequence number
 %%%  Max - integer() - max sequence number
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-go(FileName, Patt, CBs, '', Max) -> 
+go(FileName, Patt, CBs, '', Max) ->
   go(FileName, Patt, CBs, 0, Max);
-go(FileName, _Patt, raw, Min, Max) -> 
+go(FileName, _Patt, raw, Min, Max) ->
   {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
   State = #state{min=Min,max=Max},
   file_action(FD, State, fun raw/2),
@@ -58,21 +58,21 @@ go(FileName, Patt, CBs, Min, Max) ->
 file_action(FD, Stat,Fun) ->
   file_action(make_chunk(FD, <<>>), FD, Stat, Fun).
 
-file_action(_, _FD, #state{eof = true} = Stat, Fun) -> 
+file_action(_, _FD, #state{eof = true} = Stat, Fun) ->
   Fun(end_of_trace, Stat);
-file_action(eof, _FD, Stat, Fun) -> 
+file_action(eof, _FD, Stat, Fun) ->
   Fun(end_of_trace, Stat);
 file_action({Term, Rest}, FD, Stat, Fun) ->
   file_action(make_chunk(FD, Rest), FD, Fun(Term, Stat), Fun).
 
-make_chunk(_FD, eof) -> 
+make_chunk(_FD, eof) ->
   eof;
 make_chunk(FD, <<0, Size:32, Tal/binary>> = Bin) ->
   case Tal of
     <<Term:Size/binary, Tail/binary>> -> {binary_to_term(Term), Tail};
     _ -> make_chunk(FD, get_more_bytes(FD, Bin))
   end;
-make_chunk(FD, B) when size(B) < 5 -> 
+make_chunk(FD, B) when size(B) < 5 ->
   make_chunk(FD, get_more_bytes(FD, B)).
 
 get_more_bytes(FD, Rest) ->
@@ -87,21 +87,21 @@ cbs([]) -> [];
 cbs([CB|T]) -> [to_cb(CB)|cbs(T)];
 cbs(Term) -> cbs([Term]).
 
-to_cb('') 				-> to_cb({'',standard_io});
-to_cb(Mod) 	  when is_atom(Mod) 	-> to_cb({Mod,initial});
-to_cb(Fun) 	  when is_function(Fun) -> to_cb({Fun,initial});
-to_cb({'',Out})   			-> {fun write_msg/3,Out};
-to_cb({Mod,Init}) when is_atom(Mod) 	-> is_cb(Mod),{{Mod,go},Init};
+to_cb('')                               -> to_cb({'',standard_io});
+to_cb(Mod)        when is_atom(Mod)     -> to_cb({Mod,initial});
+to_cb(Fun)        when is_function(Fun) -> to_cb({Fun,initial});
+to_cb({'',Out})                         -> {fun write_msg/3,Out};
+to_cb({Mod,Init}) when is_atom(Mod)     -> is_cb(Mod),{{Mod,go},Init};
 to_cb({Fun,Init}) when is_function(Fun) -> is_cb(Fun),{Fun,Init}.
 
 is_cb(M) when is_atom(M) -> true = member({go,3},M:module_info(exports));
 is_cb(F) when is_function(F) -> {arity,3} = erlang:fun_info(F,arity).
 
-do(end_of_trace, State) -> 
+do(end_of_trace, State) ->
   do_do(end_of_trace, State);
-do(_Mess, #state{max = Max, seq = Seq} = Stat) when Max < Seq -> 
+do(_Mess, #state{max = Max, seq = Seq} = Stat) when Max < Seq ->
   Stat#state{eof=true};
-do(Mess, #state{min = Min, seq = Seq} = Stat) when Seq < Min -> 
+do(Mess, #state{min = Min, seq = Seq} = Stat) when Seq < Min ->
   case mass(Mess) of
     [] -> Stat;
     _ -> Stat#state{seq = Seq+1}
@@ -117,9 +117,9 @@ do_do(end_of_trace = Ms, #state{cbs=CBs, seq=Seq} = State) ->
 do_do(Mess, #state{pattern=Patt, cbs=CBs, seq=Seq} = State) ->
   case grep(Patt, Mess) of
     false -> State#state{seq = Seq+1};
-    true -> 
-      State#state{seq = Seq+1, 
-                  hits = State#state.hits+1, 
+    true ->
+      State#state{seq = Seq+1,
+                  hits = State#state.hits+1,
                   cbs=do_safe_cbs(CBs, Mess, Seq, [])}
   end.
 
@@ -145,22 +145,22 @@ grep(P,T) -> grep([P],T).
 
 grp([], _) -> [];
 grp(P, []) -> P;
-grp(P, Fun) 
+grp(P, Fun)
   when is_function(Fun) -> grp(P, list_to_atom(erlang:fun_to_list(Fun)));
-grp(P, Port) 
+grp(P, Port)
   when is_port(Port) -> grp(P, list_to_atom(erlang:port_to_list(Port)));
-grp(P, Rf) 
+grp(P, Rf)
   when is_reference(Rf) -> grp(P, list_to_atom(erlang:ref_to_list(Rf)));
-grp(P, Pid) 
+grp(P, Pid)
   when is_pid(Pid) -> grp(P, list_to_atom(pid_to_list(Pid)));
-grp(P, T) 
-  when is_tuple(T) -> 
+grp(P, T)
+  when is_tuple(T) ->
   case lists:member(T,P) of
     true -> grp(P--[T], []);
     false -> grp(P,tuple_to_list(T))
   end;
-grp(P, L) 
-  when is_list(L) -> 
+grp(P, L)
+  when is_list(L) ->
   case lists:member(L, P) of
     true -> grp(P--[L], []);
     false -> grp(grp(P, hd(L)), tl(L))
@@ -189,7 +189,7 @@ raw_out(_Mess, State = #state{seq=Seq}) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% format is {Tag, PI, Data, Timestamp}
-%%% PI is {pid(), Info} 
+%%% PI is {pid(), Info}
 %%% Info is atom()|tuple()
 %%% Timestamp is no_time|now()
 %%% Data is;
@@ -246,13 +246,13 @@ mass(Pid, T=out, MFA, TS) ->                        {T,pi(Pid),MFA,TS};
 mass(Pid, T=gc_start, Info, TS) ->                  {T,pi(Pid),Info,TS};
 mass(Pid, T=gc_end, Info, TS) ->                    {T,pi(Pid),Info,TS}.
 
-mass_send(Pid, T, {Msg, To}, TS) when is_pid(To); is_port(To) -> 
+mass_send(Pid, T, {Msg, To}, TS) when is_pid(To); is_port(To) ->
   {T,pi(Pid),{pi(To), Msg},TS};
-mass_send(Pid, T, {Msg, To}, TS) when is_atom(To) -> 
+mass_send(Pid, T, {Msg, To}, TS) when is_atom(To) ->
   {T,pi(Pid),{{find_pid(To),To}, Msg},TS};
-mass_send(Pid, T, {Msg, {To,Node}}, TS) when is_atom(To), Node==node(Pid) -> 
+mass_send(Pid, T, {Msg, {To,Node}}, TS) when is_atom(To), Node==node(Pid) ->
   {T,pi(Pid),{{find_pid(To),To}, Msg},TS};
-mass_send(Pid, T, {Msg, {To,Node}}, TS) when is_atom(To), is_atom(Node) -> 
+mass_send(Pid, T, {Msg, {To,Node}}, TS) when is_atom(To), is_atom(Node) ->
   {T,pi(Pid),{{remote,{To,Node}}, Msg},TS}.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -295,7 +295,7 @@ del(Reg) when is_atom(Reg) -> ?log({unregistered,Reg}),ets_del(Reg).
 
 mangle_ic(MFA) ->
   case MFA of
-    {proc_lib,init_p,[_,_,M,F,A]} -> 
+    {proc_lib,init_p,[_,_,M,F,A]} ->
       {proc_lib, trans_init(M,F,A)};
     {file,file,[_,FileName,_]} ->
       {file, {atomize(FileName)}};
@@ -304,9 +304,9 @@ mangle_ic(MFA) ->
     {application_master,start_it,[_,{state,_,ApplD,_,_,_},_,_]} ->
       {appl_data,App,_,_,_,_,_,_,_} = ApplD,
       {application_master, {App}};
-    {erlang,apply,[Fun,[]]} when is_function(Fun) -> 
+    {erlang,apply,[Fun,[]]} when is_function(Fun) ->
       funi(Fun);
-    {M,F,As} -> 
+    {M,F,As} ->
       {M,F,As}
   end.
 
@@ -323,10 +323,10 @@ funi(Fun) ->
           {rpc, {call, node(Pid)}, {M, F, length(A)}};
         {_, [Pid, A, F, M]} when is_pid(Pid), is_list(A) ->
           {rpc, {cast, node(Pid)}, {M, F, length(A)}};
-        _X -> 
+        _X ->
           {rpc}
       end;
-    {_, Mod} -> 
+    {_, Mod} ->
       case erlang:fun_info(Fun, pid) of
         {_, Pid} when is_pid(Pid) -> {'fun', {Mod, node(Pid)}};
         {_, X} -> {'fun', {Mod, X}}

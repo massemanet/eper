@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File     : sherk_aquire.erl
 %%% Author  : Mats Cronqvist <qthmacr@mwux005>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 16 Aug 2004 by Mats Cronqvist <qthmacr@mwux005>
 %%%-------------------------------------------------------------------
@@ -25,7 +25,7 @@
 %%% sherk_aquire:go(1000,[call,timestamp],[{'_','_'}],all,[mwux005@mwux005],foo,{file,"/tmp/sherk/gruff",0,"/tmp"}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-go(Time,Flags,RTPs,Procs,Targs,Dest) -> 
+go(Time,Flags,RTPs,Procs,Targs,Dest) ->
     check_and_spawn(Time,Flags,RTPs,Procs,Targs,Dest).
 
 stop() -> catch (sherk_host ! stop).
@@ -33,28 +33,28 @@ stop() -> catch (sherk_host ! stop).
 kill() -> catch exit(erlang:whereis(sherk_host),kill).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% most argument checking is done here. some pid-related checking has 
-%% to be deferred to the target 
+%% most argument checking is done here. some pid-related checking has
+%% to be deferred to the target
 
 check_and_spawn(Time,Flags,RTPs,Procs,Targs,Dest) ->
     LD = from_list([{time,chk_time(Time)},
-		    {flags,chk_flags(Flags)},
-		    {rtps,chk_rtps(RTPs)},
-		    {procs,chk_procs(Procs)},
-		    {dest,chk_dest(Dest)},
-		    {targs,chk_conns(Targs)},
-		    {daddy,self()}]),
-    
+                    {flags,chk_flags(Flags)},
+                    {rtps,chk_rtps(RTPs)},
+                    {procs,chk_procs(Procs)},
+                    {dest,chk_dest(Dest)},
+                    {targs,chk_conns(Targs)},
+                    {daddy,self()}]),
+
     (Pid = spawn(fun init/0)) ! {init,LD},
     Pid.
 
 chk_conns(Targs) -> map(fun(T)->chk_conn(T) end,Targs).
 
 chk_conn(T) when T==node() -> T;
-chk_conn(T) -> 
+chk_conn(T) ->
     case net_adm:ping(T) of
-	pong -> ass_loaded(T,sherk_target);
-	pang -> exit({connection_failed,T})
+        pong -> ass_loaded(T,sherk_target);
+        pang -> exit({connection_failed,T})
     end.
 
 chk_time(Time) when is_integer(Time) -> Time;
@@ -76,10 +76,10 @@ chk_dest(X) -> exit({bad_dest,X}).
 
 chk_flags(Fs) -> map(fun chk_flag/1, Fs).
 
-chk_flag(F) -> 
-    case member(F,trace_flags()) of 
-	true -> F;
-	false -> exit({bad_flag,F})
+chk_flag(F) ->
+    case member(F,trace_flags()) of
+        true -> F;
+        false -> exit({bad_flag,F})
     end.
 
 chk_rtps(RTPs) -> map(fun chk_rtp/1, RTPs).
@@ -106,70 +106,70 @@ init() ->
     sherk_target:self_register(sherk_host),
     process_flag(trap_exit,true),
     receive
-	{init,LD} -> 
-	    Targs = fetch(targs,LD),
-	    Pids = [spawn_link(T, fun sherk_target:init/0) || T <- Targs],
-	    [ P ! {init,store(daddy,self(),LD)} || P <- Pids],
-	    Timer = erlang:start_timer(fetch(time,LD),self(),{die}),
-	    loop(store(pids,Pids,store(timer,Timer,LD)))
+        {init,LD} ->
+            Targs = fetch(targs,LD),
+            Pids = [spawn_link(T, fun sherk_target:init/0) || T <- Targs],
+            [ P ! {init,store(daddy,self(),LD)} || P <- Pids],
+            Timer = erlang:start_timer(fetch(time,LD),self(),{die}),
+            loop(store(pids,Pids,store(timer,Timer,LD)))
     end.
 
 loop(LD) ->
     receive
-	{timeout,_,{die}} -> 
-	    ?log({timed_out}),
-	    stop(LD);
-	stop -> 
-	    stop(LD);
-	{'EXIT',P,R} -> 
-	    ?log([got_exit,{from,node(P)},{reason,R}]),
-	    case fetch(pids,LD) of
-		[P] -> ?log(all_clients_dead);
-		Ps -> loop(store(pids,Ps--[P],LD))
-	    end
+        {timeout,_,{die}} ->
+            ?log({timed_out}),
+            stop(LD);
+        stop ->
+            stop(LD);
+        {'EXIT',P,R} ->
+            ?log([got_exit,{from,node(P)},{reason,R}]),
+            case fetch(pids,LD) of
+                [P] -> ?log(all_clients_dead);
+                Ps -> loop(store(pids,Ps--[P],LD))
+            end
     end.
 
-stop(LD) -> 
+stop(LD) ->
     Pids = fetch(pids,LD),
     [P ! stop || P <- Pids],
     recv(Pids,fetch(dest,LD),dict:new()).
 
 recv(_,{ip,_},_) -> ok;
 recv(Pids,{file,{Dir,_,_}},FDs) -> recv(Pids,Dir,FDs);
-recv([],_,FDs) -> 
+recv([],_,FDs) ->
     case dict:fold(fun(P,_,A)->[node(P)|A] end,[],FDs) of
-	[] -> ok;
-	X -> ?log({fds_still_open,X})
+        [] -> ok;
+        X -> ?log({fds_still_open,X})
     end;
 recv(Pids,Dir,FDs) ->
     receive
-	{'EXIT',P,R} 	    -> recv(bye(P,R,Pids),Dir,close(P,FDs));
-	{P,chunk,eof} 	    -> recv(bye(P,eof,Pids),Dir,close(P,FDs));
-	{P,chunk,{error,R}} -> recv(bye(P,R,Pids),Dir,close(P,FDs));
-	{P,chunk,B} when is_binary(B) -> recv(Pids,Dir,stuff(P,B,Dir,FDs))
+        {'EXIT',P,R}        -> recv(bye(P,R,Pids),Dir,close(P,FDs));
+        {P,chunk,eof}       -> recv(bye(P,eof,Pids),Dir,close(P,FDs));
+        {P,chunk,{error,R}} -> recv(bye(P,R,Pids),Dir,close(P,FDs));
+        {P,chunk,B} when is_binary(B) -> recv(Pids,Dir,stuff(P,B,Dir,FDs))
     end.
 
 stuff(P,B,Dir,FDs) ->
     try fetch(P,FDs) of
-	FD -> 
-	    file:write(FD,B),
-	    FDs
+        FD ->
+            file:write(FD,B),
+            FDs
     catch
-	_:_ -> 
-	    File = filename:join(Dir,atom_to_list(node(P)))++".trz",
-	    filelib:ensure_dir(File),
-	    {ok,FD} = file:open(File,[raw,write,compressed]),
-	    ?log({opened,File}),
-	    stuff(P,B,Dir,store(P,FD,FDs))
+        _:_ ->
+            File = filename:join(Dir,atom_to_list(node(P)))++".trz",
+            filelib:ensure_dir(File),
+            {ok,FD} = file:open(File,[raw,write,compressed]),
+            ?log({opened,File}),
+            stuff(P,B,Dir,store(P,FD,FDs))
     end.
 
 close(P,FDs) ->
     try fetch(P,FDs) of
-	FD -> 
-	    file:close(FD),
-	    dict:erase(P,FDs)
+        FD ->
+            file:close(FD),
+            dict:erase(P,FDs)
     catch
-	_:_ -> FDs
+        _:_ -> FDs
     end.
 
 bye(P,R,Pids) ->
@@ -179,21 +179,21 @@ bye(P,R,Pids) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ass_loaded(Node, Mod) ->
     case rpc:call(Node,Mod,module_info,[compile]) of
-	{badrpc,{'EXIT',{undef,_}}} -> 		%no code
-	    netload(Node, Mod),
-	    ass_loaded(Node, Mod);
-	{badrpc,_} ->
-	    exit({no_connection,Node});
-	CompInfo when is_list(CompInfo) ->
-	    case {ftime(CompInfo), ftime(Mod:module_info(compile))} of
-		{interpreted,_} ->
-		    exit({target_has_interpreted_code,Mod});
-		{TargT, HostT} when TargT < HostT -> %old code on target
-		    netload(Node, Mod),
-		    ass_loaded(Node, Mod);
-		_ -> 
-		    Node
-	    end
+        {badrpc,{'EXIT',{undef,_}}} ->          %no code
+            netload(Node, Mod),
+            ass_loaded(Node, Mod);
+        {badrpc,_} ->
+            exit({no_connection,Node});
+        CompInfo when is_list(CompInfo) ->
+            case {ftime(CompInfo), ftime(Mod:module_info(compile))} of
+                {interpreted,_} ->
+                    exit({target_has_interpreted_code,Mod});
+                {TargT, HostT} when TargT < HostT -> %old code on target
+                    netload(Node, Mod),
+                    ass_loaded(Node, Mod);
+                _ ->
+                    Node
+            end
     end.
 
 netload(Node, Mod) ->

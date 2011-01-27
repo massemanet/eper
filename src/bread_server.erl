@@ -68,11 +68,11 @@ start_breader(File,Files,LD) ->
   LD#ld{file=File,files=Files,bread_pid=BP,bread_ref=BR}.
 
 %% runs in its own process
-breader(File,guess) -> 
+breader(File,guess) ->
   breader(File,guess_type(filename:extension(File)));
-breader(File,Type) -> 
+breader(File,Type) ->
   bread:fold(File,fun breaded/2,0,[Type]).
-  
+
 breaded(Blob,N) ->
   receive
     quit -> exit(N);

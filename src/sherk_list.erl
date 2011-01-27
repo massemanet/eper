@@ -1,7 +1,7 @@
 %%%-------------------------------------------------------------------
 %%% File    : sherk_list.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 21 Aug 2006 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
@@ -24,7 +24,7 @@ get_list(Pid) ->
 
 str(X) -> flatten(io_lib:fwrite("~p",[X])).
 
-%% tag(P) -> 
+%% tag(P) ->
 %%     case sherk_ets:lup(sherk_scan,P) of
 %%         {M,F,As} when is_list(As) -> mangle(M,F,As);
 %%         X -> X
@@ -36,7 +36,7 @@ str(X) -> flatten(io_lib:fwrite("~p",[X])).
 percent(_,0) -> 0;
 percent(A,B) -> round(100*A/B).
 
-calls(Pid,MFA) -> 
+calls(Pid,MFA) ->
     case sherk_ets:lup(sherk_prof,{{func, calls}, Pid, MFA}) of
         [] -> 0;
         N -> N

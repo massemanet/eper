@@ -1,14 +1,14 @@
 %%%-------------------------------------------------------------------
 %%% File    : gperfGtk.erl
 %%% Author  : Mats Cronqvist <locmacr@mwlx084>
-%%% Description : 
+%%% Description :
 %%%
 %%% Created : 12 Sep 2005 by Mats Cronqvist <locmacr@mwlx084>
 %%%-------------------------------------------------------------------
 -module(gperfGtk).
 
 -export([start/0,stop/0,init/0]).
--export([loop/1]).				%internal export
+-export([loop/1]).                              %internal export
 
 -import(lists,[foreach/2,flatten/1,keysearch/3,nth/2,reverse/1,seq/2,sort/1]).
 -import(orddict,[new/0,store/3,is_key/2,fold/3,update/3,fetch/2,from_list/1]).
@@ -23,8 +23,8 @@
 -define(WYSIZE,?YSIZE).
 -define(XHALF,(?XSIZE div 2)).
 -define(DAREAS, [{drawingarea1,[blue,red,green,magenta]},
-		 {drawingarea2,[black,blue,red,yellow]},
-		 {drawingarea3,[red,green]}]).
+                 {drawingarea2,[black,blue,red,yellow]},
+                 {drawingarea3,[red,green]}]).
 
 -record(dArea, {win,px_fg,px_bg,gc_fg,gc_bg,gcs,layout}).
 -record(conf, {widget, val, type}).
@@ -48,7 +48,7 @@ init() ->
     _:R -> ?log([{error,R},{stack,erlang:get_stacktrace()}])
   end.
 
-glade_file(Glade) -> 
+glade_file(Glade) ->
   try take_first(
         fun(F) -> true = filelib:is_regular(F) end,
         [filename:join([code:lib_dir(eper),"src",Glade])
@@ -56,8 +56,8 @@ glade_file(Glade) ->
   catch _:_ -> exit({not_found,Glade})
   end.
 
-take_first(F,[H|T]) -> 
-  try F(H),H 
+take_first(F,[H|T]) ->
+  try F(H),H
   catch _:_ -> take_first(F,T)
   end.
 
@@ -86,7 +86,7 @@ loop(LD) ->
     {args,['']}         -> ?LP(LD);
     {args,[Node]}       -> ?LP(conf(LD,from_list([{anode,Node}])));
     {args,[Node,Proxy]} -> ?LP(conf(LD,from_list([{aproxy,Proxy},
-						  {anode,Node}])));
+                                                  {anode,Node}])));
 
     %% ticker
     {tick, Stuff}       -> ?LP(do_tick(LD,Stuff));
@@ -106,12 +106,12 @@ dump_ld(LD) ->
 %% initialize the conf dialog
 -spec conf() -> confs().
 conf() ->
-  from_list([{anode, #conf{widget=conf_node,  val='',  type=atom}}, 
-	     {cookie,#conf{widget=conf_cookie,val='',  type=atom}}, 
-	     {aproxy,#conf{widget=conf_proxy, val='',  type=atom}}, 
-	     {cpu,   #conf{widget=conf_cpu,   val=300, type=integer}},
-	     {mem,   #conf{widget=conf_mem,   val=8*1024,type=integer}},
-	     {net,   #conf{widget=conf_net,   val=32*1024,type=integer}}]).
+  from_list([{anode, #conf{widget=conf_node,  val='',  type=atom}},
+             {cookie,#conf{widget=conf_cookie,val='',  type=atom}},
+             {aproxy,#conf{widget=conf_proxy, val='',  type=atom}},
+             {cpu,   #conf{widget=conf_cpu,   val=300, type=integer}},
+             {mem,   #conf{widget=conf_mem,   val=8*1024,type=integer}},
+             {net,   #conf{widget=conf_net,   val=32*1024,type=integer}}]).
 
 %% sets and allpies conf values
 %% TagVals and Confs are dicts
@@ -129,7 +129,7 @@ conf_upd(Key,Val,Confs) ->
 %% struct differ. if so, take the value from the GUI
 %% TagVals and Confs are dicts
 -spec conf(#ld{}) -> #ld{}.
-conf(LD) -> 
+conf(LD) ->
   {TagVals,Confs} = fold(fun conf_chk/3, {new(),LD#ld.conf}, LD#ld.conf),
   conf_apply(TagVals,Confs),
   LD#ld{conf=Confs}.
@@ -165,14 +165,14 @@ conf_fill(Confs) -> fold(fun conf_fill/3, [], Confs).
 conf_fill(_Key,#conf{widget=Widget, val=Val},_) ->
   g('Gtk_entry_set_text',[Widget,to_str(Val)]).
 
-conf_val(Key,LD) when is_record(LD,ld) -> 
+conf_val(Key,LD) when is_record(LD,ld) ->
   conf_val(Key,LD#ld.conf);
 conf_val(Key,Confs) ->
   (fetch(Key,Confs))#conf.val.
 
-get_gui_val(Widget,Type,Val) -> 
+get_gui_val(Widget,Type,Val) ->
   X = g('Gtk_entry_get_text',[Widget]),
-  case Type of 
+  case Type of
     atom -> try list_to_atom(X) catch _:_ -> Val end;
     integer-> try list_to_integer(X) catch _:_ -> Val end
   end.
@@ -197,7 +197,7 @@ setcookie(Node,Cookie) ->
 restart(Confs) ->
   try restart(conf_val(anode,Confs),conf_val(aproxy,Confs)),
       [do_conf(Tag,Confs) || Tag <- [cpu,net,mem]]
-  catch _:R -> 
+  catch _:R ->
       ?log([{reason,R},Confs])
   end.
 
@@ -213,7 +213,7 @@ die(_LD) ->
   io:fwrite("~w - terminating~n", [?MODULE]),
   exit(dying).
 
-do_unknown(LD,X) -> 
+do_unknown(LD,X) ->
   io:fwrite("~w - unknown signal - ~p~n",[?MODULE,X]),
   LD.
 
@@ -239,7 +239,7 @@ hide(Darea) -> g('Gtk_widget_hide',[Darea]).
 
 hide_cf() -> hide(conf_window).
 
-show_cf(LD) -> 
+show_cf(LD) ->
   conf_fill(LD#ld.conf),
   show(conf_window).
 
@@ -280,7 +280,7 @@ timeline(LD = #ld{dAreas=Dareas},{_,M,_}=HMS) ->
   foreach(fun(Darea)->draw_timeline(Darea,LD,HMS) end,Dareas),
   LD#ld{minute=M}.
 
-stat_change(up,LD) ->     
+stat_change(up,LD) ->
   Nod = to_str(conf_val(anode,LD)),
   g('Gtk_window_set_title',[window,"gperf - "++Nod]),
   statbar(Nod++" - connected",LD),
@@ -305,7 +305,7 @@ draw_time(#dArea{px_fg=Pxfg,px_bg=Pxbg,layout=Layout,gc_fg=GC},LD,{H,M}) ->
   g('Gdk_draw_layout',[Pxbg,GC,LD#ld.x-?XHALF,90,Layout]).
 
 draw_line(DA,GCtag,X,Y) ->
-  %% draws a line from {X,0} to {X,Y} where 0<Y<1. 
+  %% draws a line from {X,0} to {X,Y} where 0<Y<1.
   %% Y=0: upper margin, Y=1: lower margin
   Y0 = ?YSIZE-?MARG,
   Y1 = Y0-round(Y*(?YSIZE-2*?MARG)),
@@ -349,9 +349,9 @@ init_da({DA,Colors})->
   g( 'Gtk_widget_set_size_request',[DA,?WXSIZE,?WYSIZE]),
   g('Gtk_widget_modify_bg', [DA,'GTK_STATE_NORMAL',white]),
   {DA,#dArea{win=Win,layout=Layout,
-	     gc_fg=GCblack,gc_bg=GCwhite,
-	     px_fg=P1,px_bg=P2,
-	     gcs=gcs(Win,Colors)}}.
+             gc_fg=GCblack,gc_bg=GCwhite,
+             px_fg=P1,px_bg=P2,
+             gcs=gcs(Win,Colors)}}.
 
 pixmaps(0, _Win) -> [];
 pixmaps(N,Win) ->
@@ -368,7 +368,7 @@ clear_one({_,#dArea{px_fg=Px1,px_bg=Px2,gc_fg=GCfg,gc_bg=GCbg}}) ->
 
 clear_px(GCfg,GCbg,Pixmap) ->
   g('Gdk_draw_rectangle', [Pixmap,GCbg, true, 0, 0, -1, -1]),
-  g('Gdk_draw_rectangle', 
+  g('Gdk_draw_rectangle',
     [Pixmap,GCfg,false,?MARG,?MARG,?XSIZE-2*?MARG,?YSIZE-2*?MARG]).
 
 gcs(_Win,[]) -> [];

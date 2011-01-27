@@ -21,14 +21,14 @@ config(State,_ConfigData) -> State.
 data() -> lists:sort([port_info(P) || P <- erlang:ports()]).
 
 %%returns {Name::atom(),Stats::list()}
-port_info(P) when is_port(P) -> 
+port_info(P) when is_port(P) ->
   try stats(P,name(P))
   catch _:_ -> {P,[]}
   end.
 
-stats(P,{driver,Name}) -> 
+stats(P,{driver,Name}) ->
   {{driver,Name},erlang:port_info(P)};
-stats(P,Name) -> 
+stats(P,Name) ->
   case erlang:port_info(P) of
     undefined -> throw(port_gone);
     Info ->
@@ -42,23 +42,23 @@ name(P) -> name(erlang:port_info(P,name),P).
 name({name,"udp_inet"},P) ->
   {ok,Port} = inet:port(P),
   {udp,Port};
-name({name,"tcp_inet"},P) -> 
+name({name,"tcp_inet"},P) ->
   {ok,{IP,Port}} = inet:peername(P),
   memoize({prfNet,tcp_name,IP,Port}, fun tcp_name/1);
 name({name,Name},_P) ->
   {driver,Name}.
 
 tcp_name({prfNet,tcp_name,IP,Port}) ->
-  case inet:gethostbyaddr(IP) of 
+  case inet:gethostbyaddr(IP) of
     {ok,#hostent{h_name=HostName}} ->
-      try 
+      try
         {ok,Names} = net_adm:names(HostName),
         {value,{NodeName,Port}} = lists:keysearch(Port,2,Names),
-        {node,NodeName++"@"++HostName} 
-      catch 
-        _:_ -> {tcp,{HostName,Port}} 
+        {node,NodeName++"@"++HostName}
+      catch
+        _:_ -> {tcp,{HostName,Port}}
       end;
-    _ -> 
+    _ ->
       X = tuple_to_list(IP),
       {tcp,{tl(lists:flatten([[$.,integer_to_list(I)]||I<-X])),Port}}
   end.
@@ -68,4 +68,3 @@ memoize(Key,F) ->
     undefined -> put(Key,F(Key)), get(Key);
     Name -> Name
   end.
-
