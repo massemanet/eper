@@ -2,6 +2,7 @@
 
 self=`dirname $_`
 self=`dirname $self`
+self=`dirname $self`
 self=`(cd $self ; pwd)`
 
 usage(){
