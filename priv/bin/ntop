@@ -16,7 +16,11 @@ else
     SPATH=`which $0`
 fi
 
-script=`basename $0`
+if [ -L $SPATH ];then
+    SPATH=`readlink $SPATH`
+fi
+
+script=`basename $SPATH`
 
 n=3
 while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
