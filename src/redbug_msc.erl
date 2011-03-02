@@ -5,6 +5,17 @@
 %% transforms a string to a call trace expression;
 %% {MFA,MatchSpec} == {{M,F,A},{Head,Cond,Body}}
 
+
+%% TODO
+%%redbug_msc:transform("a:b([$a,$b|C])").  
+%%** exception exit: {bad_type,{char,97}}
+%%
+%%redbug_msc:transform("a:b(\"ab\"++C)").
+%%** exception exit: {function_clause,
+%%                       {parse_body,"a:b(\"ab\"++C)"},
+%%                       [{redbug_msc,arg,
+%%                            [{op,1,'++',{string,1,"ab"},{var,1,'C'}}]},
+
 -module('redbug_msc').
 -author('Mats Cronqvist').
 
@@ -95,11 +106,13 @@ ca_fun_list(Es,Vars) ->
 
 cfl([],O) -> O;
 cfl([E|Es],{V0,P0}) when is_list(Es) ->
-  {V,P}=ca_fun(E,{V0,[]}),
+  {V,P} = ca_fun(E,{V0,[]}),
   cfl(Es,{lists:usort(V0++V),P0++P});
-cfl(E,{V0,P0}) ->
+cfl([E1|E2],{V0,P0}) ->
   %% non-proper list / tail match
-  exit({nyi,E,V0,P0}).
+  {V1,[P1]} = ca_fun(E1,{V0,[]}),
+  {V2,[P2]} = ca_fun(E2,{lists:usort(V0++V1),[]}),
+  {lists:usort(V0++V1++V2),P0++[P1|P2]}.
 
 assert_type(Type,Val) ->
   case lists:member(Type,[integer,atom,string]) of
@@ -277,8 +290,12 @@ unit() ->
        {{a,b,1},
         [{[['$1','$2','$3']],[{'==','$2','$3'}],[]}],
         [local]}}
-    ]).
-
+     ,{"x:y([C|{D}])when is_atom(C)",
+       {{x,y,1},
+        [{[['$1'|{'$2'}]],[{is_atom,'$1'}],[]}],
+        [local]}}
+    ])
+.
 
 unit(Method,{Str,MS}) ->
   try MS=Method(Str),Str
