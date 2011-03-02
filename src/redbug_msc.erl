@@ -91,15 +91,15 @@ ca_fun({Type,Val},{Vars,O}) ->
   {Vars,O++[Val]}.
 
 ca_fun_list(Es,Vars) ->
-  cfl(lists:reverse(Es),{Vars,[]}).
+  cfl(Es,{Vars,[]}).
 
 cfl([],O) -> O;
 cfl([E|Es],{V0,P0}) when is_list(Es) ->
   {V,P}=ca_fun(E,{V0,[]}),
-  cfl(Es,{lists:usort(V0++V),P++P0});
-cfl(A,B) ->
+  cfl(Es,{lists:usort(V0++V),P0++P});
+cfl(E,{V0,P0}) ->
   %% non-proper list / tail match
-  exit({nyi,A,B}).
+  exit({nyi,E,V0,P0}).
 
 assert_type(Type,Val) ->
   case lists:member(Type,[integer,atom,string]) of
@@ -265,17 +265,17 @@ unit() ->
         [local]}}
      ,{"x:y(A,[A,B,C])when A==B,is_atom(C)",
        {{x,y,2},
-        [{['$1',['$1','$3','$2']],
-          [{'==','$1','$3'},{is_atom,'$2'}],
+        [{['$1',['$1','$2','$3']],
+          [{'==','$1','$2'},{is_atom,'$3'}],
           []}],
         [local]}}
      ,{"x:y([A,B,C])when A=/=B,is_atom(C)",
        {{x,y,1},
-        [{[['$3','$2','$1']],[{'=/=','$3','$2'},{is_atom,'$1'}],[]}],
+        [{[['$1','$2','$3']],[{'=/=','$1','$2'},{is_atom,'$3'}],[]}],
         [local]}}
      ,{"a:b([A,B,T])when B==T",
        {{a,b,1},
-        [{[['$3','$2','$1']],[{'==','$2','$1'}],[]}],
+        [{[['$1','$2','$3']],[{'==','$2','$3'}],[]}],
         [local]}}
     ]).
 
