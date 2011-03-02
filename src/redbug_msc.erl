@@ -91,11 +91,15 @@ ca_fun({Type,Val},{Vars,O}) ->
   {Vars,O++[Val]}.
 
 ca_fun_list(Es,Vars) ->
-  lists:foldr(fun(E,{V0,P0})-> {V,P}=ca_fun(E,{V0,[]}),
-                               {lists:usort(V0++V),P++P0}
-              end,
-              {Vars,[]},
-              Es).
+  cfl(lists:reverse(Es),{Vars,[]}).
+
+cfl([],O) -> O;
+cfl([E|Es],{V0,P0}) when is_list(Es) ->
+  {V,P}=ca_fun(E,{V0,[]}),
+  cfl(Es,{lists:usort(V0++V),P++P0});
+cfl(A,B) ->
+  %% non-proper list / tail match
+  exit({nyi,A,B}).
 
 assert_type(Type,Val) ->
   case lists:member(Type,[integer,atom,string]) of
@@ -177,8 +181,8 @@ arg({tuple,1,Args}) -> {tuple,[arg(A)||A<-Args]};
 arg({T,1,Var})      -> {T,Var}.
 
 arg_list({cons,_,H,T}) -> [arg(H)|arg_list(T)];
-arg_list({nil,_})      -> [].
-%% non-proper list should be handled here.
+arg_list({nil,_})      -> [];
+arg_list(V)            -> arg(V).
 
 actions_fun(Str) ->
   fun() ->
@@ -258,6 +262,20 @@ unit() ->
      ,{"a:b(X,X) -> return;stack",
        {{a,b,2},
         [{['$1','$1'],[],[{exception_trace},{message,{process_dump}}]}],
+        [local]}}
+     ,{"x:y(A,[A,B,C])when A==B,is_atom(C)",
+       {{x,y,2},
+        [{['$1',['$1','$3','$2']],
+          [{'==','$1','$3'},{is_atom,'$2'}],
+          []}],
+        [local]}}
+     ,{"x:y([A,B,C])when A=/=B,is_atom(C)",
+       {{x,y,1},
+        [{[['$3','$2','$1']],[{'=/=','$3','$2'},{is_atom,'$1'}],[]}],
+        [local]}}
+     ,{"a:b([A,B,T])when B==T",
+       {{a,b,1},
+        [{[['$3','$2','$1']],[{'==','$2','$1'}],[]}],
         [local]}}
     ]).
 
