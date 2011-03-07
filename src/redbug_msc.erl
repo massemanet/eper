@@ -115,7 +115,7 @@ cfl([E1|E2],{V0,P0}) ->
   {lists:usort(V0++V1++V2),P0++[P1|P2]}.
 
 assert_type(Type,Val) ->
-  case lists:member(Type,[integer,atom,string]) of
+  case lists:member(Type,[integer,atom,string,char]) of
     true -> ok;
     false-> exit({bad_type,{Type,Val}})
   end.
