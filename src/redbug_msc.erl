@@ -7,14 +7,10 @@
 
 
 %% TODO
-%%redbug_msc:transform("a:b([$a,$b|C])").  
-%%** exception exit: {bad_type,{char,97}}
-%%
-%%redbug_msc:transform("a:b(\"ab\"++C)").
-%%** exception exit: {function_clause,
-%%                       {parse_body,"a:b(\"ab\"++C)"},
-%%                       [{redbug_msc,arg,
-%%                            [{op,1,'++',{string,1,"ab"},{var,1,'C'}}]},
+%%redbug_msc:transform("a:b(\"\"++_)").
+%%** exception error: no function clause matching 
+%%                    redbug_msc:cfl({var,'_'},{[],[]})
+%%     in function  redbug_msc:ca_fun/2
 
 -module('redbug_msc').
 -author('Mats Cronqvist').
@@ -188,10 +184,15 @@ guard({op,1,Op,One,Two})        -> {Op,guard(One),guard(Two)};% unary op
 guard({op,1,Op,One})            -> {Op,guard(One)};           % binary op
 guard(Guard)                    -> arg(Guard).                % variable
 
+arg({op,_,'++',{string,_,Str},Var}) -> {list,arg_list(consa(Str,Var))};
 arg({nil,_})        -> {list,[]};
 arg(L={cons,_,_,_}) -> {list,arg_list(L)};
-arg({tuple,1,Args}) -> {tuple,[arg(A)||A<-Args]};
-arg({T,1,Var})      -> {T,Var}.
+arg({tuple,_,Args}) -> {tuple,[arg(A)||A<-Args]};
+arg({T,_,Var})      -> {T,Var}.
+
+consa([],T) -> T;
+consa([C],T) -> {cons,1,{char,1,C},T};
+consa([C|Cs],T) -> {cons,1,{char,1,C},consa(Cs,T)}.
 
 arg_list({cons,_,H,T}) -> [arg(H)|arg_list(T)];
 arg_list({nil,_})      -> [];
@@ -294,8 +295,18 @@ unit() ->
        {{x,y,1},
         [{[['$1'|{'$2'}]],[{is_atom,'$1'}],[]}],
         [local]}}
-    ])
-.
+     ,{"lists:reverse(\"ab\"++_)",
+       {{lists,reverse,1},
+        [{[[97,98|'_']],[],[]}],
+        [local]}}
+     ,{"lists:reverse(\"ab\"++C)when 3<length(C)",
+       {{lists,reverse,1},
+        [{[[97,98|'$1']],[{'<',3,{length,'$1'}}],[]}],
+        [local]}}       
+     ,{"a:b([$a,$b|C])",
+       {{a,b,1},[{[[97,98|'$1']],[],[]}],
+        [local]}}
+    ]).
 
 unit(Method,{Str,MS}) ->
   try MS=Method(Str),Str
