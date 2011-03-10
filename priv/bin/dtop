@@ -16,6 +16,10 @@ else
     SPATH=`which $0`
 fi
 
+if [ -L $SPATH ];then
+    SPATH=`readlink $SPATH`
+fi
+
 n=3
 while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
 ERL=erl

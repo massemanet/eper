@@ -1,6 +1,12 @@
 #!/bin/bash
 
-self=`dirname $_`
+SPATH=$_
+if [ -L $SPATH ];then
+    SPATH=`readlink $SPATH`
+fi
+
+self=`dirname $SPATH`
+self=`dirname $self`
 self=`dirname $self`
 self=`(cd $self ; pwd)`
 
