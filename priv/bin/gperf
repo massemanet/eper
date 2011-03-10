@@ -2,7 +2,7 @@
 
 usage(){
     cat <<- end
-usage: `basename $0` [-setcookie <cookie>] [-nocookie] [-nettick <tick>] 
+usage: `basename $0` [-setcookie <cookie>] [-nocookie] [-nettick <tick>]
        [-pa <path>] [-win] [-dbg] [-vsn <OTP version>] [-proxy proxy] [node]
 end
     exit
@@ -21,9 +21,9 @@ while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
 PATHS=""
 for p in $SPATH/gtknode-*/ebin $SPATH/eper-*/ebin; do
     if [ "${p: -7}" == "-*/ebin" ]; then
-	echo "Can't expand $p.${p: -7}"
+        echo "Can't expand $p.${p: -7}"
     else
-	PATHS=$PATHS" -pa $p"
+        PATHS=$PATHS" -pa $p"
     fi
 done
 
@@ -33,46 +33,46 @@ START="-s gperf ni"
 HALT="-s erlang halt"
 XTRA=""
 
-while [ -n "$1" ] 
+while [ -n "$1" ]
   do
   case $1 in
       "-help"|"-h"|"-?")
-	  usage
-	  ;;
+          usage
+          ;;
       "-win")
-	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
+          WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
           START="-s gperf start"
           HALT=""
-	  detach=""
-	  ;;
+          detach=""
+          ;;
       "-dbg")
           START="-s gperf start"
           HALT=""
-	  detach=""
-	  ;;
+          detach=""
+          ;;
       "-vsn"|"-version")
-	  shift
-	  VSN="+R $1"
-	  ;;
+          shift
+          VSN="+R $1"
+          ;;
       "-nettick"|"-tick")
-	  shift 
-	  nettick="-kernel net_ticktime $1"
-	  ;;
+          shift
+          nettick="-kernel net_ticktime $1"
+          ;;
       "-cookie"|"-setcookie")
-	  shift
-	  cookie="-setcookie $1"
-	  ;;
+          shift
+          cookie="-setcookie $1"
+          ;;
       "-nocookie")
-	  cookie=""
-	  ;;
+          cookie=""
+          ;;
       "-pa")
-	   shift
-	   XTRA="-pa $1 $XTRA"
-	   ;;
+           shift
+           XTRA="-pa $1 $XTRA"
+           ;;
       "-proxy")
-	  shift
-	  proxy="$1"
-	  ;;
+          shift
+          proxy="$1"
+          ;;
       "-*")
           echo dollar_one $1
           ;;

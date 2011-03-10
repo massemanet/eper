@@ -26,35 +26,35 @@ detach="-detached"
 VSN=""
 START="-s sherk ni -s erlang halt"
 
-while [ -n "$1" ] 
+while [ -n "$1" ]
   do
   case $1 in
       "-help"|"-h"|"-?")
-	  usage
-	  ;;
+          usage
+          ;;
       "-win")
-	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
+          WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
           START="-s sherk go"
-	  detach=""
-	  ;;
+          detach=""
+          ;;
       "-vsn"|"-version")
-	  VSN="+R "$2
-	  shift
-	  ;;
+          VSN="+R "$2
+          shift
+          ;;
       "-nettick"|"-tick")
-	  nettick="-kernel net_ticktime $2"
-	  shift 
-	  ;;
+          nettick="-kernel net_ticktime $2"
+          shift
+          ;;
       "-cookie"|"-setcookie")
-	  cookie="-setcookie $2"
-	  shift
-	  ;;
+          cookie="-setcookie $2"
+          shift
+          ;;
       "-nocookie")
-	  cookie=""
-	  ;;
+          cookie=""
+          ;;
       *)
           usage
-	  ;;
+          ;;
   esac
   shift
 done

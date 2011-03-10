@@ -15,33 +15,33 @@ VSN=""
 XTRA=""
 echo=""
 
-while [ -n "$1" ] 
+while [ -n "$1" ]
   do
   case $1 in
       "--help"|"-h"|"-?")
-	  usage
-	  ;;
+          usage
+          ;;
       "-vsn"|"-version")
-	  VSN="+R "$2
-	  shift
-	  ;;
+          VSN="+R "$2
+          shift
+          ;;
       "-nettick"|"-tick")
-	  nettick="-kernel net_ticktime $2"
-	  shift 
-	  ;;
+          nettick="-kernel net_ticktime $2"
+          shift
+          ;;
       "-cookie"|"-setcookie")
-	  cookie="-setcookie $2"
-	  shift
-	  ;;
+          cookie="-setcookie $2"
+          shift
+          ;;
       "-debug")
           echo=echo
           ;;
       "-nocookie")
-	  cookie=""
-	  ;;
+          cookie=""
+          ;;
       "-*")
           echo unrecognized flag $1
-	  usage
+          usage
           ;;
       *)
           XTRA=" $XTRA $1"
@@ -53,7 +53,7 @@ done
 if [ -z "$XTRA" ]; then usage; fi
 
 PATHS="-pa $self/ebin"
-name="redbug_"$$ 
+name="redbug_"$$
 DISTR="-noshell -hidden -sname $name $cookie $nettick"
 START="-run redbug unix"
 

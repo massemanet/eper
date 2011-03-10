@@ -2,7 +2,7 @@
 
 usage(){
     cat <<- end
-usage: `basename $0` [-setcookie <cookie>] [-nocookie] [-nettick <tick>] 
+usage: `basename $0` [-setcookie <cookie>] [-nocookie] [-nettick <tick>]
        [-win] [-dbg] [-vsn <OTP version>] [-proxy proxynode] nodename
 end
     exit
@@ -21,49 +21,49 @@ while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
 ERL=erl
 START="-s dtop start"
 
-while [ -n "$1" ] 
+while [ -n "$1" ]
   do
   case $1 in
       "-help"|"-h"|"-?")
-	  usage
-	  ;;
+          usage
+          ;;
       "-dbg")
-	  ;;
+          ;;
       "-win")
-	  WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
-	  ;;
+          WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
+          ;;
       "-vsn"|"-version")
-	  shift
-	  VSN="+R "$1
-	  ;;
+          shift
+          VSN="+R "$1
+          ;;
       "-nettick"|"-tick")
-	  shift 
-	  nettick="-kernel net_ticktime $1"
-	  ;;
+          shift
+          nettick="-kernel net_ticktime $1"
+          ;;
       "-cookie"|"-setcookie")
-	  shift
-	  cookie="-setcookie $1"
-	  ;;
+          shift
+          cookie="-setcookie $1"
+          ;;
       "-nocookie")
-	  cookie=""
-	  ;;
+          cookie=""
+          ;;
       "-proxy")
-	  shift
-	  proxy="$1"
-	  ;;
+          shift
+          proxy="$1"
+          ;;
       *)
-	  if [ $# -eq 1 ]; then
-	      TARG=$1
-	  else
-	      usage
-	  fi
-	  ;;
+          if [ $# -eq 1 ]; then
+              TARG=$1
+          else
+              usage
+          fi
+          ;;
   esac
   shift
 done
 
-if [ -z "$TARG" ]; then 
-    usage; 
+if [ -z "$TARG" ]; then
+    usage;
 else
     START="$START $TARG $proxy"
 fi

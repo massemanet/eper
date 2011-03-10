@@ -117,7 +117,7 @@ unix([Node,Time,Msgs,Trc,Proc]) ->
   try
     Cnf = #cnf{time = to_int(Time),
                msgs   = to_int(Msgs),
-               trc    = to_term(Trc),
+               trc    = try to_term(Trc) catch _:_ -> Trc end,
                proc   = to_atom(Proc),
                target = to_atom(Node)},
     self() ! {start,Cnf},
