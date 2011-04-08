@@ -6,12 +6,6 @@
 %% {MFA,MatchSpec} == {{M,F,A},{Head,Cond,Body}}
 
 
-%% TODO
-%%redbug_msc:transform("a:b(\"\"++_)").
-%%** exception error: no function clause matching 
-%%                    redbug_msc:cfl({var,'_'},{[],[]})
-%%     in function  redbug_msc:ca_fun/2
-
 -module('redbug_msc').
 -author('Mats Cronqvist').
 
@@ -38,9 +32,12 @@ compile({M,F,Ari,[],Actions}) when is_integer(Ari) ->
   compile({M,F,lists:duplicate(Ari,{var,'_'}),[],Actions});
 compile({M,F,As,Gs,Actions}) when is_list(As) ->
   {Vars,Args} = compile_args(As),
-  {{M,F,length(As)},
+  {{M,F,len(F,As)},
    [{Args,compile_guards(Gs,Vars),compile_acts(Actions)}],
    flags()}.
+
+len('_',_) -> '_';
+len(_,As)  -> length(As).
 
 flags() -> [local].
 
@@ -161,10 +158,12 @@ body_fun(Str) ->
           {M,F,Ari};
         {ok,[{call,1,{remote,1,{atom,1,M},{atom,1,F}},Args}]} ->
           {M,F,[arg(A) || A<-Args]};
+        {ok,[{call,1,{remote,1,{atom,1,M},{var,1,'_'}},Args}]} ->
+          {M,'_',[arg(A) || A<-Args]};
         {ok,[{remote,1,{atom,1,M},{atom,1,F}}]} ->
           {M,F,'_'};
-        {ok,_} ->
-          exit(this_is_too_confusing)
+        {ok,C} ->
+          exit({this_is_too_confusing,C})
      end
   end.
 
@@ -302,16 +301,19 @@ unit() ->
      ,{"lists:reverse(\"ab\"++C)when 3<length(C)",
        {{lists,reverse,1},
         [{[[97,98|'$1']],[{'<',3,{length,'$1'}}],[]}],
-        [local]}}       
+        [local]}}
      ,{"a:b([$a,$b|C])",
        {{a,b,1},[{[[97,98|'$1']],[],[]}],
+        [local]}}
+     ,{"a:_(a)",
+       {{a,'_',1},[{[a],[],[]}],
         [local]}}
     ]).
 
 unit(Method,{Str,MS}) ->
   try MS=Method(Str),Str
   catch
-    _:{MS,_,_} -> Str;
-    _:{MS,_}   -> Str;
-    C:R        -> {C,R,Str,erlang:get_stacktrace()}
+    _:{MS,_}       -> Str;
+    _:{{MS,_},_,_} -> Str;
+    C:R            -> {C,R,Str,erlang:get_stacktrace()}
   end.
