@@ -18,7 +18,7 @@
 %%% interface %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 config(ConfData) ->
   case whereis(prfTarg) of
-    underfined -> not_started;
+    undefined -> not_started;
     Pid -> Pid ! {config,ConfData}
   end.
 
