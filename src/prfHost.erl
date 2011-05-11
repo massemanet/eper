@@ -22,7 +22,7 @@
 
 start(Name,Node,Consumer) -> start(Name,Node,Consumer,no_proxy).
 start(Name,Node,Consumer,Proxy)
-  when is_atom(Name),is_atom(Node),is_atom(Consumer),is_atom(Proxy) ->
+  when is_atom(Name),is_atom(Node), is_atom(Proxy) ->
   assert_proxy(Proxy),
   SpawnFun = fun()->init(Consumer,Node,Proxy) end,
   case whereis(Name) of
