@@ -25,7 +25,11 @@
 -include("log.hrl").
 
 -record(ld,
-        {jailed=[]                       %jailed pids
+        {timeout_restart=5000 %turn off sys_mon this long @ max_jailed
+         ,max_jailed=20       %turn off sys_mon when jail is this full
+         ,timeout_release=10  %keep pid/msg_type in jail this long
+
+         ,jailed=[]                      %jailed pids
          ,subscribers=[]                 %where to send our reports
          ,triggers=default_triggers()    %{atom(Tag), fun/1->no|fun/1}
          ,prfState                       %prfTarg:subscribe return val
@@ -36,6 +40,19 @@
 
 rec_info(ld) -> record_info(fields,ld);
 rec_info(_)  -> [].
+
+show_these_fields() ->
+  [timeout_restart,max_jailed,timeout_release,jailed,subscribers,triggers].
+
+upgrade({ld,Js,Ss,Ts,PS,UD,PD,MD}) ->
+  #ld{jailed=Js
+      ,subscribers=Ss
+      ,triggers=Ts
+      ,prfState=PS
+      ,userData=UD
+      ,prfData=PD
+      ,monData=MD
+     }.
 
 %% constants
 
@@ -48,10 +65,6 @@ default_triggers() ->
    ,{[prfSys,kernel],fun(X)->true=(0.5<X) end}
    ,{[prfSys,iowait],fun(X)->true=(0.3<X) end}
   ].
-
-timeout(restart) -> 5000;                       %  5 sec
-timeout(release) -> 1800.                       %  1.8 sec
--define(max_jailed, 100).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% api
@@ -67,6 +80,12 @@ stop() ->
 
 state() ->
   handle_state().
+
+config(prfPrc,{max_procs,MaxProcs}) ->
+  prfTarg:config({prfPrc,{max_procs,MaxProcs}});
+config(Tag,Val) ->
+  send_to_wd({cfg,Tag,Val}),
+  state().
 
 delete_trigger(Key) ->
   send_to_wd({delete_trigger,Key}).
@@ -119,14 +138,23 @@ send_to_wd(Term) ->
     _:R            -> {error,R}
   end.
 
-config(prfPrc,{max_procs,MaxProcs}) ->
-  prfTarg:config({prfPrc,{max_procs,MaxProcs}}).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init([]) ->
   LD = #ld{prfState=prfTarg:subscribe(node(),self(),[prfSys,prfPrc])},
   start_monitor(LD#ld.triggers),
   LD.
+
+% upgrade
+handle_info(Msg,OLD) when not is_record(OLD,ld) ->
+  handle_info(Msg,upgrade(OLD));
+
+% admin configs
+handle_info({cfg,timeout_restart,TR}, LD) when is_integer(TR) ->
+  LD#ld{timeout_restart=TR};
+handle_info({cfg,max_jailed,MJ}, LD)      when is_integer(MJ) ->
+  LD#ld{max_jailed=MJ};
+handle_info({cfg,timeout_release,TR}, LD) when is_integer(TR)->
+  LD#ld{timeout_release=TR};
 
 % admin triggers
 handle_info({delete_trigger,Key},LD) ->
@@ -176,7 +204,7 @@ handle_info(X,LD) ->
   LD.
 
 handle_state() ->
-  handle_state([jailed,subscribers,triggers]).
+  handle_state(show_these_fields()).
 
 handle_state(Ks) ->
   try
@@ -215,16 +243,16 @@ maybe_restart(Trig,Triggers) ->
 clean_triggers(Triggers,IDs) ->
   lists:filter(fun({ID,_})->not lists:member(ID,IDs) end, Triggers).
 
-check_jailed(LD,_) when ?max_jailed < length(LD#ld.jailed) ->
+check_jailed(LD,_) when LD#ld.max_jailed < length(LD#ld.jailed) ->
   % we take a timeout when enough pids are jailed. conservative is good.
-  erlang:start_timer(timeout(restart), self(), restart),
+  erlang:start_timer(LD#ld.timeout_restart, self(), restart),
   stop_monitor(),
   flush(),
   throw(taking_timeout);
 check_jailed(LD,What) ->
   case lists:member(What, LD#ld.jailed) of
     false->
-      erlang:start_timer(timeout(release), self(), {release, What}),
+      erlang:start_timer(LD#ld.timeout_release, self(), {release, What}),
       LD#ld{jailed=[What|LD#ld.jailed]};
     true ->
       throw(is_jailed)
