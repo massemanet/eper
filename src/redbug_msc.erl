@@ -162,6 +162,8 @@ body_fun(Str) ->
           {M,'_',[arg(A) || A<-Args]};
         {ok,[{remote,1,{atom,1,M},{atom,1,F}}]} ->
           {M,F,'_'};
+        {ok,[{remote,1,{atom,1,M},{var,1,'_'}}]} ->
+          {M,'_','_'};
         {ok,C} ->
           exit({this_is_too_confusing,C})
      end
@@ -306,7 +308,13 @@ unit() ->
        {{a,b,1},[{[[97,98|'$1']],[],[]}],
         [local]}}
      ,{"a:_(a)",
-       {{a,'_',1},[{[a],[],[]}],
+       {{a,'_','_'},[{[a],[],[]}],
+        [local]}}
+     ,{"a:_",
+       {{a,'_','_'},[{'_',[],[]}],
+        [local]}}
+     ,{"a:_->return",
+       {{a,'_','_'},[{'_',[],[{exception_trace}]}],
         [local]}}
     ]).
 
