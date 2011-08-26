@@ -27,7 +27,7 @@
 -record(ld,
         {timeout_restart=5000 %turn off sys_mon this long @ max_jailed
          ,max_jailed=20       %turn off sys_mon when jail is this full
-         ,timeout_release=10  %keep pid/msg_type in jail this long
+         ,timeout_release=100  %keep pid/msg_type in jail this long
 
          ,jailed=[]                      %jailed pids
          ,subscribers=[]                 %where to send our reports
@@ -249,14 +249,16 @@ check_jailed(LD,_) when LD#ld.max_jailed < length(LD#ld.jailed) ->
   stop_monitor(),
   flush(),
   throw(taking_timeout);
+check_jailed(LD = #ld{timeout_release=0},_) ->
+  LD;
 check_jailed(LD,What) ->
   case lists:member(What, LD#ld.jailed) of
+    true ->
+      throw(is_jailed);
     false->
       erlang:start_timer(LD#ld.timeout_release, self(), {release, What}),
-      LD#ld{jailed=[What|LD#ld.jailed]};
-    true ->
-      throw(is_jailed)
-    end.
+      LD#ld{jailed=[What|LD#ld.jailed]}
+  end.
 
 do_mon(LD) ->
   send_report(LD,sysMon),
