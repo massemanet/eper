@@ -151,42 +151,53 @@ pid_info(Pid) when is_pid(Pid) ->
   pid_info(Pid,?TAGS).
 
 pid_info(Pid,Tags) when is_list(Tags) ->
-  try [pidinfo(Pid,T) || T <- Tags]
-  catch _:_ -> []
-  end.
+  [pidinfo(Pid,T) || T <- Tags].
 
-pidinfo(Pid, Type = stack_size) ->
-  {Type,8*element(2,process_info(Pid, Type))};
-pidinfo(Pid, Type = heap_size) ->
-  {Type,8*element(2,process_info(Pid, Type))};
-pidinfo(Pid, Type = total_heap_size) ->
-  {Type,8*element(2,process_info(Pid, Type))};
-pidinfo(Pid, Type = last_calls) ->
-  try
-    case process_info(Pid,last_calls) of
-      {_,false} -> process_flag(Pid,save_calls,16),{Type,[]};
-      {_,Calls} -> {Type,lists:usort(Calls)}
-    end
-  catch
-    _:_ -> {Type,[]}
-  end;
-pidinfo(Pid, Type = registered_name) ->
-  case process_info(Pid, Type) of
-    [] -> {Type,[]};
-    XX -> XX
-  end;
-pidinfo(Pid, Type = initial_call) ->
-  case process_info(Pid, Type) of
-    {Type,{proc_lib,init_p,5}} ->
-      case proc_lib:translate_initial_call(Pid) of
-        {dets,init,2} -> {Type,{dets, element(2, dets:pid2name(Pid))}};
-        IC -> {Type,IC}
-      end;
-    {Type,{dets, do_open_file, 11}}->{Type,pinf_dets(Pid)};%gone in R12
-    XX -> XX
-  end;
-pidinfo(Pid, Type) ->
-  process_info(Pid, Type).
+pidinfo(Pid,Tag) ->
+  {Getter,Default} = pidinfo(Tag),
+  {Tag,try Getter(Pid) catch _:_ -> Default end}.
+
+pidinfo(Type = stack_size) ->
+  {fun(Pid) -> 8*element(2,process_info(Pid, Type))end,
+   0};
+pidinfo(Type = heap_size) ->
+  {fun(Pid) -> 8*element(2,process_info(Pid, Type))end,
+   0};
+pidinfo(Type = total_heap_size) ->
+  {fun(Pid) -> 8*element(2,process_info(Pid, Type))end,
+   0};
+pidinfo(Type = last_calls) ->
+  {fun(Pid) ->
+       case process_info(Pid,Type) of
+         {_,false} -> process_flag(Pid,save_calls,16),[];
+         {_,Calls} -> lists:usort(Calls)
+       end
+   end,
+   []};
+pidinfo(Type = registered_name) ->
+  {fun(Pid) ->
+       case process_info(Pid, Type) of
+         []       -> [];
+         {Type,N} -> N
+       end
+   end,
+  []};
+pidinfo(Type = initial_call) ->
+  {fun(Pid) ->
+       case process_info(Pid, Type) of
+         {Type,{proc_lib,init_p,5}} ->
+           case proc_lib:translate_initial_call(Pid) of
+             {dets,init,2} -> {dets, element(2, dets:pid2name(Pid))};
+             IC -> IC
+           end;
+         {Type,{dets, do_open_file, 11}} -> pinf_dets(Pid);%gone in R12
+         {Type,IC} -> IC
+       end
+   end,
+   []};
+pidinfo(Type) ->
+  {fun(Pid) -> process_info(Pid, Type) end,
+   []}.
 
 pinf_dets(Pid) ->
   {dets, element(2, dets:pid2name(Pid))}.
