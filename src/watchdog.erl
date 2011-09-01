@@ -302,7 +302,8 @@ add_subscriber(Key,Val,Subs) ->
         _     -> lists:keyreplace(Key,1,Subs,Sub)
       end
   catch _:R ->
-      ?log([{subscriber_not_added,R},{Key,Val}])
+      ?log([{subscriber_not_added,R},{Key,Val}]),
+      Subs
     end.
 
 send_report(LD,Trigger) ->
