@@ -299,7 +299,7 @@ add_subscriber(Key,Val,Subs) ->
   try Sub = mk_subscriber(Key,Val),
       case lists:keysearch(Key,1,Subs) of
         false -> [{Key,Sub}|Subs];
-        _     -> lists:keyreplace(Key,1,Subs,Sub)
+        _     -> lists:keyreplace(Key,1,Subs,{Key, Sub})
       end
   catch _:R ->
       ?log([{subscriber_not_added,R},{Key,Val}]),
