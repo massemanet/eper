@@ -155,9 +155,7 @@ pid_info(Pid,Tags) when is_list(Tags) ->
 
 pidinfo(Pid,Tag) ->
   {Getter,Default} = pidinfo(Tag),
-  try Getter(Pid)
-  catch _:_ -> Default
-  end.
+  {Tag, try Getter(Pid) catch _:_ -> Default end}.
 
 pidinfo(Type = stack_size) ->
   {fun(Pid) -> 8*element(2,process_info(Pid, Type))end,
@@ -198,7 +196,7 @@ pidinfo(Type = initial_call) ->
    end,
    []};
 pidinfo(Type) ->
-  {fun(Pid) -> process_info(Pid, Type) end,
+  {fun(Pid) -> {Type,I} = process_info(Pid, Type), I end,
    []}.
 
 pinf_dets(Pid) ->
