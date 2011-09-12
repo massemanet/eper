@@ -155,7 +155,9 @@ pid_info(Pid,Tags) when is_list(Tags) ->
 
 pidinfo(Pid,Tag) ->
   {Getter,Default} = pidinfo(Tag),
-  {Tag,try Getter(Pid) catch _:_ -> Default end}.
+  try Getter(Pid)
+  catch _:_ -> Default
+  end.
 
 pidinfo(Type = stack_size) ->
   {fun(Pid) -> 8*element(2,process_info(Pid, Type))end,
