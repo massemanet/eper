@@ -121,9 +121,8 @@ get_tab_header(FD) ->
 
 
 f2t(FD,Tab,N) ->
-  try
-    ets:insert(Tab,f2t_f(FD)),
-    f2t(FD,Tab,N+1)
+  try ets:insert(Tab,f2t_f(FD)) of
+    _ -> f2t(FD,Tab,N+1)
   catch
     throw:delimiter -> N;
     throw:eof -> exit({unexpected_eof})
