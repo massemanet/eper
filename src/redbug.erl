@@ -300,7 +300,7 @@ mk_out(#cnf{print_re=RE,print_file=File,print_depth=D,print_msec=MS}) ->
       Str=flat(F,[fix_ts(MS,hd(A))|tl(A)]++[D]),
       case RE =:= "" andalso re:run(Str,RE) =:= nomatch of
         true  -> ok;
-        false -> io:fwrite(get_fd(File),"~s~n",Str)
+        false -> io:fwrite(get_fd(File),"~s~n",[Str])
       end
   end.
 
