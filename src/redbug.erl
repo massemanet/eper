@@ -313,8 +313,8 @@ get_fd(FN) ->
 
 fix_ts(MS,TS) ->
   case MS of
-    true -> ts(TS);
-    false-> ts_ms(TS)
+    true -> ts_ms(TS);
+    false-> ts(TS)
   end.
 
 ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
