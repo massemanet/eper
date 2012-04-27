@@ -269,11 +269,32 @@ spawn_printer(Cnf) ->
 
 def_print_fun(#cnf{print_fun=PF}) when is_function(PF) -> PF;
 def_print_fun(Cnf) ->
-  OutFun = mk_out(Cnf),
-  fun(Msgs) -> outer(OutFun,Msgs) end.
+  OuterFun = mk_outer(Cnf),
+  fun(Msgs) -> foreach(OuterFun,Msgs) end.
 
-mk_out(#cnf{file=[_|_]}) ->
-  fun(_,_) -> ok end;
+mk_outer(#cnf{file=[_|_]}) ->
+  fun(_) -> ok end;
+mk_outer(Cnf) ->
+  OutFun = mk_out(Cnf),
+  fun(Msg) ->
+      case Msg of
+        {'call',{MFA,Bin},PI,TS} ->
+          case Cnf#cnf.print_calls of
+            true -> 
+              OutFun("~n~s <~p> ~P",[TS,PI,MFA]),
+              foreach(fun(L)->OutFun(" ",[L]) end, stak(Bin));
+            false->
+              ok
+          end;
+        {'retn',{MFA,Val},PI,TS} ->
+          OutFun("~n~s <~p> ~p -> ~P",[TS,PI,MFA,Val]);
+        {'send',{MSG,To},PI,TS} ->
+          OutFun("~n~s <~p> <~p> <<< ~P",[TS,PI,To,MSG]);
+        {'recv',MSG,PI,TS} ->
+          OutFun("~n~s <~p> <<< ~P",[TS,PI,MSG])
+      end
+  end.
+
 mk_out(#cnf{print_re=RE,print_file=File,print_depth=D,print_msec=MS}) ->
   fun(F,A) ->
       Str=flat(F,[fix_ts(MS,hd(A))|tl(A)]++[D]),
@@ -301,22 +322,6 @@ ts_ms({H,M,S,Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w.~3.3.0w",[H,M,S,Us div 1000])
 
 flat(Form,List) -> flatten(io_lib:fwrite(Form,List)).
 
-outer(_,[]) -> ok;
-outer(OutFun,[Msg|Msgs]) ->
-  case Msg of
-    {'call',{MFA,Bin},PI,TS} ->
-      OutFun("~n~s <~p> ~P",[TS,PI,MFA]),
-      foreach(fun(L)->OutFun(" ",[L]) end, stak(Bin));
-    {'retn',{MFA,Val},PI,TS} ->
-      OutFun("~n~s <~p> ~p -> ~P",[TS,PI,MFA,Val]);
-    {'send',{MSG,To},PI,TS} ->
-      OutFun("~n~s <~p> <~p> <<< ~P",[TS,PI,To,MSG]);
-    {'recv',MSG,PI,TS} ->
-      OutFun("~n~s <~p> <<< ~P",[TS,PI,MSG]);
-    _ ->
-      OutFun("~n~P", [Msg])
-  end,
-  outer(OutFun,Msgs).
 
 %%% call stack handler
 stak(Bin) ->
