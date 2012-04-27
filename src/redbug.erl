@@ -23,8 +23,8 @@
 
 %% the redbug server data structure
 %% most can be set in the input proplist
--record(cnf,{time         = 15000          % ms
-             , msgs         = 10           % unit
+-record(cnf,{time         = 15000          % stop trace after this time [ms]
+             , msgs         = 10           % stop trace after this # msgs [unit]
              , proc         = all          % list of procs (or 'all')
              , target       = node()       % target node
              , cookie       = ''           % target node cookie
@@ -268,7 +268,7 @@ maybe_new_target(Cnf = #cnf{target=Target}) ->
 
 maybe_print(#cnf{print_depth = Pdepth, print_msec = Pmsec} = Cnf) ->
   PF = the_print_fun(Cnf),
-  Cnf#cnf{print_pid=spawn_link(fun()->printi(PF,Pdepth,Pmsec) end)}.
+  Cnf#cnf{print_pid=spawn_link(fun()->print_init(PF,Pdepth,Pmsec) end)}.
 
 the_print_fun(Cnf) ->
   PrintFun = mk_the_print_fun(Cnf),
@@ -381,18 +381,18 @@ slist(L) when is_list(L) -> usort(L);
 slist(X) -> [X].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-printi(PrintFun,Pdepth,Pmsec) ->
+print_init(PrintFun,Pdepth,Pmsec) ->
   receive
     {trace_consumer,TC} ->
       erlang:monitor(process,TC),
-      printl(PrintFun,Pdepth,Pmsec)
+      print_loop(PrintFun,Pdepth,Pmsec)
   end.
 
-printl(PrintFun,Pdepth,Pmsec) ->
+print_loop(PrintFun,Pdepth,Pmsec) ->
   receive
     {'DOWN',_,_,_,R} -> io:fwrite("quitting: ~p~n",[R]);
     X -> outer(PrintFun,Pdepth,Pmsec,X),
-         printl(PrintFun,Pdepth,Pmsec)
+         print_loop(PrintFun,Pdepth,Pmsec)
   end.
 
 outer(_,_,_,[]) -> ok;
