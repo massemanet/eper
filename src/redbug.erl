@@ -30,12 +30,12 @@
              , cookie       = ''           % target node cookie
              , buffered     = no           % output buffering
              , arity        = false        % arity instead of args
-             , print_call   = true         % print calls (see `return_only')
-             , print_form   = "~s~n"       % format for printing
+             , print_calls  = true         % print calls
              , print_file   = ""           % file to print to (standard_io)
              , print_msec   = false        % print milliseconds in timestamps?
              , print_depth  = 999999       % Limit for "~P" formatting depth
              , print_re     = ""           % regexp that must match to print
+             , print_fun    = ''           % custom print handler
              , max_queue    = 5000         % max # of msgs before suicide
              , max_msg_size = 50000        % max message size before suicide
              , file         = ""           % file to write trace msgs to
@@ -50,10 +50,8 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-print_fun(FD,Form) -> fun(Str) -> io:fwrite(FD,Form,[Str]) end.
-
 help() ->
-  foreach(print_fun(standard_io,"~s~n"),
+  foreach(fun(S)->io:fwrite(standard_io,"~s~n",[S])end,
           ["redbug - the (sensibly) Restrictive Debugger"
            , ""
            , "  redbug:start(Trc) -> start(Trc,[])."
@@ -97,11 +95,11 @@ help() ->
            , "max_queue    (5000)        fail if internal queue gets this long"
            , "max_msg_size (50000)       fail if seeing a msg this big"
            , "buffered     (no)          buffer messages till end of trace"
-           , "print_form   (\"~s~n\")      print msgs using this format"
            , "print_file   (standard_io) print to this file"
            , "print_msec   (false)       print milliseconds on timestamps"
            , "print_depth  (999999)      formatting depth for \"~P\""
            , "print_re     (\"\")          print only strings that match this"
+           , "print_pid    ''            custom print handler"
            , "  trc file related opts"
            , "file         (none)        use a trc file based on this name"
            , "file_size    (1)           size of each trc file"
@@ -226,7 +224,7 @@ starting(Cnf = #cnf{print_pid=PrintPid}) ->
   end.
 
 running(Cnf = #cnf{trc_pid=TrcPid,print_pid=PrintPid}) ->
-  maybe_alert_printer(Cnf),
+  Cnf#cnf.print_pid ! {trace_consumer,Cnf#cnf.cons_pid},
   receive
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}}),
                    stopping(Cnf);
@@ -252,13 +250,10 @@ stopping(#cnf{print_pid=PrintPid}) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 do_start(OCnf) ->
-  Cnf = maybe_print(maybe_new_target(OCnf)),
+  Cnf = spawn_printer(assert_print_fun(maybe_new_target(OCnf))),
   prf:start(prf_redbug,Cnf#cnf.target,redbugConsumer),
   prf:config(prf_redbug,prfTrc,{start,{self(),pack(Cnf)}}),
   Cnf.
-
-maybe_alert_printer(Cnf) ->
-  Cnf#cnf.print_pid ! {trace_consumer,Cnf#cnf.cons_pid}.
 
 maybe_new_target(Cnf = #cnf{target=Target}) ->
   case lists:member($@,Str=atom_to_list(Target)) of
@@ -266,26 +261,25 @@ maybe_new_target(Cnf = #cnf{target=Target}) ->
     false-> Cnf#cnf{target=to_atom(Str++"@"++element(2,inet:gethostname()))}
   end.
 
-maybe_print(#cnf{print_depth = Pdepth, print_msec = Pmsec} = Cnf) ->
-  PF = the_print_fun(Cnf),
-  Cnf#cnf{print_pid=spawn_link(fun()->print_init(PF,Pdepth,Pmsec) end)}.
 
-the_print_fun(Cnf) ->
-  PrintFun = mk_the_print_fun(Cnf),
-  fun(print_call)->Cnf#cnf.print_call;
-     (Str) -> PrintFun(Str)
-  end.
+assert_print_fun(Cnf) -> Cnf#cnf{print_fun=def_print_fun(Cnf)}.
 
-mk_the_print_fun(#cnf{file=[_|_]}) ->
-  fun(_) -> ok end;
-mk_the_print_fun(#cnf{print_re="",print_file=F,print_form=Form}) ->
-  print_fun(get_fd(F),Form);
-mk_the_print_fun(Cnf = #cnf{print_re=RE}) ->
-  PF = mk_the_print_fun(Cnf#cnf{print_re=""}),
-  fun(Str) ->
-      case re:run(Str,RE) of
-        nomatch -> ok;
-        _       -> PF(Str)
+spawn_printer(Cnf) ->
+  Cnf#cnf{print_pid=spawn_link(fun()->print_init(Cnf#cnf.print_fun) end)}.
+
+def_print_fun(#cnf{print_fun=PF}) when is_function(PF) -> PF;
+def_print_fun(Cnf) ->
+  OutFun = mk_out(Cnf),
+  fun(Msgs) -> outer(OutFun,Msgs) end.
+
+mk_out(#cnf{file=[_|_]}) ->
+  fun(_,_) -> ok end;
+mk_out(#cnf{print_re=RE,print_file=File,print_depth=D,print_msec=MS}) ->
+  fun(F,A) ->
+      Str=flat(F,[fix_ts(MS,hd(A))|tl(A)]++[D]),
+      case RE =:= "" andalso re:run(Str,RE) =:= nomatch of
+        true  -> ok;
+        false -> io:fwrite(get_fd(File),"~s~n",Str)
       end
   end.
 
@@ -295,6 +289,60 @@ get_fd(FN) ->
     {ok,FD} -> FD;
     _ -> exit({cannot_open,FN})
   end.
+
+fix_ts(MS,TS) ->
+  case MS of
+    true -> ts(TS);
+    false-> ts_ms(TS)
+  end.
+
+ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
+ts_ms({H,M,S,Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w.~3.3.0w",[H,M,S,Us div 1000]).
+
+flat(Form,List) -> flatten(io_lib:fwrite(Form,List)).
+
+outer(_,[]) -> ok;
+outer(OutFun,[Msg|Msgs]) ->
+  case Msg of
+    {'call',{MFA,Bin},PI,TS} ->
+      OutFun("~n~s <~p> ~P",[TS,PI,MFA]),
+      foreach(fun(L)->OutFun(" ",[L]) end, stak(Bin));
+    {'retn',{MFA,Val},PI,TS} ->
+      OutFun("~n~s <~p> ~p -> ~P",[TS,PI,MFA,Val]);
+    {'send',{MSG,To},PI,TS} ->
+      OutFun("~n~s <~p> <~p> <<< ~P",[TS,PI,To,MSG]);
+    {'recv',MSG,PI,TS} ->
+      OutFun("~n~s <~p> <<< ~P",[TS,PI,MSG]);
+    _ ->
+      OutFun("~n~P", [Msg])
+  end,
+  outer(OutFun,Msgs).
+
+%%% call stack handler
+stak(Bin) ->
+  foldl(fun munge/2,[],string:tokens(binary_to_list(Bin),"\n")).
+
+munge(I,Out) ->
+  case reverse(I) of
+    "..."++_ -> [truncated|Out];
+    _ ->
+      case string:str(I, "Return addr") of
+        0 ->
+          case string:str(I, "cp = ") of
+            0 -> Out;
+            _ -> [mfaf(I)|Out]
+          end;
+        _ ->
+          case string:str(I, "erminate process normal") of
+            0 -> [mfaf(I)|Out];
+            _ -> Out
+          end
+      end
+  end.
+
+mfaf(I) ->
+  [_, C|_] = string:tokens(I,"()+"),
+  C.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% pack the cnf record into a proplist for prf consumption
@@ -381,67 +429,19 @@ slist(L) when is_list(L) -> usort(L);
 slist(X) -> [X].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-print_init(PrintFun,Pdepth,Pmsec) ->
+print_init(PrintFun) ->
   receive
     {trace_consumer,TC} ->
       erlang:monitor(process,TC),
-      print_loop(PrintFun,Pdepth,Pmsec)
+      print_loop(PrintFun)
   end.
 
-print_loop(PrintFun,Pdepth,Pmsec) ->
+print_loop(PrintFun) ->
   receive
     {'DOWN',_,_,_,R} -> io:fwrite("quitting: ~p~n",[R]);
-    X -> outer(PrintFun,Pdepth,Pmsec,X),
-         print_loop(PrintFun,Pdepth,Pmsec)
+    X -> PrintFun(X),
+         print_loop(PrintFun)
   end.
-
-outer(_,_,_,[]) -> ok;
-outer(PrintFun,Pdepth,Pmsec,[Msg|Msgs]) ->
-  case Msg of
-    {'call',{MFA,Bin},PI,TS} ->
-      PrintFun(flat("~n~s <~p> ~P",[ts(TS,Pmsec),PI,MFA,Pdepth])),
-      foreach(fun(L)->PrintFun(flat("  ~P",[L,Pdepth])) end, stak(Bin));
-    {'retn',{MFA,Val},PI,TS} ->
-      PrintFun(flat("~n~s <~p> ~p -> ~P",[ts(TS,Pmsec),PI,MFA,Val,Pdepth]));
-    {'send',{MSG,To},PI,TS} ->
-      PrintFun(flat("~n~s <~p> <~p> <<< ~P",[ts(TS,Pmsec),PI,To,MSG,Pdepth]));
-    {'recv',MSG,PI,TS} ->
-      PrintFun(flat("~n~s <~p> <<< ~P",[ts(TS,Pmsec),PI,MSG,Pdepth]));
-    _ ->
-      PrintFun(flat("~n~P", [Msg,Pdepth]))
-  end,
-  outer(PrintFun,Pdepth,Pmsec,Msgs).
-
-ts({H,M,S,_Us},false) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]);
-ts({H,M,S,Us},_) -> flat("~2.2.0w:~2.2.0w:~2.2.0w.~3.3.0w",[H,M,S,Us div 1000]).
-
-flat(Form,List) -> flatten(io_lib:fwrite(Form,List)).
-
-%%% call stack handler
-stak(Bin) ->
-  foldl(fun munge/2,[],string:tokens(binary_to_list(Bin),"\n")).
-
-munge(I,Out) ->
-  case reverse(I) of
-    "..."++_ -> [truncated|Out];
-    _ ->
-      case string:str(I, "Return addr") of
-        0 ->
-          case string:str(I, "cp = ") of
-            0 -> Out;
-            _ -> [mfaf(I)|Out]
-          end;
-        _ ->
-          case string:str(I, "erminate process normal") of
-            0 -> [mfaf(I)|Out];
-            _ -> Out
-          end
-      end
-  end.
-
-mfaf(I) ->
-  [_, C|_] = string:tokens(I,"()+"),
-  C.
 
 to_int(L) -> list_to_integer(L).
 to_atom(L) -> list_to_atom(L).
