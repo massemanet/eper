@@ -14,6 +14,7 @@
 % start from erlang shell
 -export([start/1,start/2,start/3,start/4,start/5]).
 -export([stop/0]).
+-export([printp/1]).
 
 -import(lists,[foldl/3,usort/1,reverse/1,foreach/2,flatten/1]).
 
@@ -51,6 +52,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 print_fun(FD,Form) -> fun(Str) -> io:fwrite(FD,Form,[Str]) end.
+
 
 help() ->
   foreach(print_fun(standard_io,"~s~n"),
@@ -97,7 +99,8 @@ help() ->
            , "max_queue    (5000)        fail if internal queue gets this long"
            , "max_msg_size (50000)       fail if seeing a msg this big"
            , "buffered     (no)          buffer messages till end of trace"
-           , "print_form   (\"~s~n\")      print msgs using this format"
+           , "print_form   (\"~s~n\")    print msgs using this format"
+	   , "print_pid    (none)        send trace messages to this process"
            , "print_file   (standard_io) print to this file"
            , "print_msec   (false)       print milliseconds on timestamps"
            , "print_depth  (999999)      formatting depth for \"~P\""
@@ -266,6 +269,10 @@ maybe_new_target(Cnf = #cnf{target=Target}) ->
     false-> Cnf#cnf{target=to_atom(Str++"@"++element(2,inet:gethostname()))}
   end.
 
+maybe_print(#cnf{print_depth = _, print_msec = _, print_pid = Pid} = Cnf) when is_pid(Pid) ->
+  link(Pid),
+  Cnf;
+
 maybe_print(#cnf{print_depth = Pdepth, print_msec = Pmsec} = Cnf) ->
   PF = the_print_fun(Cnf),
   Cnf#cnf{print_pid=spawn_link(fun()->print_init(PF,Pdepth,Pmsec) end)}.
@@ -394,6 +401,23 @@ print_loop(PrintFun,Pdepth,Pmsec) ->
     X -> outer(PrintFun,Pdepth,Pmsec,X),
          print_loop(PrintFun,Pdepth,Pmsec)
   end.
+
+printp([Msg]) ->
+  case Msg of
+    {'call',{MFA,Bin},PI,TS} ->
+      X = flat("~s <~p> ~p",[ts(TS, false),PI,MFA]),
+      foreach(fun(L)-> X ++ flat("  ~p",[L]) end, stak(Bin)),
+      X;
+    {'retn',{MFA,Val},PI,TS} ->
+      flat("~s <~p> ~p -> ~p",[ts(TS,false),PI,MFA,Val]);
+    {'send',{MSG,To},PI,TS} ->
+      flat("~s <~p> <~p> <<< ~p",[ts(TS,false),PI,To,MSG]);
+    {'recv',MSG,PI,TS} ->
+      flat("~s <~p> <<< ~p",[ts(TS,false),PI,MSG]);
+    _ ->
+      flat("~p", [Msg])
+  end.
+      
 
 outer(_,_,_,[]) -> ok;
 outer(PrintFun,Pdepth,Pmsec,[Msg|Msgs]) ->
