@@ -99,7 +99,6 @@ help() ->
            , "print_msec   (false)       print milliseconds on timestamps"
            , "print_depth  (999999)      formatting depth for \"~P\""
            , "print_re     (\"\")          print only strings that match this"
-           , "print_pid    ''            custom print handler"
            , "  trc file related opts"
            , "file         (none)        use a trc file based on this name"
            , "file_size    (1)           size of each trc file"
