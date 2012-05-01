@@ -95,6 +95,7 @@ help() ->
            , "max_queue    (5000)        fail if internal queue gets this long"
            , "max_msg_size (50000)       fail if seeing a msg this big"
            , "buffered     (no)          buffer messages till end of trace"
+           , "print_calls  (true)        print calls"
            , "print_file   (standard_io) print to this file"
            , "print_msec   (false)       print milliseconds on timestamps"
            , "print_depth  (999999)      formatting depth for \"~P\""
@@ -260,43 +261,42 @@ maybe_new_target(Cnf = #cnf{target=Target}) ->
     false-> Cnf#cnf{target=to_atom(Str++"@"++element(2,inet:gethostname()))}
   end.
 
-
-assert_print_fun(Cnf) -> Cnf#cnf{print_fun=def_print_fun(Cnf)}.
+assert_print_fun(Cnf) -> Cnf#cnf{print_fun=mk_print_fun(Cnf)}.
 
 spawn_printer(Cnf) ->
-  Cnf#cnf{print_pid=spawn_link(fun()->print_init(Cnf#cnf.print_fun) end)}.
+  F = fun() -> print_init(fun(Ms) -> foreach(Cnf#cnf.print_fun,Ms) end) end,
+  Cnf#cnf{print_pid=spawn_link(F)}.
 
-def_print_fun(#cnf{print_fun=PF}) when is_function(PF) -> PF;
-def_print_fun(Cnf) ->
-  OuterFun = mk_outer(Cnf),
-  fun(Msgs) -> foreach(OuterFun,Msgs) end.
+mk_print_fun(#cnf{print_fun=PF}) when is_function(PF) -> PF;
+mk_print_fun(Cnf)                                     -> mk_outer(Cnf).
 
 mk_outer(#cnf{file=[_|_]}) ->
   fun(_) -> ok end;
-mk_outer(Cnf) ->
+mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
   OutFun = mk_out(Cnf),
-  fun(Msg) ->
-      case Msg of
-        {'call',{MFA,Bin},PI,TS} ->
+  fun({Tag,Data,PI,TS}) ->
+      MTS = fix_ts(MS,TS),
+      case {Tag,Data} of
+        {'call',{MFA,Bin}} ->
           case Cnf#cnf.print_calls of
             true -> 
-              OutFun("~n~s <~p> ~P",[TS,PI,MFA]),
+              OutFun("~n~s <~p> ~P",[MTS,PI,MFA,Depth]),
               foreach(fun(L)->OutFun(" ",[L]) end, stak(Bin));
             false->
               ok
           end;
-        {'retn',{MFA,Val},PI,TS} ->
-          OutFun("~n~s <~p> ~p -> ~P",[TS,PI,MFA,Val]);
-        {'send',{MSG,To},PI,TS} ->
-          OutFun("~n~s <~p> <~p> <<< ~P",[TS,PI,To,MSG]);
-        {'recv',MSG,PI,TS} ->
-          OutFun("~n~s <~p> <<< ~P",[TS,PI,MSG])
+        {'retn',{MFA,Val}} ->
+          OutFun("~n~s <~p> ~p -> ~P",[MTS,PI,MFA,Val,Depth]);
+        {'send',{MSG,To}} ->
+          OutFun("~n~s <~p> <~p> <<< ~P",[MTS,PI,To,MSG,Depth]);
+        {'recv',MSG} ->
+          OutFun("~n~s <~p> <<< ~P",[MTS,PI,MSG,Depth])
       end
   end.
 
-mk_out(#cnf{print_re=RE,print_file=File,print_depth=D,print_msec=MS}) ->
+mk_out(#cnf{print_re=RE,print_file=File}) ->
   fun(F,A) ->
-      Str=flat(F,[fix_ts(MS,hd(A))|tl(A)]++[D]),
+      Str=flat(F,[A]),
       case RE =:= "" andalso re:run(Str,RE) =:= nomatch of
         true  -> ok;
         false -> io:fwrite(get_fd(File),"~s~n",[Str])
