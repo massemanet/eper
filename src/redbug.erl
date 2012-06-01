@@ -28,7 +28,7 @@
              , proc         = all          % list of procs (or 'all')
              , target       = node()       % target node
              , cookie       = ''           % target node cookie
-             , buffered     = no           % output buffering
+             , buffered     = false        % output buffering
              , arity        = false        % arity instead of args
              , print_calls  = true         % print calls
              , print_file   = ""           % file to print to (standard_io)
@@ -188,7 +188,7 @@ assert_cookie(Cnf) -> erlang:set_cookie(Cnf#cnf.target,Cnf#cnf.cookie).
 
 %% turn the proplist inta a #cnf{}
 make_cnf(Trc,Props) ->
-  make_cnf(Props,#cnf{trc=Trc},record_info(fields,cnf)).
+  make_cnf(proplists:unfold(Props),#cnf{trc=Trc},record_info(fields,cnf)).
 
 make_cnf([],Cnf,_) -> Cnf;
 make_cnf([{Tag,Val}|Props],Cnf,Tags) ->
@@ -387,8 +387,8 @@ maybe_arity(_,Flags)                -> Flags.
 chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> exit({bad_time,X}).
 
-chk_buffered(yes) -> term_buffer;
-chk_buffered(no) -> term_stream.
+chk_buffered(true)  -> term_buffer;
+chk_buffered(false) -> term_stream.
 
 chk_proc(Pid) when is_pid(Pid) -> Pid;
 chk_proc(Atom) when is_atom(Atom)-> Atom;
