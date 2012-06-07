@@ -150,10 +150,11 @@ os_info(_) ->
 proc_stat(FDs) ->
 %%user nice kernel idle iowait irq softirq steal
   {ok,Str} = file:pread(FDs,0,200),
-  case string:tokens(Str," \n") of
-    ["cpu",User,Nice,Kernel,Idle,Iowait|_] -> ok;
-    _ -> User=Nice=Kernel=Idle=Iowait=0
-  end,
+  [User,Nice,Kernel,Idle,Iowait] =
+    case string:tokens(Str," \n") of
+      ["cpu",I1,I2,I3,I4,I5|_] -> [I1,I2,I3,I4,I5];
+      _                        -> [0,0,0,0,0]
+    end,
   lists:zip([user,nice,kernel,idle,iowait],
             [to_sec(J) || J <- [User,Nice,Kernel,Idle,Iowait]]).
 
@@ -162,12 +163,13 @@ proc_self_stat(FDss) ->
 %%% minflt,cminflt,majflt,cmajflt,utime,stime,cutime,cstime,
 %%% priority,nice,num_threads,itrealvalue,starttime,vsize,rss
   {ok,Str} = file:pread(FDss,0,200),
-  case string:tokens(Str," ") of
-    [_,_,_,_,_,_,_,_,_,
-     Minflt,_,Majflt,_,Utime,Stime,_,_,
-     _,_,_,_,_,Vsize,Rss|_] -> ok;
-    _ -> Minflt=Majflt=Utime=Stime=Vsize=Rss=0
-  end,
+  {Minflt,Majflt,Utime,Stime,Vsize,Rss} =
+    case string:tokens(Str," ") of
+      [_,_,_,_,_,_,_,_,_,I10,_,I12,_,I14,I15,_,_,_,_,_,_,_,I23,I24|_] ->
+        {I10,I12,I14,I15,I23,I24};
+      _ ->
+        {0,0,0,0,0,0}
+    end,
   lists:zip([beam_user,beam_kernel,beam_vss,beam_rss,beam_minflt,beam_majflt],
             [to_sec(Utime),to_sec(Stime),to_int(Vsize),
              to_int(Rss), %% in pages...
