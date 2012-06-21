@@ -116,9 +116,14 @@ resize(Items,Prcs) ->
   end.
 
 cpu_per_red(Sys) ->
+  CPU = 
+    case lks(beam_user,Sys,1)+lks(beam_kernel,Sys,0) of
+      0.0 -> 1;
+      C -> C
+    end,
   case lks(reductions,Sys) of
     0    -> 0;
-    Reds -> 100*(lks(beam_user,Sys,1)+lks(beam_kernel,Sys,0))/Reds
+    Reds -> 100*CPU/Reds
   end.
 
 procsI(FD,PP,CpuPerRed) ->
