@@ -7,7 +7,7 @@
 %%            {count,int()}
 %%            {node,atom()}
 %%            {time,hms_string()}
-%%            {delta_time,int()}
+%%            {delta_time,hms_string()}
 %%            {start_time,hms_string()}
 %%            {stop_time,hms_string()}
 %% hms_string() - "HH:MM:SS"
@@ -59,10 +59,9 @@ mk_fun(Fun,Opts) ->
 times(Opts) ->
   case proplists:lookup(time,Opts) of
     {time,HMS} ->
-      Range = proplists:get_value(delta_time,Opts,6),
-      B = hms_from_string(HMS),
-      {B,
-       hms_from_sec(sec_from_hms(B)+Range)};
+      Range = hms_from_string(proplists:get_value(delta_time,Opts,"00:00:10")),
+      Begin = hms_from_string(HMS),
+      {Begin,hms_add(Begin,Range)};
     none ->
       {hms_from_string(proplists:get_value(start_time,Opts,"00:00:00")),
        hms_from_string(proplists:get_value(stop_time,Opts,"23:59:59"))}
@@ -75,6 +74,9 @@ hms_from_sec(Secs) ->
 
 sec_from_hms(HMS) ->
   calendar:datetime_to_gregorian_seconds({{0,1,1},HMS}).
+
+hms_add(A,B) ->
+  hms_from_sec(sec_from_hms(A)+sec_from_hms(B)).
 
 hms_from_now(Now) ->
   element(2,calendar:now_to_local_time(Now)).
