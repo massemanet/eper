@@ -2,6 +2,15 @@
 %%% Created : 29 Jun 2010 by Mats Cronqvist <masse@kreditor.se>
 
 %% @doc
+%% Opts - list({Tag,Val}) 
+%% {Tag,Val}: {to_file,string(Filename)}
+%%            {count,int()}
+%%            {node,atom()}
+%%            {time,hms_string()}
+%%            {delta_time,hms_string()}
+%%            {start_time,hms_string()}
+%%            {stop_time,hms_string()}
+%% hms_string() - "HH:MM:SS"
 %% @end
 
 -module('replay_trc').
@@ -49,18 +58,32 @@ mk_fun(Fun,Opts) ->
 
 times(Opts) ->
   case proplists:lookup(time,Opts) of
+    {time,HMS} ->
+      Range = hms_from_string(proplists:get_value(delta_time,Opts,"00:00:10")),
+      Begin = hms_from_string(HMS),
+      {Begin,hms_add(Begin,Range)};
     none ->
-      B = proplists:get_value(start_time,Opts,"00:00:00"),
-      E = proplists:get_value(stop_time,Opts,"23:59:59")
-  end,
-  {hms_from_string(B),hms_from_string(E)}.
+      {hms_from_string(proplists:get_value(start_time,Opts,"00:00:00")),
+       hms_from_string(proplists:get_value(stop_time,Opts,"23:59:59"))}
+  end.
+
+hms_from_sec(Secs) ->
+  try {{0,1,1},HMS} = calendar:gregorian_seconds_to_datetime(Secs), HMS
+  catch _:_ -> {23,59,59}
+  end.
+
+sec_from_hms(HMS) ->
+  calendar:datetime_to_gregorian_seconds({{0,1,1},HMS}).
+
+hms_add(A,B) ->
+  hms_from_sec(sec_from_hms(A)+sec_from_hms(B)).
 
 hms_from_now(Now) ->
   element(2,calendar:now_to_local_time(Now)).
 
 hms_from_string(Str) ->
   case [list_to_integer(S) || S <- string:tokens(Str,":")] of
-    [H]     -> {H,0,0};
-    [H,M]   -> {H,M,0};
-    [H,M,S] -> {H,M,S}
+    [H]     when H < 24 -> {H,0,0};
+    [H,M]   when H < 24 -> {H,M,0};
+    [H,M,S] when H < 24 -> {H,M,S}
   end.

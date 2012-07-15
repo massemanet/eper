@@ -37,13 +37,13 @@ tick(LD,Data) ->
 print(#cld{fd=FD,sort=Sort,items=Items},PrfSys,PrfPrc) ->
   print_del(FD),
   print_sys(FD,PrfSys),
-  io:fwrite(FD,"~n",[]),
+  lwrite(FD,"~n",[]),
   print_tags(FD),
   print_procs(FD,Items,PrfSys,which_sort(Sort,PrfPrc)).
 
 print_sys(FD,Sys) ->
-  io:fwrite(FD,"~s~n",[sys_str(Sys)]),
-  io:fwrite(FD,memf(),memi(Sys)).
+  lwrite(FD,"~s~n",[sys_str(Sys)]),
+  lwrite(FD,memf(),memi(Sys)).
 
 memf() -> "memory:      proc~8s, atom~8s, bin~8s, code~8s, ets~8s~n".
 
@@ -86,14 +86,14 @@ pad(Item,Len,Pad,LeftRight) ->
   end.
 
 print_del(FD) ->
-  io:fwrite(FD,"~s~n", [lists:duplicate(79, $-)]).
+  lwrite(FD,"~s~n", [lists:duplicate(79, $-)]).
 
 format() -> "~-14s ~-28s ~-17s~7s~7s~4s~n".
 
 tags() -> ["pid","name","current","msgq","mem","cpu"].
 
 print_tags(FD) ->
-  io:fwrite(FD,format(),tags()).
+  lwrite(FD,format(),tags()).
 
 which_sort( cpu,PrfPrc) -> expand(lks(dreds,PrfPrc),lks(info,PrfPrc));
 which_sort(msgq,PrfPrc) -> expand(lks(msgq,PrfPrc),lks(info,PrfPrc));
@@ -116,23 +116,28 @@ resize(Items,Prcs) ->
   end.
 
 cpu_per_red(Sys) ->
+  CPU =
+    case lks(beam_user,Sys,1)+lks(beam_kernel,Sys,0) of
+      0.0 -> 1;
+      C -> C
+    end,
   case lks(reductions,Sys) of
     0    -> 0;
-    Reds -> 100*(lks(beam_user,Sys,1)+lks(beam_kernel,Sys,0))/Reds
+    Reds -> 100*CPU/Reds
   end.
 
 procsI(FD,PP,CpuPerRed) ->
   try
-    io:fwrite(FD,
-              format(),
-              [pidf(to_list(lks(pid,PP))),
-               funf(reg(PP)),
-               funf(lks(current_function, PP)),
-               prf:human(lks(message_queue_len, PP)),
-               prf:human(lks(memory,PP)),
-               to_list(lks(dreductions,PP)*CpuPerRed)])
+    lwrite(FD,
+           format(),
+           [pidf(to_list(lks(pid,PP))),
+            funf(reg(PP)),
+            funf(lks(current_function, PP)),
+            prf:human(lks(message_queue_len, PP)),
+            prf:human(lks(memory,PP)),
+            to_list(lks(dreductions,PP)*CpuPerRed)])
   catch _:_ ->
-      io:fwrite(FD,"~n",[])
+      lwrite(FD,"~n",[])
   end.
 
 reg(PP) ->
@@ -163,3 +168,12 @@ lks(Tag,TVs,Def) ->
 lks(Tag, [])            -> throw({not_found, Tag});
 lks(Tag, [{Tag,Val}|_]) -> Val;
 lks(Tag, [_|List])      -> lks(Tag, List).
+
+lwrite({Tab,LineNo},Format,As) when is_atom(Tab) ->
+  L = ets:update_counter(Tab,LineNo,1),
+  ets:insert(Tab,{L,flat(Format,As)});
+lwrite(FD,Format,As) ->
+  io:fwrite(FD,Format,As).
+
+flat(F,A) ->
+  lists:flatten(io_lib:fwrite(F,A)).
