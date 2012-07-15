@@ -41,6 +41,7 @@
              , file         = ""           % file to write trace msgs to
              , file_size    = 1            % file size (per file [Mb])
              , file_count   = 8            % number of files in wrap log
+             , debug        = false        % big error messages
 
              , trc          = []           % cannot be set by user
              , print_pid    = []           % cannot be set by user
@@ -208,7 +209,12 @@ init() ->
       try
         starting(do_start(Cnf))
       catch
-        C:R -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
+        C:R ->
+          case {Cnf#cnf.debug,R} of
+            {false,{X,Y,_}} -> erlang:display({X,Y});
+            _               -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
+
+          end
       end
   end,
   exit(exiting).
@@ -279,7 +285,7 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
       case {Tag,Data} of
         {'call',{MFA,Bin}} ->
           case Cnf#cnf.print_calls of
-            true -> 
+            true ->
               OutFun("~n~s <~p> ~P",[MTS,PI,MFA,Depth]),
               foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
             false->
