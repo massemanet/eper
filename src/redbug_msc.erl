@@ -90,7 +90,7 @@ ca_fun({tuple,Es},{Vars,O}) ->
 ca_fun({var,'_'},{Vars,O}) ->
   {Vars,O++['_']};
 ca_fun({var,Var},{Vars,O}) ->
-  V = 
+  V =
     case proplists:get_value(Var,Vars) of
       undefined -> list_to_atom("\$"++integer_to_list(length(Vars)+1));
       X -> X
@@ -139,13 +139,13 @@ parse(Str) ->
 split_fun(Str) ->
   fun() ->
       % strip off the actions, if any
-      {St,Action} = 
+      {St,Action} =
         case re:run(Str,"^(.+)->\\s*([a-z;]+)\\s*\$",[{capture,[1,2],list}]) of
           {match,[Z,A]} -> {Z,A};
           nomatch       -> {Str,""}
         end,
       % strip off the guards, if any
-      {S,Guard} = 
+      {S,Guard} =
         case re:run(St,"^(.+[\\s)])+when\\s(.+)\$",[{capture,[1,2],list}]) of
           {match,[Y,G]} -> {Y,G};
           nomatch       -> {St,""}
