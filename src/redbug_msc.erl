@@ -10,7 +10,7 @@
 -author('Mats Cronqvist').
 
 -export([transform/1]).
--export([unit/0]).
+-export([unit/0,unit_quiet/0]).
 
 -define(is_string(Str), (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
 
@@ -85,10 +85,11 @@ ca_fun({tuple,Es},{Vars,O}) ->
 ca_fun({var,'_'},{Vars,O}) ->
   {Vars,O++['_']};
 ca_fun({var,Var},{Vars,O}) ->
-  case proplists:get_value(Var,Vars) of
-    undefined -> V = list_to_atom("\$"++integer_to_list(length(Vars)+1));
-    V -> ok
-  end,
+  V = 
+    case proplists:get_value(Var,Vars) of
+      undefined -> list_to_atom("\$"++integer_to_list(length(Vars)+1));
+      X -> X
+    end,
   {[{Var,V}|Vars],O++[V]};
 ca_fun({Type,Val},{Vars,O}) ->
   assert_type(Type,Val),
@@ -133,20 +134,23 @@ parse(Str) ->
 split_fun(Str) ->
   fun() ->
       % strip off the actions, if any
-      case re:run(Str,"^(.+)->\\s*([a-z;]+)\\s*\$",[{capture,[1,2],list}]) of
-        {match,[St,Action]} -> ok;
-        nomatch             -> St=Str,Action=""
-      end,
+      {St,Action} = 
+        case re:run(Str,"^(.+)->\\s*([a-z;]+)\\s*\$",[{capture,[1,2],list}]) of
+          {match,[Z,A]} -> {Z,A};
+          nomatch       -> {Str,""}
+        end,
       % strip off the guards, if any
-      case re:run(St,"^(.+[\\s)])+when\\s(.+)\$",[{capture,[1,2],list}]) of
-        {match,[S,Guard]} -> ok;
-        nomatch           -> S=St,Guard=""
-      end,
+      {S,Guard} = 
+        case re:run(St,"^(.+[\\s)])+when\\s(.+)\$",[{capture,[1,2],list}]) of
+          {match,[Y,G]} -> {Y,G};
+          nomatch       -> {St,""}
+        end,
       % add a wildcard F, if Body is just an atom (presumably a module)
-      case re:run(S,"^\\s*[a-zA-Z0-9_]+\\s*\$") of
-        nomatch -> Body=S;
-        _       -> Body=S++":'_'"
-      end,
+      Body =
+        case re:run(S,"^\\s*[a-zA-Z0-9_]+\\s*\$") of
+          nomatch -> S;
+          _       -> S++":'_'"
+        end,
       {Body,Guard,Action}
   end.
 
@@ -215,11 +219,20 @@ assert(Fun,Tag) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% ad-hoc unit testing
 
+unit_quiet() ->
+  [R||R<-unit(),is_tuple(R)].
+
 unit() ->
   lists:foldr(
     fun(Str,O)->[unit(fun transform/1,Str)|O]end,[],
-    [{"a",
-      {{a,'_','_'},[{'_',[],[]}],[local]}}
+    [{"a when element(1,'$_')=/=b",
+      {{a,'_','_'},
+       [{'_',[{'=/=',{element,1,'$_'},b}],[]}],[local]}}
+     ,{"a:b when element(1,'$_')=/=c",
+       {{a,b,'_'},
+        [{'_',[{'=/=',{element,1,'$_'},c}],[]}],[local]}}
+     ,{"a",
+       {{a,'_','_'},[{'_',[],[]}],[local]}}
      ,{"a",
        {{a,'_','_'},[{'_',[],[]}],[local]}}
      ,{"a->stack",
@@ -240,8 +253,10 @@ unit() ->
        {{a,b,2},[{['$1','$1'],[],[]}],[local]}}
      ,{"a:b(X,y)",
        {{a,b,2},[{['$1',y],[],[]}],[local]}}
-     ,{" a:foo()when a==b",
+     ,{"a:foo()when a==b",
        {{a,foo,0},[{[],[{'==',a,b}],[]}],[local]}}
+     ,{"a:foo when a==b",
+       {{a,foo,'_'},[{'_',[{'==',a,b}],[]}],[local]}}
      ,{"a:b(X,1)",
        {{a,b,2},[{['$1',1],[],[]}],[local]}}
      ,{"a:b(X,\"foo\")",
@@ -250,8 +265,6 @@ unit() ->
        {{x,y,2},[{[{'$1',{'$2','$1'}},'$1'],[],[]}],[local]}}
      ,{"x:y(A,[A,{B,[B,A]},A],B)",
        {{x,y,3},[{['$1',['$1',{'$2',['$2','$1']},'$1'],'$2'],[],[]}],[local]}}
-     ,{" a:foo when a==b",
-       guards_without_args}
      ,{"a:b(X,y)when is_atom(Y)",
        unbound_variable}
      ,{"x:c([string])",
