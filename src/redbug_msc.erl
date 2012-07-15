@@ -24,10 +24,11 @@ to_string(X)                    -> exit({illegal_input,X}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% compiler
 %% returns {{Module,Function,Arity},[{Head,Cond,Body}],[Flag]}
-compile({M,F,'_',[],Actions}) ->
-  {{M,F,'_'},[{'_',[],compile_acts(Actions)}],flags()};
-compile({_,_,'_',Gs,_}) ->
-  exit({guards_without_args,Gs});
+
+compile({M,F,'_',Gs,Actions}) ->
+  {{M,F,'_'},
+   [{'_',compile_guards(Gs,[{'$_','$_'}]),compile_acts(Actions)}],
+   flags()};
 compile({M,F,Ari,[],Actions}) when is_integer(Ari) ->
   compile({M,F,lists:duplicate(Ari,{var,'_'}),[],Actions});
 compile({M,F,As,Gs,Actions}) when is_list(As) ->
@@ -62,6 +63,10 @@ gd_fun({Op,V1,V2},{Vars,O}) ->               % binary
 unpack_op(Op,As,Vars) ->
   list_to_tuple([Op|[unpack_var(A,Vars)||A<-As]]).
 
+unpack_var({tuple,Es},Vars) ->
+  {list_to_tuple([unpack_var(E,Vars)||E<-Es])};
+unpack_var({list,Es},Vars) ->
+  [unpack_var(E,Vars)||E<-Es];
 unpack_var({var,Var},Vars) ->
   case proplists:get_value(Var,Vars) of
     undefined -> exit({unbound_variable,Var});
@@ -328,6 +333,9 @@ unit() ->
         [local]}}
      ,{"a:_->return",
        {{a,'_','_'},[{'_',[],[{exception_trace}]}],
+        [local]}}
+     ,{"erlang:_({A}) when hd(A)=={}",
+       {{erlang,'_','_'},[{[{'$1'}],[{'==',{hd,'$1'},{{}}}],[]}],
         [local]}}
     ]).
 
