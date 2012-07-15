@@ -195,13 +195,14 @@ guard({op,1,Op,One})            -> {Op,guard(One)};           % binary op
 guard(Guard)                    -> arg(Guard).                % variable
 
 arg({op,_,'++',{string,_,Str},Var}) -> {list,arg_list(consa(Str,Var))};
-arg({nil,_})        -> {list,[]};
-arg(L={cons,_,_,_}) -> {list,arg_list(L)};
-arg({tuple,_,Args}) -> {tuple,[arg(A)||A<-Args]};
-arg({T,_,Var})      -> {T,Var}.
+arg({call,1,F,Args}) -> guard({call,1,F,Args});
+arg({nil,_})         -> {list,[]};
+arg(L={cons,_,_,_})  -> {list,arg_list(L)};
+arg({tuple,_,Args})  -> {tuple,[arg(A)||A<-Args]};
+arg({T,_,Var})       -> {T,Var}.
 
-consa([],T) -> T;
-consa([C],T) -> {cons,1,{char,1,C},T};
+consa([],T)     -> T;
+consa([C],T)    -> {cons,1,{char,1,C},T};
 consa([C|Cs],T) -> {cons,1,{char,1,C},consa(Cs,T)}.
 
 arg_list({cons,_,H,T}) -> [arg(H)|arg_list(T)];
