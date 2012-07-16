@@ -24,29 +24,25 @@ to_string(X)                    -> exit({illegal_input,X}).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% compiler
 %% returns {{Module,Function,Arity},[{Head,Cond,Body}],[Flag]}
+%% i.e. the args to erlang:trace_pattern/3
 
-compile({M,F,'_',Gs,Actions}) ->
-  {{M,F,'_'},
-   [{'_',compile_guards(Gs,[{'$_','$_'}]),compile_acts(Actions)}],
-   flags()};
 compile({M,F,Ari,[],Actions}) when is_integer(Ari) ->
   compile({M,F,lists:duplicate(Ari,{var,'_'}),[],Actions});
-compile({M,F,As,Gs,Actions}) when is_list(As) ->
+compile({M,OF,As,Gs,Actions}) ->
+  {F,A,Flags} = chk_fa(OF,As),
   {Vars,Args} = compile_args(As),
-  {{M,F,len(F,As)},
-   [{Args,compile_guards(Gs,Vars),compile_acts(Actions)}],
-   flags()}.
+  {{M,F,A}, [{Args,compile_guards(Gs,Vars),compile_acts(Actions)}], Flags}.
 
-len('_',_) -> '_';
-len(_,As)  -> length(As).
-
-flags() -> [local].
+chk_fa('X',_) -> {'_','_',[global]};
+chk_fa('_',_) -> {'_','_',[local]};
+chk_fa(F,'_') -> {F,'_',[local]};
+chk_fa(F,As)  -> {F,length(As),[local]}.
 
 compile_acts(As) ->
   [ac_fun(A)|| A <- As].
 
 ac_fun("stack") -> {message,{process_dump}};
-ac_fun("return")-> {exception_trace};   %{return_trace}; %backward compatible?
+ac_fun("return")-> {exception_trace};
 ac_fun(X)       -> exit({unknown_action,X}).
 
 compile_guards(Gs,Vars) ->
@@ -78,6 +74,8 @@ unpack_var({Type,Val},_) ->
   assert_type(Type,Val),
   Val.
 
+compile_args('_') ->
+  {[{'$_','$_'}],'_'};
 compile_args(As) ->
   lists:foldl(fun ca_fun/2,{[],[]},As).
 
@@ -169,10 +167,14 @@ body_fun(Str) ->
           {M,F,[arg(A) || A<-Args]};
         {ok,[{call,1,{remote,1,{atom,1,M},{var,1,'_'}},Args}]} ->
           {M,'_',[arg(A) || A<-Args]};
+        {ok,[{call,1,{remote,1,{atom,1,M},{var,1,_}},Args}]} ->
+          {M,'X',[arg(A) || A<-Args]};
         {ok,[{remote,1,{atom,1,M},{atom,1,F}}]} ->
           {M,F,'_'};
         {ok,[{remote,1,{atom,1,M},{var,1,'_'}}]} ->
           {M,'_','_'};
+        {ok,[{remote,1,{atom,1,M},{var,1,_}}]} ->
+          {M,'X','_'};
         {ok,C} ->
           exit({this_is_too_confusing,C})
      end
@@ -234,6 +236,10 @@ unit() ->
     [{"a when element(1,'$_')=/=b",
       {{a,'_','_'},
        [{'_',[{'=/=',{element,1,'$_'},b}],[]}],[local]}}
+     ,{"erlang when tl(hd('$_'))=={}",
+       {{erlang,'_','_'},
+        [{'_',[{'==',{tl,{hd,'$_'}},{{}}}],[]}],
+        [local]}}
      ,{"a:b when element(1,'$_')=/=c",
        {{a,b,'_'},
         [{'_',[{'=/=',{element,1,'$_'},c}],[]}],[local]}}
@@ -338,6 +344,15 @@ unit() ->
      ,{"erlang:_({A}) when hd(A)=={}",
        {{erlang,'_','_'},[{[{'$1'}],[{'==',{hd,'$1'},{{}}}],[]}],
         [local]}}
+     ,{"lists:X([])",
+       {{lists,'_','_'},[{[[]],[],[]}],
+        [global]}}
+     ,{"lists:X(A) when is_list(A)",
+       {{lists,'_','_'},[{['$1'],[{is_list,'$1'}],[]}],
+        [global]}}
+     ,{"lists:X",
+       {{lists,'_','_'},[{'_',[],[]}],
+        [global]}}
     ]).
 
 unit(Method,{Str,MS}) ->
@@ -345,5 +360,5 @@ unit(Method,{Str,MS}) ->
   catch
     _:{MS,_}       -> Str;
     _:{{MS,_},_,_} -> Str;
-    C:R            -> {C,R,Str,erlang:get_stacktrace()}
+    _:R            -> {Str,R,MS}
   end.
