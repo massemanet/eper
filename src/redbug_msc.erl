@@ -138,7 +138,7 @@ split_fun(Str) ->
   fun() ->
       % strip off the actions, if any
       {St,Action} =
-        case re:run(Str,"^(.+)->\\s*([a-z;]+)\\s*\$",[{capture,[1,2],list}]) of
+        case re:run(Str,"^(.+)->\\s*([a-z;,]+)\\s*\$",[{capture,[1,2],list}]) of
           {match,[Z,A]} -> {Z,A};
           nomatch       -> {Str,""}
         end,
@@ -213,7 +213,7 @@ arg_list(V)            -> arg(V).
 
 actions_fun(Str) ->
   fun() ->
-      string:tokens(Str,";")
+      string:tokens(Str,";,")
   end.
 
 assert(Fun,Tag) ->
@@ -344,8 +344,12 @@ unit() ->
      ,{"erlang:_({A}) when hd(A)=={}",
        {{erlang,'_','_'},[{[{'$1'}],[{'==',{hd,'$1'},{{}}}],[]}],
         [local]}}
-     ,{"lists:X([])",
-       {{lists,'_','_'},[{[[]],[],[]}],
+     ,{"a:X([]) -> return,stack",
+       {{a,'_','_'},
+        [{[[]],[],[{exception_trace},{message,{process_dump}}]}],
+        [global]}}
+     ,{"lists:X([a])",
+       {{lists,'_','_'},[{[[a]],[],[]}],
         [global]}}
      ,{"lists:X(A) when is_list(A)",
        {{lists,'_','_'},[{['$1'],[{is_list,'$1'}],[]}],
