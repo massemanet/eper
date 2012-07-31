@@ -8,22 +8,27 @@ usage(){
 }
 
 if [ ${0:0:1} == "/" ];then
-    SPATH=$0
+    EPATH=$0
 elif [ -x $PWD/$0 ];then
-    SPATH=$PWD/$0
+    EPATH=$PWD/$0
 else
-    SPATH=`which $0`
+    EPATH=`which $0`
 fi
 
-if [ -L $SPATH ];then
-    SPATH=`readlink $SPATH`
+if [ -L $EPATH ];then
+    EPATH=`readlink $EPATH`
 fi
 
-n=4
+EPATH=`dirname $EPATH`
+
+n=3
+SPATH=`(cd $EPATH ; pwd)`
 while [ 0 -lt "$n" ]; do SPATH=`dirname $SPATH`; let n=n-1; done
+
 PATHS=""
-for p in `ls -d $SPATH/ebin`; do
-    PATHS=$PATHS" -pa $p"
+for p in eper gtknode; do
+    BPATH=`find $SPATH -name $p.beam`
+    PATHS=$PATHS" -pa "`dirname $BPATH`
 done
 
 detach="-detached"
