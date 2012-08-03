@@ -198,7 +198,12 @@ ass_loaded(Node, Mod) ->
 
 netload(Node, Mod) ->
     {Mod, Bin, Fname} = code:get_object_code(Mod),
-    {module, Mod} = rpc:call(Node, code, load_binary, [Mod, Fname, Bin]).
+    case rpc:call(Node, code, load_binary, [Mod, Fname, Bin]) of
+        {module, Mod} -> ok;
+        {error,badfile} -> 
+            I = (catch rpc:call(Node, erlang, system_info, [otp_release])),
+            exit({target_emulator_too_old,Node,I})
+    end.
 
 ftime([]) -> interpreted;
 ftime([{time,T}|_]) -> T;

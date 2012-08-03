@@ -184,15 +184,18 @@ conf(LD) ->
   end.
 
 proxy(LD) ->
-  case list_to_atom(g('Gtk_entry_get_text',[conf_proxy_entry])) of
-    '' ->
-      Proxy = node(),
-      Cookie = erlang:get_cookie(),
-      Tick = fetch(orig_ticktime,LD);
-    Proxy ->
-      Cookie = list_to_atom(g('Gtk_entry_get_text',[conf_cookie_entry])),
-      erlang:set_cookie(Proxy,Cookie),
-      Tick = rpc:call(Proxy,net_kernel,get_net_ticktime,[])
+  {Proxy,Cookie,Tick} = 
+    case list_to_atom(g('Gtk_entry_get_text',[conf_proxy_entry])) of
+      '' ->
+        P = node(),
+        C = erlang:get_cookie(),
+        T = fetch(orig_ticktime,LD),
+        {P,C,T};
+      P ->
+        C = list_to_atom(g('Gtk_entry_get_text',[conf_cookie_entry])),
+        erlang:set_cookie(P,C),
+        T = rpc:call(P,net_kernel,get_net_ticktime,[]),
+        {P,C,T}
   end,
   net_kernel:set_net_ticktime(Tick),
   store(cookie,Cookie,

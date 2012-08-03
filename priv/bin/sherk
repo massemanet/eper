@@ -2,7 +2,7 @@
 
 usage(){
     U1="usage: $0 [-setcookie <cookie>] [-nocookie] "
-    U2="[-nettick <tick>] [-win] [-vsn <OTP version>]"
+    U2="[-nettick <tick>] [-dbg] [-vsn <OTP version>]"
     echo $U1 $U2
     exit
 }
@@ -41,8 +41,7 @@ while [ -n "$1" ]
       "-help"|"-h"|"-?")
           usage
           ;;
-      "-win")
-          WIN="xterm -sb -sl 9999 -bg gold -fg black -e"
+      "-dbg")
           START="-s sherk go"
           detach=""
           ;;
@@ -72,4 +71,4 @@ name="sherk_"$$
 FLAGS="$detach -boot start_sasl -sasl errlog_type error +A16"
 DISTR="-hidden -sname $name $cookie $nettick"
 
-$WIN erl $VSN $FLAGS $DISTR $PATHS $START
+erl $VSN $FLAGS $DISTR $PATHS $START
