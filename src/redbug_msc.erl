@@ -70,6 +70,8 @@ unpack_var({var,Var},Vars) ->
   end;
 unpack_var({Op,As},Vars) when is_list(As) ->
   unpack_op(Op,As,Vars);
+unpack_var({Op, V1, V2},Vars) ->
+  unpack_op(Op, [V1, V2], Vars);
 unpack_var({Type,Val},_) ->
   assert_type(Type,Val),
   Val.
