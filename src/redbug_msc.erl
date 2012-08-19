@@ -12,7 +12,8 @@
 -export([transform/1]).
 -export([unit/0,unit_quiet/0]).
 
--define(is_string(Str), (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
+-define(is_string(Str),
+        (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
 
 transform(E) ->
   compile(parse(to_string(E))).
@@ -70,8 +71,8 @@ unpack_var({var,Var},Vars) ->
   end;
 unpack_var({Op,As},Vars) when is_list(As) ->
   unpack_op(Op,As,Vars);
-unpack_var({Op, V1, V2},Vars) ->
-  unpack_op(Op, [V1, V2], Vars);
+unpack_var({Op,V1,V2},Vars) ->
+  unpack_op(Op,[V1,V2],Vars);
 unpack_var({Type,Val},_) ->
   assert_type(Type,Val),
   Val.
@@ -234,7 +235,7 @@ unit_quiet() ->
 
 unit() ->
   lists:foldr(
-    fun(Str,O)->[unit(fun transform/1,Str)|O]end,[],
+    fun(Str,O)->[unit(Str)|O]end,[],
     [{"a when element(1,'$_')=/=b",
       {{a,'_','_'},
        [{'_',[{'=/=',{element,1,'$_'},b}],[]}],[local]}}
@@ -287,6 +288,15 @@ unit() ->
        this_is_too_confusing}
      ,{"x:c(S)when S==x;S==y",
        {syntax_error,"syntax error before: S"}}
+     ,{"x:c(S)when (S==x)or(S==y)",
+       {{x,c,1},
+        [{['$1'],[{'or',{'==','$1',x},{'==','$1',y}}],[]}],
+        [local]}}
+     ,{"a:b(X,Y)when is_record(X,rec) and (Y==0), (X==z)",
+       {{a,b,2},
+        [{['$1','$2'],
+          [{'and',{is_record,'$1',rec},{'==','$2',0}},{'==','$1',z}],[]}],
+        [local]}}
      ,{"x:y(z)->bla",
        unknown_action}
      ,{"a:b(X,y)when not is_atom(X)",
@@ -361,8 +371,8 @@ unit() ->
         [global]}}
     ]).
 
-unit(Method,{Str,MS}) ->
-  try MS=Method(Str),Str
+unit({Str,MS}) ->
+  try MS=transform(Str),Str
   catch
     _:{MS,_}       -> Str;
     _:{{MS,_},_,_} -> Str;
