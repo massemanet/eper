@@ -10,7 +10,7 @@
 -author('Mats Cronqvist').
 
 -export([transform/1]).
--export([unit/0,unit_quiet/0]).
+-export([unit_loud/0,unit_quiet/0]).
 
 -define(is_string(Str),
         (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
@@ -194,7 +194,8 @@ guards_fun(Str) ->
       end
   end.
 
-disjunct_guard(Toks) ->  %% replace ';' with 'orelse'
+%% deal with disjunct guards by replacing ';' with 'orelse'
+disjunct_guard(Toks) ->
   [case T of {';',1} -> {'orelse',1}; _ -> T end||T<-Toks].
 
 guard({call,1,{atom,1,G},Args}) -> {G,[arg(A) || A<-Args]};   % function
@@ -233,6 +234,9 @@ assert(Fun,Tag) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% ad-hoc unit testing
 
+unit_loud() ->
+  lists:foreach(fun(R)->io:fwrite("~p~n",[R])end,unit()).
+
 unit_quiet() ->
   [R||R<-unit(),is_tuple(R)].
 
@@ -249,8 +253,6 @@ unit() ->
      ,{"a:b when element(1,'$_')=/=c",
        {{a,b,'_'},
         [{'_',[{'=/=',{element,1,'$_'},c}],[]}],[local]}}
-     ,{"a",
-       {{a,'_','_'},[{'_',[],[]}],[local]}}
      ,{"a",
        {{a,'_','_'},[{'_',[],[]}],[local]}}
      ,{"a->stack",
