@@ -189,10 +189,13 @@ guards_fun(Str) ->
         "" -> [];
         _ ->
           {done,{ok,Toks,1},[]} = erl_scan:tokens([],Str++". ",1),
-          {ok,Guards} = erl_parse:parse_exprs(Toks),
+          {ok,Guards} = erl_parse:parse_exprs(disjunct_guard(Toks)),
           [guard(G)||G<-Guards]
       end
   end.
+
+disjunct_guard(Toks) ->  %% replace ';' with 'orelse'
+  [case T of {';',1} -> {'orelse',1}; _ -> T end||T<-Toks].
 
 guard({call,1,{atom,1,G},Args}) -> {G,[arg(A) || A<-Args]};   % function
 guard({op,1,Op,One,Two})        -> {Op,guard(One),guard(Two)};% unary op
@@ -287,7 +290,9 @@ unit() ->
      ,{"x(s)",
        this_is_too_confusing}
      ,{"x:c(S)when S==x;S==y",
-       {syntax_error,"syntax error before: S"}}
+       {{x,c,1},
+        [{['$1'],[{'orelse',{'==','$1',x},{'==','$1',y}}],[]}],
+        [local]}}
      ,{"x:c(S)when (S==x)or(S==y)",
        {{x,c,1},
         [{['$1'],[{'or',{'==','$1',x},{'==','$1',y}}],[]}],
