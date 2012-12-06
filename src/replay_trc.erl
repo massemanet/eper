@@ -48,10 +48,12 @@ mk_fun(Fun,Opts) ->
   {Beg,End} = times(Opts),
   fun(Item,{N,Acc}) when N =:= Max-> throw(Fun(done,Fun(Item,Acc)));
      (Item,{N,Acc}) when element(2,Item)=:=Nod; Nod=:=all ->
-      case hms_from_now(element(3,Item)) of
+      try hms_from_now(element(3,Item)) of
         T when End < T  -> throw(Fun(done,Fun(Item,Acc)));
         T when Beg =< T -> {N+1,Fun(Item,Acc)};
         _               -> {N,Acc}
+      catch
+        error:_ -> {N+1,Fun(Item,Acc)}
       end;
      (_,{N,Acc}) -> {N,Acc}
   end.
