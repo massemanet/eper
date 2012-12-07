@@ -45,7 +45,7 @@ trc(Filename,Fun,Acc) ->
 
 fold(Filename,Fun,Acc,Opts) ->
   Type = take_first(Opts,[line,sax,xml,term,trc]),
-  case file:open(Filename, [read, raw, binary]) of
+  case file:open(Filename, [read, raw, binary, compressed]) of
     {ok, FD} ->
       try fold(read(FD),FD,wrap(Fun,Type),chunker(Type),?state(Acc,?tail_0()))
       after file:close(FD)
