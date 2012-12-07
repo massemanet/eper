@@ -1,9 +1,9 @@
-AC_INIT(Various Erlang performance related tools, 0.60,
+AC_INIT(Various Erlang performance related tools, 0.61,
              mats.cronqvist()gmail.com, eper)
 
 dnl Require autoconf version >=2.59c. first one with erlang macros
 AC_PREREQ(2.59c)
-AC_COPYRIGHT(Copyright (C) 2008 Mats Cronqvist)
+AC_COPYRIGHT(Copyright (C) 2008-2012 Mats Cronqvist)
 dnl AC_REVISION($Id$)
 
 dnl Require automake version >=1.9.5.

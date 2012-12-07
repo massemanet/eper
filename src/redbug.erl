@@ -25,7 +25,7 @@
 %% most can be set in the input proplist
 -record(cnf,{time         = 15000          % stop trace after this time [ms]
              , msgs         = 10           % stop trace after this # msgs [unit]
-             , proc         = all          % list of procs (or 'all')
+             , procs        = all          % list of procs (or 'all')
              , target       = node()       % target node
              , cookie       = ''           % target node cookie
              , buffered     = false        % output buffering
@@ -88,7 +88,7 @@ help() ->
            , "  general opts:"
            , "time         (15000)       stop trace after this many ms"
            , "msgs         (10)          stop trace after this many msgs"
-           , "proc         (all)         (list of) Erlang process(es)"
+           , "procs        (all)         (list of) Erlang process(es)"
            , "                           all|pid()|atom(RegName)|{pid,I2,I3}"
            , "target       (node())      node to trace on"
            , "arity        (false)       print arity instead of arg list"
@@ -117,7 +117,7 @@ unix([Node,Time,Msgs,Trc,Proc]) ->
     Cnf = #cnf{time = to_int(Time),
                msgs   = to_int(Msgs),
                trc    = try to_term(Trc) catch _:_ -> Trc end,
-               proc   = to_atom(Proc),
+               procs  = [to_atom(Proc)],
                target = to_atom(Node)},
     self() ! {start,Cnf},
     init(),
@@ -368,8 +368,12 @@ pack(Cnf) ->
   dict:from_list([{time,chk_time(Cnf#cnf.time)},
                   {flags,[call,timestamp|maybe_arity(Cnf,Flags)]},
                   {rtps,RTPs},
-                  {procs,chk_proc(Cnf#cnf.proc)},
+                  {procs,[chk_proc(P) || P <- mk_list(Cnf#cnf.procs)]},
                   {where,where(Cnf)}]).
+
+mk_list([]) -> exit(no_procs);
+mk_list([_|_] = L) -> L;
+mk_list(E) -> [E].
 
 where(Cnf) ->
   case Cnf#cnf.file of

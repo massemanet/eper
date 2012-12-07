@@ -17,8 +17,6 @@
               , store/3
               , from_list/1]).
 
-%-define(bla,erlang:display(process_info(self(),current_function))).
-
 %% states
 -define(ACTIVE         , ?MODULE:active).
 -define(IDLE           , ?MODULE:idle).
@@ -136,10 +134,9 @@ start_trace(LD) ->
   link(HostPid),
   Consumer = consumer(fetch(where,Conf),fetch(time,Conf)),
   HostPid ! {prfTrc,{starting,self(),Consumer}},
-  Procs = mk_prc(fetch(procs,Conf)),
   Flags = [{tracer,real_consumer(Consumer)}|fetch(flags,Conf)],
   unset_tps(),
-  erlang:trace(Procs,true,Flags),
+  [erlang:trace(mk_prc(P),true,Flags) || P <- fetch(procs,Conf)],
   untrace(family(redbug)++family(prfTrc),Flags),
   set_tps(fetch(rtps,Conf)),
   store(consumer,Consumer,LD).
