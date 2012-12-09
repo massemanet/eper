@@ -209,6 +209,8 @@ init() ->
       try
         starting(do_start(Cnf))
       catch
+        R ->
+          erlang:display({argument_error,R});
         C:R ->
           case {Cnf#cnf.debug,R} of
             {false,{X,Y,_}} -> erlang:display({X,Y});
@@ -235,7 +237,8 @@ running(Cnf = #cnf{trc_pid=TrcPid,print_pid=PrintPid}) ->
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}}),
                    stopping(Cnf);
     {prfTrc,{stopping,_,_}}         -> stopping(Cnf);
-    {'EXIT',TrcPid,_}               -> stopping(Cnf);
+    {'EXIT',TrcPid,R}               -> ?log({trace_control_died,R}),
+                                       stopping(Cnf);
     {prfTrc,{not_started,R,TrcPid}} -> ?log([{not_started,R}]);
     {'EXIT',PrintPid,_}             -> maybe_stopping(Cnf);
     X                               -> ?log([{unknown_message,X}])
@@ -313,7 +316,7 @@ get_fd("") -> standard_io;
 get_fd(FN) ->
   case file:open(FN,[write]) of
     {ok,FD} -> FD;
-    _ -> exit({cannot_open,FN})
+    _ -> throw({cannot_open,FN})
   end.
 
 fix_ts(MS,TS) ->
@@ -371,7 +374,7 @@ pack(Cnf) ->
                   {procs,[chk_proc(P) || P <- mk_list(Cnf#cnf.procs)]},
                   {where,where(Cnf)}]).
 
-mk_list([]) -> exit(no_procs);
+mk_list([]) -> throw(no_procs);
 mk_list([_|_] = L) -> L;
 mk_list(E) -> [E].
 
@@ -395,7 +398,7 @@ maybe_arity(#cnf{arity=true},Flags) -> [arity|Flags];
 maybe_arity(_,Flags)                -> Flags.
 
 chk_time(Time) when is_integer(Time) -> Time;
-chk_time(X) -> exit({bad_time,X}).
+chk_time(X) -> throw({bad_time,X}).
 
 chk_buffered(true)  -> term_buffer;
 chk_buffered(false) -> term_stream.
@@ -403,10 +406,10 @@ chk_buffered(false) -> term_stream.
 chk_proc(Pid) when is_pid(Pid) -> Pid;
 chk_proc(Atom) when is_atom(Atom)-> Atom;
 chk_proc({pid,I1,I2}) when is_integer(I1), is_integer(I2) -> {pid,I1,I2};
-chk_proc(X) -> exit({bad_proc,X}).
+chk_proc(X) -> throw({bad_proc,X}).
 
 chk_msgs(Msgs) when is_integer(Msgs) -> Msgs;
-chk_msgs(X) -> exit({bad_msgs,X}).
+chk_msgs(X) -> throw({bad_msgs,X}).
 
 -define(is_string(Str), (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
 
@@ -415,7 +418,7 @@ chk_trc('receive',{Flags,RTPs})                -> {['receive'|Flags],RTPs};
 chk_trc('arity',{Flags,RTPs})                  -> {['arity'|Flags],RTPs};
 chk_trc(RTP,{Flags,RTPs}) when ?is_string(RTP) -> {Flags,[chk_rtp(RTP)|RTPs]};
 chk_trc(RTP,{Flags,RTPs}) when is_tuple(RTP)   -> {Flags,[chk_rtp(RTP)|RTPs]};
-chk_trc(X,_)                                   -> exit({bad_trc,X}).
+chk_trc(X,_)                                   -> throw({bad_trc,X}).
 
 -define(is_aal(M,F,MS), is_atom(M),is_atom(F),is_list(MS)).
 
@@ -423,9 +426,9 @@ chk_rtp(Str) when ?is_string(Str)      -> redbug_msc:transform(Str);
 chk_rtp({M})                           -> chk_rtp({M,'_',[]});
 chk_rtp({M,F}) when is_atom(F)         -> chk_rtp({M,F,[]});
 chk_rtp({M,L}) when is_list(L)         -> chk_rtp({M,'_',L});
-chk_rtp({'_',_,_})                     -> exit(dont_wildcard_module);
+chk_rtp({'_',_,_})                     -> throw(dont_wildcard_module);
 chk_rtp({M,F,MS}) when ?is_aal(M,F,MS) -> {{M,F,'_'},ms(MS),[local]};
-chk_rtp(X)                             -> exit({bad_rtp,X}).
+chk_rtp(X)                             -> throw({bad_rtp,X}).
 
 ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
 
@@ -434,7 +437,7 @@ msf(return,[{Head,Cond,Body}])-> [{Head,Cond,[{return_trace}|Body]}];
 msf(Ari, [{_,Cond,Body}]) when is_integer(Ari)-> [{mk_head(Ari),Cond,Body}];
 msf({Head,Cond},[{_,_,Body}]) when is_tuple(Head)->[{Head,slist(Cond),Body}];
 msf(Head, [{_,Cond,Body}]) when is_tuple(Head)-> [{Head,Cond,Body}];
-msf(X,_) -> exit({bad_match_spec,X}).
+msf(X,_) -> throw({bad_match_spec,X}).
 
 mk_head(N) -> erlang:make_tuple(N,'_').
 

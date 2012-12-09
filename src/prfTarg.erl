@@ -89,7 +89,7 @@ starter(Pid) ->
 init() ->
   erlang:process_flag(trap_exit,true),
   erlang:group_leader(whereis(user),self()),
-  receive {start,Pid} -> ok end,
+  Pid = receive {start,P} -> P end,
   case whereis(?MODULE) of   %to avoid register error msg...
     undefined ->
       case catch register(?MODULE, self()) of
