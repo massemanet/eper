@@ -172,6 +172,41 @@ file_count   (8)           number of trc files
 17:45:27 <{erlang,apply,2}> {ets,lookup,
                                  [ac_tab,{env,stdlib,shell_saved_results}]}
 </tt></pre>
+
+<pre><tt>
+9&gt; redbug:start("ets:lookup->return",[{msgs,2},{time,1000}]).      
+{38,1}
+
+18:06:26 <{erlang,apply,2}> {ets,lookup,
+                                 [ac_tab,{env,stdlib,shell_history_length}]}
+                
+18:06:26 <{erlang,apply,2}> {ets,lookup,2} -> []
+</tt></pre>
+
+<pre><tt>
+10&gt; redbug:start("ets:lookup(ac_tab,X)when not is_tuple(X)->return",[{msgs,2},{time,10000}]).
+{38,1}
+
+18:09:27 <{erlang,apply,2}> {ets,lookup,[ac_tab,[]]}
+18:09:27 <{erlang,apply,2}> {ets,lookup,2} -> []
+</tt></pre>
+
+<pre><tt>
+11&gt; redbug:start("ets:lookup->stack,return",[{msgs,2},{time,1000}]).
+{38,1}
+
+18:05:02 <{erlang,apply,2}> {ets,lookup,
+                                 [ac_tab,{env,stdlib,shell_history_length}]}
+  shell:eval_loop/3 
+  shell:eval_exprs/7 
+  shell:exprs/7 
+  shell:result_will_be_saved/0 
+  shell:get_history_and_results/0 
+  shell:get_env/2 
+                
+18:05:02 <{erlang,apply,2}> {ets,lookup,2} -> []
+</tt></pre>
+
 <h3>misc</h3>
 
 The call stack displayed by redbug is really a call return stack; i.e. only functions that will be returned to are shown. This is a feature of the emulator (tail call optimization), and cannot be circumvented in a safe way (as far as I know).<p>
