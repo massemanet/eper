@@ -142,6 +142,30 @@ file_size    (1)           size of each trc file
 file_count   (8)           number of trc files
 </tt></pre>
 
+<h3>examples</h3>
+
+<pre><tt>
+6&gt; redbug:start("ets",{time,1000}).
+{38,136}
+
+17:43:55 <{erlang,apply,2}> {ets,lookup,
+                                 [ac_tab,{env,stdlib,shell_history_length}]}
+</tt></pre>
+
+<pre><tt>
+7&gt; redbug:start("ets",{time,1000}).
+{38,136}
+
+17:43:55 <{erlang,apply,2}> {ets,lookup,
+                                 [ac_tab,{env,stdlib,shell_history_length}]}
+</tt></pre>
+<pre>tt<>
+8&gt; redbug:start("ets:lookup(_,{_,_,shell_saved_results})",{time,1000}).
+{38,1}
+
+17:45:27 <{erlang,apply,2}> {ets,lookup,
+                                 [ac_tab,{env,stdlib,shell_saved_results}]}
+</tt></pre>
 <h3>misc</h3>
 
 The call stack displayed by redbug is really a call return stack; i.e. only functions that will be returned to are shown. This is a feature of the emulator (tail call optimization), and cannot be circumvented in a safe way (as far as I know).<p>
