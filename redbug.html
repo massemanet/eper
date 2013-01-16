@@ -75,13 +75,13 @@ The point of the above was to show
 
 <h3>dbg</h3>
 
-The standard OTP solution is called dbg. Alas, I must recommend against using this on live systems, since it is way too easy to get it wrong.<p>
+The standard OTP solution is called <tt>dbg</tt>. Alas, I must recommend against using this on live systems, since it is way too easy to get it wrong.<p>
 
 Try this for a laugh (it will kill the node).<p>
 
 <pre><tt>5&gt; dbg:tracer(),dbg:p(all,m).</tt></pre>
 
-Another problem with dbg is that it does not lift the level of abstraction enough (from that of the trace bifs).<p>
+Another problem with <tt>dbg</tt> is that it does not lift the level of abstraction enough (from that of the trace bifs).<p>
 
 Things look grim, what to do?<p>
 
@@ -89,11 +89,13 @@ Things look grim, what to do?<p>
 
 The simplicity comes from exposing only the most useful (i.e. the bits I use often) parts of the API in a concise way.<p>
 
-The safety comes partly from the simplicity, but also from the way the redbug process works.<p>
+The safety comes partly from the simplicity, but also from the way the <tt>redbug</tt> process works.<p>
 
-redbug supervises itself and will kill itself if it deems that it is in danger of overloading the node. It also delays the processing of the trace messages until after the trace is done.<p>
+<tt>redbug</tt> supervises itself and will kill itself if it deems that it is in danger of overloading the node. It also delays the processing of the trace messages until after the trace is done.<p>
 
-The most interesting extra feature is probably the stack match spec. Answers the eternal question: "Who the * is calling my function with this * argument?"
+The most interesting extra feature is probably the stack match spec. Answers the eternal question: "Who the * is calling my function with this * argument?"<p>
+
+Another potentially interesting feature is remote tracing; i.e. tracing on a node other than the one we run <tt>redbug</tt> on.
 
 <h3>interface</h3>
 
@@ -209,9 +211,9 @@ file_count   (8)           number of trc files
 
 <h3>misc</h3>
 
-The call stack displayed by redbug is really a call return stack; i.e. only functions that will be returned to are shown. This is a feature of the emulator (tail call optimization), and cannot be circumvented in a safe way (as far as I know).<p>
+The call stack displayed by <tt>redbug</tt> is really a call return stack; i.e. only functions that will be returned to are shown. This is a feature of the emulator (tail call optimization), and cannot be circumvented in a safe way (as far as I know).<p>
 
-redbug has the idiotic/awesome feature that it can be run from a Unix shell. actually pretty handy if you're working against an embedded system.<p>
+<tt>redbug</tt> has the idiotic/awesome feature that it can be run from a Unix shell. actually pretty handy if you're working against an embedded system.<p>
 
 <pre><tt>
 bash$ redbug shad@mwux005 3000 2 "{erlang,phash}"
