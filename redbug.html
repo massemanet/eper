@@ -16,57 +16,57 @@ For example, imagine this problem;<p>
 
 We have a system using 10,000 processes. Due to a bug, someone occasionally sends the atom true to an important server process. This eventually causes total system failure. We can not easily load code onto the system since it sits at a customer site.<p>
 
-Here's a piece of code (that can be pasted into the Erlang shell). It will trigger when someone sends true, and log the name and current function of the sending and the receiving processes.<p>
+Here's a piece of code (that can be pasted into the Erlang shell). It will trigger when someone sends true, and log the name and current function of the sending and the receiving processes.
 
 <pre><tt>
 % pulls out process info for a given pid. 
-Pi = fun (P) -> 
+Pi = fun (P) -&gt; 
  try 
   {element(2,case process_info(P,registered_name) of 
-              [] -> process_info(P,initial_call); 
-              R -> R 
+              [] -&gt; process_info(P,initial_call); 
+              R -&gt; R 
              end), 
    element(2,process_info(P,current_function))} 
- catch _:_ -> dead 
+ catch _:_ -&gt; dead 
  end 
 end.
 
 % called by Init. receives trace messages, filters, logs the hits.
-Loop = fun (G) -> 
-  receive {trace,Sender,send,true,Rec} -> io:fwrite("~p -> ~p~n", [Pi(Sender), Pi(Rec)]); 
-  _ -> ok end, 
+Loop = fun (G) -&gt; 
+  receive {trace,Sender,send,true,Rec} -&gt; io:fwrite("~p -&gt; ~p~n", [Pi(Sender), Pi(Rec)]); 
+  _ -&gt; ok end, 
  G(G) 
 end.
 % called by spawn. registers, starts the trace, calls Loop
-Init = fun () -> 
+Init = fun () -&gt; 
   register(trip,self()), 
   erlang:trace(all,true,[send]), 
   Loop(Loop) 
 end.
 </tt></pre>
 
-We start the tracer;<p>
+We start the tracer;
 
-1>spawn(Init).
+<tt>1&gt;spawn(Init).</tt>
 
 For clarity, I'll register a name for the shell;<p>
 
-2>register(luke,self()).
+<tt>2&gt;register(luke,self()).</tt>
 true
 
 So let's send ourself a 'true';<p>
 
-3> self()!true.
+<tt>3&gt; self()!true.</tt>
 
 The tracer will print this;<p>
 
-{luke,{shell,eval_loop,3}} -> {luke,{shell,eval_loop,3}}
+<tt>{luke,{shell,eval_loop,3}} -&gt; {luke,{shell,eval_loop,3}}</tt>
 
 luke (i.e. the shell) sent true to himself.<p>
 
-To be neat, I stop the tracer;<p>
+To be neat, I stop the tracer;
 
-4>exit(whereis(trip),kill).
+<tt>4&gt;exit(whereis(trip),kill).</tt>
 
 The point of the above was to show
 <ul>
@@ -80,7 +80,7 @@ The standard OTP solution is called dbg. Alas, I must recommend against using th
 
 Try this for a laugh (it will kill the node).<p>
 
-5> dbg:tracer(),dbg:p(all,m).
+<tt>5&gt; dbg:tracer(),dbg:p(all,m).</tt>
 
 Another problem with dbg is that it does not lift the level of abstraction enough (from that of the trace bifs).<p>
 
@@ -94,57 +94,56 @@ The safety comes partly from the simplicity, but also from the way the redbug pr
 
 redbug supervises itself and will kill itself if it deems that it is in danger of overloading the node. It also delays the processing of the trace messages until after the trace is done.<p>
 
-The most interesting extra feature is probably the stack match spec. Answers the eternal question: "Who the #$%^ is calling my function with #$%^ argument?"
+The most interesting extra feature is probably the stack match spec. Answers the eternal question: "Who the * is calling my function with this * argument?"
 
 <h2>interface</h2>
 
 The interface consists of the function start.
 
-<tt>redbug:start(Time,Msgs,Trc[,Proc[,Targ]])</tt>
-
-    Time: integer() ms? Msgs: integer() # Trc: list('send'|'receive'|{M,F}|{M,F,RestrictedMatchSpecs?}) Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3} Targ: node()
-
-        RestrictedMatchSpecs?: list(RMS) 
-
-    RMS: 'stack'|'return'|tuple(ArgDescriptor?) ArgDescriptor?: ''|literal() 
+<tt>redbug:start(Rtp,Opts)</tt>
 
 Trace for 5000 milliseconds or until 1 trigger on erlang:phash
 
-redbug:start(5000,1,{erlang,phash}).
+<tt>redbug:start(5000,1,{erlang,phash}).</tt>
 
 As above, but on erlang:phash/2
 
-redbug:start(5000,1,{erlang,phash,[{'_','_'}]}).
+<tt>redbug:start(5000,1,{erlang,phash,[{'_','_'}]}).</tt>
 
 As above, but second argument must be 16
 
-redbug:start(5000,1,{erlang,phash,[{'_',16}]}).
+<tt>redbug:start(5000,1,{erlang,phash,[{'_',16}]}).</tt>
 
 As above, but show the return value
 
-redbug:start(5000,2,{erlang,phash,[{'_',16},return]}).
+<tt>redbug:start(5000,2,{erlang,phash,[{'_',16},return]}).</tt>
 
 As above, but show the call stack
 
-redbug:start(5000,2,{erlang,phash,[{'_',16},stack,return]}).
+<tt>redbug:start(5000,2,{erlang,phash,[{'_',16},stack,return]}).</tt>
 
 The output of the last command looks like this
 
+<tt>
 15:59:39 &lt;prfTrc&gt; {erlang,phash,[time,16]}
   {prfTrc,loop,1} 
   {prfTrc,start_trace,3}
   {dict,fetch,2}  
 15:59:39 &lt;prfTrc&gt; {erlang,phash,2} -&gt; 6
+</tt>
 
 The trigger was erlang:phash(time,16) called in dict:fetch/2 and it returned 6.
-misc
 
-The call stack displayed by redbug is really a call return stack; i.e. only functions that will be returned to are shown. This is a feature of the emulator (tail call optimization), and cannot be circumvented in a safe way (as far as I know).
+<h2>misc</h2>
 
-redbug has the idiotic/awesome feature that it can be run from a Unix shell. actually pretty handy if you're working against an embedded system.
+The call stack displayed by redbug is really a call return stack; i.e. only functions that will be returned to are shown. This is a feature of the emulator (tail call optimization), and cannot be circumvented in a safe way (as far as I know).<p>
 
+redbug has the idiotic/awesome feature that it can be run from a Unix shell. actually pretty handy if you're working against an embedded system.<p>
+
+<pre><tt>
 bash$ redbug shad@mwux005 3000 2 "{erlang,phash}"
 16:26:00 &lt;prfTrc&gt; {erlang,phash,[time,16]}
+</tt></pre>
 
   </body>
 </html>
