@@ -14,9 +14,9 @@ erlang:trace_pattern/3</a>) are insanely powerful. However, they might be a bit 
 
 For example, imagine this problem;<p>
 
-We have a system using 10,000 processes. Due to a bug, someone occasionally sends the atom true to an important server process. This eventually causes total system failure. We can not easily load code onto the system since it sits at a customer site.<p>
+We have a system using 10,000 processes. Due to a bug, someone occasionally sends the atom <tt>true</tt> to an important server process. This eventually causes total system failure. We can not easily load code onto the system since it sits at a customer site.<p>
 
-Here's a piece of code (that can be pasted into the Erlang shell). It will trigger when someone sends true, and log the name and current function of the sending and the receiving processes.
+Here's a piece of code (that can be pasted into the Erlang shell). It will trigger when someone sends <tt>true</tt>, and log the name and current function of the sending and the receiving processes.
 
 <pre><tt>
 % pulls out process info for a given pid. 
@@ -37,7 +37,10 @@ Loop = fun (G) -&gt;
   _ -&gt; ok end, 
  G(G) 
 end.
+
+<span style="color:#0f0;">
 % called by spawn. registers, starts the trace, calls Loop
+</span>
 Init = fun () -&gt; 
   register(trip,self()), 
   erlang:trace(all,true,[send]), 
@@ -47,22 +50,30 @@ end.
 
 We start the tracer;
 
-<tt>1&gt;spawn(Init).</tt>
+<pre><tt>
+1&gt;spawn(Init).
+</tt></pre>
 
 For clarity, I'll register a name for the shell;<p>
 
-<tt>2&gt;register(luke,self()).</tt>
+<pre><tt>
+2&gt;register(luke,self()).
 true
+</tt></pre>
 
 So let's send ourself a 'true';<p>
 
-<tt>3&gt; self()!true.</tt>
+<pre><tt>
+3&gt; self()!true.
+</tt></pre>
 
 The tracer will print this;<p>
 
-<tt>{luke,{shell,eval_loop,3}} -&gt; {luke,{shell,eval_loop,3}}</tt>
+<pre><tt>
+{luke,{shell,eval_loop,3}} -&gt; {luke,{shell,eval_loop,3}}
+</tt></pre>
 
-luke (i.e. the shell) sent true to himself.<p>
+luke (i.e. the shell) sent <tt>true</tt> to himself.<p>
 
 To be neat, I stop the tracer;
 
@@ -74,7 +85,7 @@ The point of the above was to show
   <li>a higher-level interface is in order 
 </ul>
 
-<h2>dbg</h2>
+<h3>dbg</h3>
 
 The standard OTP solution is called dbg. Alas, I must recommend against using this on live systems, since it is way too easy to get it wrong.<p>
 
@@ -96,7 +107,7 @@ redbug supervises itself and will kill itself if it deems that it is in danger o
 
 The most interesting extra feature is probably the stack match spec. Answers the eternal question: "Who the * is calling my function with this * argument?"
 
-<h2>interface</h2>
+<h3>interface</h3>
 
 The interface consists of the function start.
 
@@ -134,7 +145,7 @@ The output of the last command looks like this
 
 The trigger was erlang:phash(time,16) called in dict:fetch/2 and it returned 6.
 
-<h2>misc</h2>
+<h3>misc</h3>
 
 The call stack displayed by redbug is really a call return stack; i.e. only functions that will be returned to are shown. This is a feature of the emulator (tail call optimization), and cannot be circumvented in a safe way (as far as I know).<p>
 
