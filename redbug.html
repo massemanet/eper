@@ -10,68 +10,15 @@ The erlang tracing (the so-called "trace bifs",
 <a href="http://www.erlang.org/doc/man/erlang.html#trace-3">
 erlang:trace/3</a> and 
 <a href="http://www.erlang.org/doc/man/erlang.html#trace_pattern-3">
-erlang:trace_pattern/3</a>) are insanely powerful. However, they might be a bit hard to get used to.<p>
+erlang:trace_pattern/3</a>) are insanely powerful.
 
 For example, imagine this problem;<p>
 
-We have a system using 10,000 processes. Due to a bug, someone occasionally sends the atom <tt>true</tt> to an important server process. This eventually causes total system failure. We can not easily load code onto the system since it sits at a customer site.<p>
+We have a system using 10,000 processes. Due to a bug, some rogue code occasionally calls a function with some garbage data. This eventually causes total system failure. We can not easily load code onto the system since it sits at a customer site.<p>
 
-Here's a piece of code (that can be pasted into the Erlang shell). It will trigger when someone sends <tt>true</tt>, and log the name and current function of the sending and the receiving processes.
+Using the trace bifs, we can instruct the VM to set a watchpoint on the called function, a watchpoint that only triggers when the function is called with the bad value, and upon triggering inspects the call stack and tells us which piece of code issued the bad call.<p>
 
-<pre><tt>
-<span style="color:#f00;">% pulls out process info for a given pid.</span>
-Pi = fun (P) -&gt; 
- try 
-  {element(2,case process_info(P,registered_name) of 
-              [] -&gt; process_info(P,initial_call); 
-              R -&gt; R 
-             end), 
-   element(2,process_info(P,current_function))} 
- catch _:_ -&gt; dead 
- end 
-end.
-
-<span style="color:#f00;">% called by Init. receives trace messages, filters, logs the hits.</span>
-Loop = fun (G) -&gt; 
-  receive {trace,Sender,send,true,Rec} -&gt; io:fwrite("~p -&gt; ~p~n", [Pi(Sender), Pi(Rec)]); 
-  _ -&gt; ok end, 
- G(G) 
-end.
-
-<span style="color:#f00;">% called by spawn. registers, starts the trace, calls Loop</span>
-Init = fun () -&gt; 
-  register(trip,self()), 
-  erlang:trace(all,true,[send]), 
-  Loop(Loop) 
-end.
-</tt></pre>
-
-We start the tracer;
-<pre><tt>1&gt;spawn(Init).</tt></pre>
-
-For clarity, I'll register a name for the shell;
-
-<pre><tt>2&gt;register(luke,self()).
-true</tt></pre>
-
-So let's send <tt>true</tt> to ourselves;
-<pre><tt>3&gt; self()!true.</tt></pre>
-
-The tracer will print this;
-<pre><tt>{luke,{shell,eval_loop,3}} -&gt; {luke,{shell,eval_loop,3}}
-</tt></pre>
-
-<tt>luke</tt> (i.e. the shell) sent <tt>true</tt> to himself.<p>
-
-To be neat, I stop the tracer;
-
-<pre><tt>4&gt;exit(whereis(trip),kill).</tt></pre>
-
-The point of the above was to show
-<ul>
-  <li>the trace bifs have immense power
-  <li>a higher-level interface is in order 
-</ul>
+Unfortunately, the interface to the trace bifs is geared towards power, and not is not particularly user friendly. A layer on top of the bifs is needed.
 
 <h3>dbg</h3>
 
@@ -151,7 +98,7 @@ file_count   (8)           number of trc files
 </tt></pre>
 
 <h3>examples</h3>
-Trace on all functions in the module <tt>ets</tt>, timeout after 1 second.
+<b>Trace on all functions in the module <tt>ets</tt>, timeout after 1 second.</b>
 <pre><tt>
 6&gt; redbug:start("ets",{time,1000}).
 {38,136}
@@ -159,7 +106,7 @@ Trace on all functions in the module <tt>ets</tt>, timeout after 1 second.
 17:43:55 <{erlang,apply,2}> {ets,lookup,
                                  [ac_tab,{env,stdlib,shell_history_length}]}
 </tt></pre>
-Trace on <tt>ets:lookup</tt>, timeout after 1 second.
+<b>Trace on <tt>ets:lookup</tt>, timeout after 1 second.</b>
 <pre><tt>
 7&gt; redbug:start("ets:lookup",{time,1000}).
 {38,1}
@@ -167,7 +114,7 @@ Trace on <tt>ets:lookup</tt>, timeout after 1 second.
 17:43:55 <{erlang,apply,2}> {ets,lookup,
                                  [ac_tab,{env,stdlib,shell_history_length}]}
 </tt></pre>
-Trace on <tt>ets:lookup/2</tt>, match on part of the second argument, timeout after 1 second.
+<b>Trace on <tt>ets:lookup/2</tt>, match on part of the second argument, timeout after 1 second.</b>
 <pre><tt>
 8&gt; redbug:start("ets:lookup(_,{_,_,shell_saved_results})",{time,1000}).
 {38,1}
@@ -175,7 +122,7 @@ Trace on <tt>ets:lookup/2</tt>, match on part of the second argument, timeout af
 17:45:27 <{erlang,apply,2}> {ets,lookup,
                                  [ac_tab,{env,stdlib,shell_saved_results}]}
 </tt></pre>
-Trace on calls to <tt>ets:lookup</tt> and its return values, timeout after 1 second, max two messages.
+<b>Trace on calls to <tt>ets:lookup</tt> and its return values, timeout after 1 second, max two messages.</b>
 <pre><tt>
 9&gt; redbug:start("ets:lookup->return",[{msgs,2},{time,1000}]).      
 {38,1}
@@ -185,7 +132,7 @@ Trace on calls to <tt>ets:lookup</tt> and its return values, timeout after 1 sec
                 
 18:06:26 <{erlang,apply,2}> {ets,lookup,2} -> []
 </tt></pre>
-Trace on <tt>ets:lookup/2</tt>, match first argument, guard on the second argument, timeout after 1 second, max two messages.
+<b>Trace on <tt>ets:lookup/2</tt>, match first argument, guard on the second argument, timeout after 1 second, max two messages.</b>
 <pre><tt>
 10&gt; redbug:start("ets:lookup(ac_tab,X)when not is_tuple(X)->return",[{msgs,2},{time,10000}]).
 {38,1}
@@ -193,7 +140,7 @@ Trace on <tt>ets:lookup/2</tt>, match first argument, guard on the second argume
 18:09:27 <{erlang,apply,2}> {ets,lookup,[ac_tab,[]]}
 18:09:27 <{erlang,apply,2}> {ets,lookup,2} -> []
 </tt></pre>
-Trace on calls to <tt>ets:lookup</tt> and its return values, timeout after 1 second, max two messages. Display call stack.
+<b>Trace on calls to <tt>ets:lookup</tt> and its return values, timeout after 1 second, max two messages. Display call stack.</b>
 <pre><tt>
 11&gt; redbug:start("ets:lookup->stack,return",[{msgs,2},{time,1000}]).
 {38,1}
@@ -217,7 +164,7 @@ The call stack displayed by <tt>redbug</tt> is really a call return stack; i.e. 
 <tt>redbug</tt> has the idiotic/awesome feature that it can be run from a Unix shell. actually pretty handy if you're working against an embedded system.<p>
 
 <pre><tt>
-bash$ redbug shad@mwux005 3000 2 "{erlang,phash}"
+bash$ redbug shad@mwux005 "{erlang,phash}"
 16:26:00 &lt;prfTrc&gt; {erlang,phash,[time,16]}
 </tt></pre>
 
