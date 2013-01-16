@@ -19,7 +19,7 @@ We have a system using 10,000 processes. Due to a bug, someone occasionally send
 Here's a piece of code (that can be pasted into the Erlang shell). It will trigger when someone sends <tt>true</tt>, and log the name and current function of the sending and the receiving processes.
 
 <pre><tt>
-% pulls out process info for a given pid. 
+<span style="color:#f00;">% pulls out process info for a given pid.</span>
 Pi = fun (P) -&gt; 
  try 
   {element(2,case process_info(P,registered_name) of 
@@ -31,16 +31,14 @@ Pi = fun (P) -&gt;
  end 
 end.
 
-% called by Init. receives trace messages, filters, logs the hits.
+<span style="color:#f00;">% called by Init. receives trace messages, filters, logs the hits.</span>
 Loop = fun (G) -&gt; 
   receive {trace,Sender,send,true,Rec} -&gt; io:fwrite("~p -&gt; ~p~n", [Pi(Sender), Pi(Rec)]); 
   _ -&gt; ok end, 
  G(G) 
 end.
 
-<span style="color:#0f0;">
-% called by spawn. registers, starts the trace, calls Loop
-</span>
+<span style="color:#f00;">% called by spawn. registers, starts the trace, calls Loop</span>
 Init = fun () -&gt; 
   register(trip,self()), 
   erlang:trace(all,true,[send]), 
@@ -49,35 +47,32 @@ end.
 </tt></pre>
 
 We start the tracer;
-
 <pre><tt>
 1&gt;spawn(Init).
 </tt></pre>
 
-For clarity, I'll register a name for the shell;<p>
+For clarity, I'll register a name for the shell;
 
 <pre><tt>
 2&gt;register(luke,self()).
 true
 </tt></pre>
 
-So let's send ourself a 'true';<p>
-
+So let's send <tt>true</tt> to ourselves;
 <pre><tt>
 3&gt; self()!true.
 </tt></pre>
 
-The tracer will print this;<p>
-
+The tracer will print this;
 <pre><tt>
 {luke,{shell,eval_loop,3}} -&gt; {luke,{shell,eval_loop,3}}
 </tt></pre>
 
-luke (i.e. the shell) sent <tt>true</tt> to himself.<p>
+<tt>luke</tt> (i.e. the shell) sent <tt>true</tt> to himself.<p>
 
 To be neat, I stop the tracer;
 
-<tt>4&gt;exit(whereis(trip),kill).</tt>
+<pre><tt>4&gt;exit(whereis(trip),kill).</tt></pre>
 
 The point of the above was to show
 <ul>
@@ -91,7 +86,7 @@ The standard OTP solution is called dbg. Alas, I must recommend against using th
 
 Try this for a laugh (it will kill the node).<p>
 
-<tt>5&gt; dbg:tracer(),dbg:p(all,m).</tt>
+<pre><tt>5&gt; dbg:tracer(),dbg:p(all,m).</tt></pre>
 
 Another problem with dbg is that it does not lift the level of abstraction enough (from that of the trace bifs).<p>
 
@@ -109,13 +104,13 @@ The most interesting extra feature is probably the stack match spec. Answers the
 
 <h3>interface</h3>
 
-The interface consists of the function start.
+The interface consists of the function <tt>start/2</tt>.
 
 <tt>redbug:start(Rtp,Opts)</tt>
 
-Trace for 5000 milliseconds or until 1 trigger on erlang:phash
+Trace on <tt>erlang:phash</tt>
 
-<tt>redbug:start(5000,1,{erlang,phash}).</tt>
+<tt>redbug:start("erlang:phash").</tt>
 
 As above, but on erlang:phash/2
 
