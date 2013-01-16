@@ -47,25 +47,18 @@ end.
 </tt></pre>
 
 We start the tracer;
-<pre><tt>
-1&gt;spawn(Init).
-</tt></pre>
+<pre><tt>1&gt;spawn(Init).</tt></pre>
 
 For clarity, I'll register a name for the shell;
 
-<pre><tt>
-2&gt;register(luke,self()).
-true
-</tt></pre>
+<pre><tt>2&gt;register(luke,self()).
+true</tt></pre>
 
 So let's send <tt>true</tt> to ourselves;
-<pre><tt>
-3&gt; self()!true.
-</tt></pre>
+<pre><tt>3&gt; self()!true.</tt></pre>
 
 The tracer will print this;
-<pre><tt>
-{luke,{shell,eval_loop,3}} -&gt; {luke,{shell,eval_loop,3}}
+<pre><tt>{luke,{shell,eval_loop,3}} -&gt; {luke,{shell,eval_loop,3}}
 </tt></pre>
 
 <tt>luke</tt> (i.e. the shell) sent <tt>true</tt> to himself.<p>
@@ -106,39 +99,48 @@ The most interesting extra feature is probably the stack match spec. Answers the
 
 The interface consists of the function <tt>start/2</tt>.
 
-<tt>redbug:start(Rtp,Opts)</tt>
+<tt>redbug:start(Trc,Opts)</tt>
 
-Trace on <tt>erlang:phash</tt>
+<pre><tt>
+Trc: list('send'|'receive'|string(RTP))
+RTP:  restricted trace pattern
+  the RTP has the form: "&lt;mfa&gt; when &lt;guards&gt; -&gt; &lt;actions&gt;"
+  where &lt;mfa&gt; can be;
+  "mod", "mod:fun", "mod:fun/3" or "mod:fun('_',atom,X)"
+  &lt;guard&gt; is something like;
+  "X==1" or "is_atom(A)"
+  and &lt;action&gt; is;
+  "return" and/or "stack" (separated by ";")
 
-<tt>redbug:start("erlang:phash").</tt>
+  E.g.
+  ets:lookup(T,hostname) when is_integer(T) -&gt;stack
 
-As above, but on erlang:phash/2
+Opts: list({Opt,Val})
 
-<tt>redbug:start(5000,1,{erlang,phash,[{'_','_'}]}).</tt>
+  general opts:
+time         (15000)       stop trace after this many ms
+msgs         (10)          stop trace after this many msgs
+target       (node())      node to trace on
+arity        (false)       print arity instead of arg list
+blocking     (false)       block start/2, return a list of messages
+procs        (all)         (list of) Erlang process(es)
+                           all|pid()|atom(RegName)|{pid,I2,I3}
 
-As above, but second argument must be 16
+  print-related opts
+max_queue    (5000)        fail if internal queue gets this long
+max_msg_size (50000)       fail if seeing a msg this big
+buffered     (no)          buffer messages till end of trace
+print_calls  (true)        print calls
+print_file   (standard_io) print to this file
+print_msec   (false)       print milliseconds on timestamps
+print_depth  (999999)      formatting depth for "~P"
+print_re     ("")          print only strings that match this
 
-<tt>redbug:start(5000,1,{erlang,phash,[{'_',16}]}).</tt>
-
-As above, but show the return value
-
-<tt>redbug:start(5000,2,{erlang,phash,[{'_',16},return]}).</tt>
-
-As above, but show the call stack
-
-<tt>redbug:start(5000,2,{erlang,phash,[{'_',16},stack,return]}).</tt>
-
-The output of the last command looks like this
-
-<tt>
-15:59:39 &lt;prfTrc&gt; {erlang,phash,[time,16]}
-  {prfTrc,loop,1} 
-  {prfTrc,start_trace,3}
-  {dict,fetch,2}  
-15:59:39 &lt;prfTrc&gt; {erlang,phash,2} -&gt; 6
-</tt>
-
-The trigger was erlang:phash(time,16) called in dict:fetch/2 and it returned 6.
+  trc file related opts
+file         (none)        use a trc file based on this name
+file_size    (1)           size of each trc file
+file_count   (8)           number of trc files
+</tt></pre>
 
 <h3>misc</h3>
 
