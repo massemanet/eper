@@ -151,7 +151,7 @@ file_count   (8)           number of trc files
 </tt></pre>
 
 <h3>examples</h3>
-
+Trace on all functions in the module <tt>ets</tt>, timeout after 1 second.
 <pre><tt>
 6&gt; redbug:start("ets",{time,1000}).
 {38,136}
@@ -159,7 +159,7 @@ file_count   (8)           number of trc files
 17:43:55 <{erlang,apply,2}> {ets,lookup,
                                  [ac_tab,{env,stdlib,shell_history_length}]}
 </tt></pre>
-
+Trace on <tt>ets:lookup</tt>, timeout after 1 second.
 <pre><tt>
 7&gt; redbug:start("ets:lookup",{time,1000}).
 {38,1}
@@ -167,6 +167,7 @@ file_count   (8)           number of trc files
 17:43:55 <{erlang,apply,2}> {ets,lookup,
                                  [ac_tab,{env,stdlib,shell_history_length}]}
 </tt></pre>
+Trace on <tt>ets:lookup/2</tt>, match on part of the second argument, timeout after 1 second.
 <pre><tt>
 8&gt; redbug:start("ets:lookup(_,{_,_,shell_saved_results})",{time,1000}).
 {38,1}
@@ -174,7 +175,7 @@ file_count   (8)           number of trc files
 17:45:27 <{erlang,apply,2}> {ets,lookup,
                                  [ac_tab,{env,stdlib,shell_saved_results}]}
 </tt></pre>
-
+Trace on calls to <tt>ets:lookup</tt> and its return values, timeout after 1 second, max two messages.
 <pre><tt>
 9&gt; redbug:start("ets:lookup->return",[{msgs,2},{time,1000}]).      
 {38,1}
@@ -184,7 +185,7 @@ file_count   (8)           number of trc files
                 
 18:06:26 <{erlang,apply,2}> {ets,lookup,2} -> []
 </tt></pre>
-
+Trace on <tt>ets:lookup/2</tt>, match first argument, guard on the second argument, timeout after 1 second, max two messages.
 <pre><tt>
 10&gt; redbug:start("ets:lookup(ac_tab,X)when not is_tuple(X)->return",[{msgs,2},{time,10000}]).
 {38,1}
@@ -192,7 +193,7 @@ file_count   (8)           number of trc files
 18:09:27 <{erlang,apply,2}> {ets,lookup,[ac_tab,[]]}
 18:09:27 <{erlang,apply,2}> {ets,lookup,2} -> []
 </tt></pre>
-
+Trace on calls to <tt>ets:lookup</tt> and its return values, timeout after 1 second, max two messages. Display call stack.
 <pre><tt>
 11&gt; redbug:start("ets:lookup->stack,return",[{msgs,2},{time,1000}]).
 {38,1}
