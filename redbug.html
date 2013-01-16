@@ -9,15 +9,16 @@
 The erlang tracing (the so-called "trace bifs", 
 <a href="http://www.erlang.org/doc/man/erlang.html#trace-3">
 erlang:trace/3</a> and 
-<a href="ttp://www.erlang.org/doc/man/erlang.html#trace_pattern-3">
-erlang:trace_pattern/3</a>) are insanely powerful. However, they might be a bit hard to get used to.
+<a href="http://www.erlang.org/doc/man/erlang.html#trace_pattern-3">
+erlang:trace_pattern/3</a>) are insanely powerful. However, they might be a bit hard to get used to.<p>
 
-For example, imagine this problem;
+For example, imagine this problem;<p>
 
-We have a system using 10,000 processes. Due to a bug, someone occasionally sends the atom true to an important server process. This eventually causes total system failure. We can not easily load code onto the system since it sits at a customer site.
+We have a system using 10,000 processes. Due to a bug, someone occasionally sends the atom true to an important server process. This eventually causes total system failure. We can not easily load code onto the system since it sits at a customer site.<p>
 
-Here's a piece of code (that can be pasted into the Erlang shell). It will trigger when someone sends true, and log the name and current function of the sending and the receiving processes.
+Here's a piece of code (that can be pasted into the Erlang shell). It will trigger when someone sends true, and log the name and current function of the sending and the receiving processes.<p>
 
+<pre><tt>
 % pulls out process info for a given pid. 
 Pi = fun (P) -> 
  try 
@@ -42,60 +43,64 @@ Init = fun () ->
   erlang:trace(all,true,[send]), 
   Loop(Loop) 
 end.
+</tt></pre>
 
-We start the tracer;
+We start the tracer;<p>
 
 1>spawn(Init).
 
-For clarity, I'll register a name for the shell;
+For clarity, I'll register a name for the shell;<p>
 
 2>register(luke,self()).
 true
 
-So let's send ourself a 'true';
+So let's send ourself a 'true';<p>
 
 3> self()!true.
 
-The tracer will print this;
+The tracer will print this;<p>
 
 {luke,{shell,eval_loop,3}} -> {luke,{shell,eval_loop,3}}
 
-luke (i.e. the shell) sent true to himself.
+luke (i.e. the shell) sent true to himself.<p>
 
-To be neat, I stop the tracer;
+To be neat, I stop the tracer;<p>
 
 4>exit(whereis(trip),kill).
 
 The point of the above was to show
+<ul>
+  <li>the trace bifs have immense power
+  <li>a higher-level interface is in order 
+</ul>
 
-    the trace bifs have immense power
-    a higher-level interface is in order 
+<h2>dbg</h2>
 
-dbg
+The standard OTP solution is called dbg. Alas, I must recommend against using this on live systems, since it is way too easy to get it wrong.<p>
 
-The standard OTP solution is called dbg. Alas, I must recommend against using this on live systems, since it is way too easy to get it wrong.
-
-Try this for a laugh (it will kill the node).
+Try this for a laugh (it will kill the node).<p>
 
 5> dbg:tracer(),dbg:p(all,m).
 
-Another problem with dbg is that it does not lift the level of abstraction enough (from that of the trace bifs).
-things look grim, what to do?
+Another problem with dbg is that it does not lift the level of abstraction enough (from that of the trace bifs).<p>
 
-redbug aims to be a safe and simple interface to the erlang trace functionality, with some extra features thrown in.
+Things look grim, what to do?<p>
 
-The simplicity comes from exposing only the most useful (i.e. the bits I use often) parts of the API in a concise way.
+<tt>redbug</tt> aims to be a safe and simple interface to the erlang trace functionality, with some extra features thrown in.<p>
 
-The safety comes partly from the simplicity, but also from the way the redbug process works.
+The simplicity comes from exposing only the most useful (i.e. the bits I use often) parts of the API in a concise way.<p>
 
-redbug supervises itself and will kill itself if it deems that it is in danger of overloading the node. It also delays the processing of the trace messages until after the trace is done.
+The safety comes partly from the simplicity, but also from the way the redbug process works.<p>
+
+redbug supervises itself and will kill itself if it deems that it is in danger of overloading the node. It also delays the processing of the trace messages until after the trace is done.<p>
 
 The most interesting extra feature is probably the stack match spec. Answers the eternal question: "Who the #$%^ is calling my function with #$%^ argument?"
-interface
+
+<h2>interface</h2>
 
 The interface consists of the function start.
 
-redbug:start(Time,Msgs,Trc[,Proc[,Targ]])
+<tt>redbug:start(Time,Msgs,Trc[,Proc[,Targ]])</tt>
 
     Time: integer() ms? Msgs: integer() # Trc: list('send'|'receive'|{M,F}|{M,F,RestrictedMatchSpecs?}) Proc: 'all'|pid()|atom(Regname)|{'pid',I2,I3} Targ: node()
 
