@@ -64,7 +64,7 @@ idle() ->
                               ?ACTIVE(start_trace(HostPid,Conf));
     {stop,{HostPid,_}}     -> HostPid ! {prfTrc,{not_started,idle,self()}},
                               ?IDLE();
-    {'EXIT',_,exiting}     -> ?IDLE();
+    {'EXIT',_,normal}      -> ?IDLE();
     X                      -> ?log({weird_in,X}), ?IDLE()
   end.
 
@@ -105,7 +105,7 @@ stop_trace(LD) ->
 start_trace(HostPid,Conf) ->
   case {maybe_load_rtps(fetch(rtps,Conf)),
         is_message_trace(fetch(flags,Conf))} of
-    {[],false}-> {not_started,no_modules,HostPid};
+    {[],false}-> exit({prfTrc,no_matching_modules});
     {Rtps,_}  -> start_trace(from_list([{host_pid,HostPid},
                                         {conf,store(rtps,Rtps,Conf)}]))
   end.
@@ -113,7 +113,7 @@ start_trace(HostPid,Conf) ->
 maybe_load_rtps(Rtps) ->
   lists:foldl(fun maybe_load_rtp/2, [], Rtps).
 
-maybe_load_rtp({{M,F,A},_MatchSpec,_Flags} = Rtp,O) ->
+maybe_load_rtp({{M,_,_},_MatchSpec,_Flags} = Rtp,O) ->
   try
     case code:which(M) of
       preloaded         -> ok;
@@ -122,7 +122,7 @@ maybe_load_rtp({{M,F,A},_MatchSpec,_Flags} = Rtp,O) ->
     end,
     [Rtp|O]
   catch
-    _:R -> ?log({no_such_function,{R,{M,F,A}}}), O
+    _:_ -> O
   end.
 
 is_message_trace(Flags) ->
@@ -131,20 +131,15 @@ is_message_trace(Flags) ->
 start_trace(LD) ->
   Conf = fetch(conf,LD),
   Consumer = consumer(fetch(where,Conf),fetch(time,Conf)),
-  fetch(host_pid,LD) ! {prfTrc,{starting,self(),Consumer}},
-  Ps = [mk_prc(P) || P <- fetch(procs,Conf)],
+  Ps = lists:foldl(fun mk_prc/2,[],fetch(procs,Conf)),
   Rtps = fetch(rtps,Conf),
   Flags = [{tracer,real_consumer(Consumer)}|fetch(flags,Conf)],
   unset_tps(),
-  case 0 < lists:sum([erlang:trace(P,true,Flags) || P <- Ps]) of
-    true -> ok;
-    false-> exit({no_such_processes,Ps})
-  end,
+  NoProcs = lists:sum([erlang:trace(P,true,Flags) || P <- Ps]),
   untrace(family(redbug)++family(prfTrc),Flags),
-  case 0 < set_tps(Rtps) of
-    true -> ok;
-    false-> exit(no_matching_functions)
-  end,
+  NoFuncs = set_tps(Rtps),
+  assert_trace_targets(NoProcs,NoFuncs),
+  fetch(host_pid,LD) ! {prfTrc,{starting,NoProcs,NoFuncs,self(),Consumer}},
   store(consumer,Consumer,LD).
 
 family(Daddy) ->
@@ -161,6 +156,16 @@ untrace(Pids,Flags) ->
           node(P)==node(),
           {flags,[]}=/=erlang:trace_info(P,flags)].
 
+assert_trace_targets(NoProcs,NoFuncs) ->
+  case 0 < NoProcs of
+    true -> ok;
+    false-> exit({prfTrc,no_matching_processes})
+  end,
+  case 0 < NoFuncs of
+    true -> ok;
+    false-> exit({prfTrc,no_matching_functions})
+  end.
+
 unset_tps() ->
   erlang:trace_pattern({'_','_','_'},false,[local]),
   erlang:trace_pattern({'_','_','_'},false,[global]).
@@ -171,19 +176,19 @@ set_tps(TPs) ->
 set_tps_f({MFA,MatchSpec,Flags},A) ->
   A+erlang:trace_pattern(MFA,MatchSpec,Flags).
 
-mk_prc(all) ->
-  all;
-mk_prc(Reg) when is_atom(Reg) ->
+mk_prc(all,A) ->
+  [all|A];
+mk_prc(Reg,A) when is_atom(Reg) ->
   case whereis(Reg) of
-    Pid when is_pid(Pid) -> mk_prc(Pid);
-    undefined -> exit({no_such_process,Reg})
+    Pid when is_pid(Pid) -> mk_prc(Pid,A);
+    undefined -> A
   end;
-mk_prc({pid,P1,P2}) when is_integer(P1), is_integer(P2) ->
-  mk_prc(c:pid(0,P1,P2));
-mk_prc(Pid) when is_pid(Pid) ->
+mk_prc({pid,P1,P2},A) when is_integer(P1), is_integer(P2) ->
+  mk_prc(c:pid(0,P1,P2),A);
+mk_prc(Pid,A) when is_pid(Pid) ->
   case is_process_alive(Pid) of
-    true -> Pid;
-    false-> exit({no_such_process,Pid})
+    true -> [Pid|A];
+    false-> A
   end.
 
 real_consumer(C) ->

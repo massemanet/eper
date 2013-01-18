@@ -9,13 +9,15 @@ $ make
 $ make install
 
 
-  if building from SVN;
+  if building from github (using rebar);
 
-$ svn checkout http://eper.googlecode.com/svn/trunk/ eper
+$ git clone git://github.com/massemanet/eper.git
 $ cd eper 
-$ aclocal
-$ autoconf
-$ automake
+$ make
+
+  or using autotools;
+
+$ aclocal ; autoconf ; automake
 $ ./configure --prefix=<some nice place>
 $ make
 $ make install
