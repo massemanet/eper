@@ -12,7 +12,7 @@ self=`(cd $self ; pwd)`
 
 usage(){
     U1="usage: `basename $0` [-setcookie <cookie>] [-nocookie] "
-    U2="[-nettick <tick>] [-vsn <OTP version>] node time msgs trace [proc]"
+    U2="[-nettick <tick>] [-vsn <OTP version>] node trace [time [msgs [proc]]]"
     echo $U1 $U2
     exit
 }
