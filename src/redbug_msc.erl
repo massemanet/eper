@@ -226,7 +226,8 @@ actions_fun(Str) ->
 assert(Fun,Tag) ->
   try Fun()
   catch
-    _:{_,{error,{1,erl_parse,L}}}-> exit({{syntax_error,lists:flatten(L)},Tag});
+    _:{this_is_too_confusing,C}  -> exit({syntax_error,{C,Tag}});
+    _:{_,{error,{1,erl_parse,L}}}-> exit({syntax_error,{lists:flatten(L),Tag}});
     _:R                          -> exit({R,Tag,erlang:get_stacktrace()})
   end.
 
@@ -290,7 +291,9 @@ unit() ->
      ,{"x:c([string])",
        {{x,c,1},[{[[string]],[],[]}],[local]}}
      ,{"x(s)",
-       this_is_too_confusing}
+       syntax_error}
+     ,{"x-s",
+       syntax_error}
      ,{"x:c(S)when S==x;S==y",
        {{x,c,1},
         [{['$1'],[{'orelse',{'==','$1',x},{'==','$1',y}}],[]}],
@@ -382,6 +385,7 @@ unit({Str,MS}) ->
   try MS=transform(Str),Str
   catch
     _:{MS,_}       -> Str;
+    _:{{MS,_},_}   -> Str;
     _:{{MS,_},_,_} -> Str;
     _:R            -> {Str,R,MS}
   end.

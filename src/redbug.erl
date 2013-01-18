@@ -15,8 +15,6 @@
 -export([start/1,start/2,start/3,start/4,start/5]).
 -export([stop/0]).
 
--import(lists,[foldl/3,usort/1,reverse/1,foreach/2,flatten/1]).
-
 -include("log.hrl").
 
 %-define(bla,erlang:display(process_info(self(),current_function))).
@@ -28,6 +26,7 @@
              , procs        = all          % list of procs (or 'all')
              , target       = node()       % target node
              , cookie       = ''           % target node cookie
+             , blocking     = false        % run blocking; return a list of msgs
              , buffered     = false        % output buffering
              , arity        = false        % arity instead of args
              , print_calls  = true         % print calls
@@ -44,6 +43,7 @@
              , debug        = false        % big error messages
 
              , trc          = []           % cannot be set by user
+             , shell_pid    = []           % cannot be set by user
              , print_pid    = []           % cannot be set by user
              , trc_pid      = []           % cannot be set by user
              , cons_pid     = []           % cannot be set by user
@@ -52,79 +52,82 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 help() ->
-  foreach(fun(S)->io:fwrite(standard_io,"~s~n",[S])end,
-          ["redbug - the (sensibly) Restrictive Debugger"
-           , ""
-           , "  redbug:start(Trc) -> start(Trc,[])."
-           , "  redbug:start(Trc,Opts)."
-           , ""
-           , "  redbug is a tool to interact with the Erlang trace facility."
-           , "  It will instruct the Erlang VM to generate so called "
-           , "  'trace messages' when certain events (such as a particular"
-           , "  function being called) occur."
-           , "  The trace messages are either printed (i.e. human readable)"
-           , "  to a file or to the screen; or written to a trc file."
-           , "  Using a trc file puts less stress on the system, but"
-           , "  there is no way to count the messages (so the msgs opt"
-           , "  is ignored), and the files can only be read by special tools"
-           , "  (such as 'bread'). Printing and trc files cannot be combined."
-           , "  By default (i.e. if the 'file' opt is not given), messages"
-           , "  are printed."
-           , ""
-           , "Trc: list('send'|'receive'|string(RTP))"
-           , "RTP:  restricted trace pattern"
-           , "  the RTP has the form: \"<mfa> when <guards> -> <actions>\""
-           , "  where <mfa> can be;"
-           , "  \"mod\", \"mod:fun\", \"mod:fun/3\" or \"mod:fun('_',atom,X)\""
-           , "  <guard> is something like;"
-           , "  \"X==1\" or \"is_atom(A)\""
-           , "  and <action> is;"
-           , "  \"return\" and/or \"stack\" (separated by \";\")"
-           , ""
-           , "  E.g."
-           , "  ets:lookup(T,hostname) when is_integer(T) ->stack"
-           , ""
-           , "Opts: list({Opt,Val})"
-           , "  general opts:"
-           , "time         (15000)       stop trace after this many ms"
-           , "msgs         (10)          stop trace after this many msgs"
-           , "procs        (all)         (list of) Erlang process(es)"
-           , "                           all|pid()|atom(RegName)|{pid,I2,I3}"
-           , "target       (node())      node to trace on"
-           , "arity        (false)       print arity instead of arg list"
-           , "  print-related opts"
-           , "max_queue    (5000)        fail if internal queue gets this long"
-           , "max_msg_size (50000)       fail if seeing a msg this big"
-           , "buffered     (no)          buffer messages till end of trace"
-           , "print_calls  (true)        print calls"
-           , "print_file   (standard_io) print to this file"
-           , "print_msec   (false)       print milliseconds on timestamps"
-           , "print_depth  (999999)      formatting depth for \"~P\""
-           , "print_re     (\"\")          print only strings that match this"
-           , "  trc file related opts"
-           , "file         (none)        use a trc file based on this name"
-           , "file_size    (1)           size of each trc file"
-           , "file_count   (8)           number of trc files"
-           , ""
-          ]).
+  Text = 
+    ["redbug - the (sensibly) Restrictive Debugger"
+     , ""
+     , "  redbug:start(Trc) -> start(Trc,[])."
+     , "  redbug:start(Trc,Opts)."
+     , ""
+     , "  redbug is a tool to interact with the Erlang trace facility."
+     , "  It will instruct the Erlang VM to generate so called "
+     , "  'trace messages' when certain events (such as a particular"
+     , "  function being called) occur."
+     , "  The trace messages are either printed (i.e. human readable)"
+     , "  to a file or to the screen; or written to a trc file."
+     , "  Using a trc file puts less stress on the system, but"
+     , "  there is no way to count the messages (so the msgs opt"
+     , "  is ignored), and the files can only be read by special tools"
+     , "  (such as 'bread'). Printing and trc files cannot be combined."
+     , "  By default (i.e. if the 'file' opt is not given), messages"
+     , "  are printed."
+     , ""
+     , "Trc: list('send'|'receive'|string(RTP))"
+     , "RTP:  restricted trace pattern"
+     , "  the RTP has the form: \"<mfa> when <guards> -> <actions>\""
+     , "  where <mfa> can be;"
+     , "  \"mod\", \"mod:fun\", \"mod:fun/3\" or \"mod:fun('_',atom,X)\""
+     , "  <guard> is something like;"
+     , "  \"X==1\" or \"is_atom(A)\""
+     , "  and <action> is;"
+     , "  \"return\" and/or \"stack\" (separated by \";\")"
+     , ""
+     , "  E.g."
+     , "  ets:lookup(T,hostname) when is_integer(T) ->stack"
+     , ""
+     , "Opts: list({Opt,Val})"
+     , "  general opts:"
+     , "time         (15000)       stop trace after this many ms"
+     , "msgs         (10)          stop trace after this many msgs"
+     , "target       (node())      node to trace on"
+     , "arity        (false)       print arity instead of arg list"
+     , "blocking     (false)       block start/2, return a list of messages"
+     , "procs        (all)         (list of) Erlang process(es)"
+     , "                           all|pid()|atom(RegName)|{pid,I2,I3}"
+     , "  print-related opts"
+     , "max_queue    (5000)        fail if internal queue gets this long"
+     , "max_msg_size (50000)       fail if seeing a msg this big"
+     , "buffered     (no)          buffer messages till end of trace"
+     , "print_calls  (true)        print calls"
+     , "print_file   (standard_io) print to this file"
+     , "print_msec   (false)       print milliseconds on timestamps"
+     , "print_depth  (999999)      formatting depth for \"~P\""
+     , "print_re     (\"\")          print only strings that match this"
+     , "  trc file related opts"
+     , "file         (none)        use a trc file based on this name"
+     , "file_size    (1)           size of each trc file"
+     , "file_count   (8)           number of trc files"
+     , ""
+    ],
+  lists:foreach(fun(S)->io:fwrite(standard_io,"~s~n",[S])end,Text).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% start from unix shell (e.g. the bin/redbug script)
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-unix([Node,Time,Msgs,Trc])      -> unix([Node,Time,Msgs,Trc,"all"]);
-unix([Node,Time,Msgs,Trc,Proc]) ->
+unix([Node,Trc])                -> unix([Node,Trc,"15000"]);
+unix([Node,Trc,Time])           -> unix([Node,Trc,Time,"10"]);
+unix([Node,Trc,Time,Msgs])      -> unix([Node,Trc,Time,Msgs,"all"]);
+unix([Node,Trc,Time,Msgs,Proc]) ->
   try
     Cnf = #cnf{time = to_int(Time),
                msgs   = to_int(Msgs),
                trc    = try to_term(Trc) catch _:_ -> Trc end,
                procs  = [to_atom(Proc)],
-               target = to_atom(Node)},
+               target = to_atom(Node),
+               print_fun = mk_outer(#cnf{})},
     self() ! {start,Cnf},
     init(),
     maybe_halt(0)
   catch
-    exit:exiting ->
-      maybe_halt(0);
     C:R ->
       io:fwrite("~p~n",[{C,R,erlang:get_stacktrace()}]),
       maybe_halt(1)
@@ -132,6 +135,14 @@ unix([Node,Time,Msgs,Trc,Proc]) ->
 unix(X) ->
   io:fwrite("bad args: ~p~n",[X]),
   maybe_halt(1).
+
+to_term("_") -> '_';
+to_term(Str) ->
+  {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "["++Str++"]. ", 1),
+  case erl_parse:parse_term(Toks) of
+    {ok, [Term]} -> Term;
+    {ok, L} when is_list(L) -> L
+  end.
 
 maybe_halt(Status) ->
   case is_in_shell() of
@@ -172,20 +183,50 @@ start(Trc,{Tag,Val})                   -> start(Trc, [{Tag,Val}]);
 start(Trc,Props) when is_list(Props) ->
   case whereis(redbug) of
     undefined ->
-      Cnf = make_cnf(Trc,Props),
-      assert_cookie(Cnf),
       try
+        Cnf = assert_print_fun(make_cnf(Trc,[{shell_pid,self()}|Props])),
+        assert_cookie(Cnf),
         register(redbug, spawn(fun init/0)),
         redbug ! {start,Cnf},
-        ok
+        maybe_block(Cnf,block_a_little())
       catch
+        R   -> R;
         C:R -> {oops,{C,R}}
       end;
-    _ -> redbug_already_started
+    _ ->
+      redbug_already_started
+  end.
+
+assert_print_fun(Cnf) ->
+  case is_function(Cnf#cnf.print_fun) of
+    true -> Cnf;
+    false-> Cnf#cnf{print_fun=make_print_fun(Cnf)}
+  end.
+
+make_print_fun(Cnf) ->
+  case Cnf#cnf.blocking of
+    false-> mk_outer(Cnf);
+    true -> fun(X,0) -> [X]; (X,A) -> [X|A] end
   end.
 
 assert_cookie(#cnf{cookie=''}) -> ok;
 assert_cookie(Cnf) -> erlang:set_cookie(Cnf#cnf.target,Cnf#cnf.cookie).
+
+block_a_little() ->
+  Ref = erlang:monitor(process,redbug),
+  receive
+    {running,NoP,NoF}  -> erlang:demonitor(Ref), {NoP,NoF};
+    {'DOWN',Ref,_,_,R} -> R
+  end.
+
+maybe_block(#cnf{blocking=true},{_,_}) -> block();
+maybe_block(_,R) -> R.
+
+block() ->
+  Ref = erlang:monitor(process,redbug),
+  receive
+    {'DOWN',Ref,_,_,R} -> R
+  end.
 
 %% turn the proplist inta a #cnf{}
 make_cnf(Trc,Props) ->
@@ -195,7 +236,7 @@ make_cnf([],Cnf,_) -> Cnf;
 make_cnf([{Tag,Val}|Props],Cnf,Tags) ->
   make_cnf(Props,setelement(findex(Tag,Tags)+1,Cnf,Val),Tags).
 
-findex(Tag,[])       -> exit({field_not_allowed,Tag});
+findex(Tag,[])       -> throw({no_such_option,Tag});
 findex(Tag,[Tag|_])  -> 1;
 findex(Tag,[_|Tags]) -> findex(Tag,Tags)+1.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -210,29 +251,30 @@ init() ->
         starting(do_start(Cnf))
       catch
         R ->
-          erlang:display({argument_error,R});
+          exit({argument_error,R});
         C:R ->
-          case {Cnf#cnf.debug,R} of
-            {false,{X,Y,_}} -> erlang:display({X,Y});
-            _               -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
-
-          end
+          case Cnf#cnf.debug of
+            false-> ok;
+            true -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
+          end,
+          exit(R)
       end
-  end,
-  exit(exiting).
+  end.
 
 starting(Cnf = #cnf{print_pid=PrintPid}) ->
   receive
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}});
-    {prfTrc,{starting,T,C}}      -> running(Cnf#cnf{trc_pid=T,cons_pid=C});
+    {prfTrc,{starting,P,F,T,C}}  -> running(Cnf#cnf{trc_pid=T,cons_pid=C},P,F);
+    {'EXIT',_,{prfTrc,R}}        -> throw(R);
     {prfTrc,{already_started,_}} -> ?log(already_started);
     {'EXIT',PrintPid,R}          -> ?log([printer_died,{reason,R}]);
     {'EXIT',R}                   -> ?log([exited,{reason,R}]);
     X                            -> ?log([{unknown_message,X}])
   end.
 
-running(Cnf = #cnf{trc_pid=TrcPid,print_pid=PrintPid}) ->
+running(Cnf = #cnf{trc_pid=TrcPid,print_pid=PrintPid},P,F) ->
   Cnf#cnf.print_pid ! {trace_consumer,Cnf#cnf.cons_pid},
+  [Cnf#cnf.shell_pid ! {running,P,F} || is_pid(Cnf#cnf.shell_pid)],
   receive
     {stop,Args} -> prf:config(prf_redbug,prfTrc,{stop,{self(),Args}}),
                    stopping(Cnf);
@@ -240,26 +282,30 @@ running(Cnf = #cnf{trc_pid=TrcPid,print_pid=PrintPid}) ->
     {'EXIT',TrcPid,R}               -> ?log({trace_control_died,R}),
                                        stopping(Cnf);
     {prfTrc,{not_started,R,TrcPid}} -> ?log([{not_started,R}]);
-    {'EXIT',PrintPid,_}             -> maybe_stopping(Cnf);
+    {'EXIT',PrintPid,R}             -> wait_for_trc(Cnf,R);
     X                               -> ?log([{unknown_message,X}])
   end.
 
-maybe_stopping(#cnf{trc_pid=TrcPid}) ->
+wait_for_trc(Cnf = #cnf{trc_pid=TrcPid},R) ->
   receive
-    {prfTrc,{stopping,_,_}} -> ok;
-    {'EXIT',TrcPid,_}       -> ok;
+    {prfTrc,{stopping,_,_}} -> done(Cnf,R);
+    {'EXIT',TrcPid,R}       -> ?log({trace_control_died,R});
     X                       -> ?log({unknown_message,X})
   end.
 
-stopping(#cnf{print_pid=PrintPid}) ->
+stopping(Cnf = #cnf{print_pid=PrintPid}) ->
   receive
-    {'EXIT',PrintPid,_} -> ok;
+    {'EXIT',PrintPid,R} -> done(Cnf,R);
     X                   -> ?log([{unknown_message,X}])
   end.
 
+done(#cnf{blocking=false},{R,A}) ->
+  io:fwrite("redbug done, ~p - ~p~n",[R,A]);
+done(#cnf{blocking=true},R) ->
+  exit(R).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 do_start(OCnf) ->
-  Cnf = spawn_printer(assert_print_fun(maybe_new_target(OCnf))),
+  Cnf = spawn_printer(wrap_print_fun(OCnf),maybe_new_target(OCnf)),
   prf:start(prf_redbug,Cnf#cnf.target,redbugConsumer),
   prf:config(prf_redbug,prfTrc,{start,{self(),pack(Cnf)}}),
   Cnf.
@@ -270,14 +316,14 @@ maybe_new_target(Cnf = #cnf{target=Target}) ->
     false-> Cnf#cnf{target=to_atom(Str++"@"++element(2,inet:gethostname()))}
   end.
 
-assert_print_fun(Cnf) -> Cnf#cnf{print_fun=mk_print_fun(Cnf)}.
+spawn_printer(PrintFun,Cnf) ->
+  Cnf#cnf{print_pid=spawn_link(fun() -> print_init(PrintFun) end)}.
 
-spawn_printer(Cnf) ->
-  F = fun() -> print_init(fun(Ms) -> foreach(Cnf#cnf.print_fun,Ms) end) end,
-  Cnf#cnf{print_pid=spawn_link(F)}.
-
-mk_print_fun(#cnf{print_fun=PF}) when is_function(PF) -> PF;
-mk_print_fun(Cnf)                                     -> mk_outer(Cnf).
+wrap_print_fun(#cnf{print_fun=PF}) ->
+  case erlang:fun_info(PF,arity) of
+    {arity,1} -> fun(M,N) -> PF(M),N+1 end;
+    {arity,2} -> PF
+  end.
 
 mk_outer(#cnf{file=[_|_]}) ->
   fun(_) -> ok end;
@@ -290,7 +336,7 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
           case Cnf#cnf.print_calls of
             true ->
               OutFun("~n~s <~p> ~P",[MTS,PI,MFA,Depth]),
-              foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
+              lists:foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
             false->
               ok
           end;
@@ -328,15 +374,16 @@ fix_ts(MS,TS) ->
 ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
 ts_ms({H,M,S,Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w.~3.3.0w",[H,M,S,Us div 1000]).
 
-flat(Form,List) -> flatten(io_lib:fwrite(Form,List)).
+flat(Form,List) -> 
+  lists:flatten(io_lib:fwrite(Form,List)).
 
 
 %%% call stack handler
 stak(Bin) ->
-  foldl(fun munge/2,[],string:tokens(binary_to_list(Bin),"\n")).
+  lists:foldl(fun munge/2,[],string:tokens(binary_to_list(Bin),"\n")).
 
 munge(I,Out) ->
-  case reverse(I) of
+  case lists:reverse(I) of
     "..."++_ -> [truncated|Out];
     _ ->
       case string:str(I, "Return addr") of
@@ -367,7 +414,7 @@ mfaf(I) ->
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 pack(Cnf) ->
-  {Flags,RTPs} = foldl(fun chk_trc/2,{[],[]},slist(Cnf#cnf.trc)),
+  {Flags,RTPs} = lists:foldl(fun chk_trc/2,{[],[]},slist(Cnf#cnf.trc)),
   dict:from_list([{time,chk_time(Cnf#cnf.time)},
                   {flags,[call,timestamp|maybe_arity(Cnf,Flags)]},
                   {rtps,RTPs},
@@ -430,7 +477,7 @@ chk_rtp({'_',_,_})                     -> throw(dont_wildcard_module);
 chk_rtp({M,F,MS}) when ?is_aal(M,F,MS) -> {{M,F,'_'},ms(MS),[local]};
 chk_rtp(X)                             -> throw({bad_rtp,X}).
 
-ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
+ms(MS) -> lists:foldl(fun msf/2, [{'_',[],[]}], MS).
 
 msf(stack,[{Head,Cond,Body}]) -> [{Head,Cond,[{message,{process_dump}}|Body]}];
 msf(return,[{Head,Cond,Body}])-> [{Head,Cond,[{return_trace}|Body]}];
@@ -442,31 +489,23 @@ msf(X,_) -> throw({bad_match_spec,X}).
 mk_head(N) -> erlang:make_tuple(N,'_').
 
 slist(S) when ?is_string(S) -> [S];
-slist(L) when is_list(L) -> usort(L);
+slist(L) when is_list(L) -> lists:usort(L);
 slist(X) -> [X].
 
+to_int(L) -> list_to_integer(L).
+to_atom(L) -> list_to_atom(L).
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%% the print_loop process
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 print_init(PrintFun) ->
   receive
     {trace_consumer,TC} ->
       erlang:monitor(process,TC),
-      print_loop(PrintFun)
+      print_loop(PrintFun,0)
   end.
 
-print_loop(PrintFun) ->
+print_loop(PrintFun,Acc) ->
   receive
-    {'DOWN',_,_,_,R} -> io:fwrite("quitting: ~p~n",[R]);
-    X -> PrintFun(X),
-         print_loop(PrintFun)
-  end.
-
-to_int(L) -> list_to_integer(L).
-to_atom(L) -> list_to_atom(L).
-
-to_term("_") -> '_';
-to_term(Str) ->
-  {done, {ok, Toks, 1}, []} = erl_scan:tokens([], "["++Str++"]. ", 1),
-  case erl_parse:parse_term(Toks) of
-    {ok, [Term]} -> Term;
-    {ok, L} when is_list(L) -> L
+    {'DOWN',_,_,_,R} -> exit({R,Acc});
+    X                -> print_loop(PrintFun,lists:foldl(PrintFun,Acc,X))
   end.
