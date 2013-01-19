@@ -17,8 +17,6 @@
 
 -include("log.hrl").
 
-%-define(bla,erlang:display(process_info(self(),current_function))).
-
 %% the redbug server data structure
 %% most can be set in the input proplist
 -record(cnf,{time         = 15000          % stop trace after this time [ms]
@@ -219,7 +217,7 @@ block_a_little() ->
     {'DOWN',Ref,_,_,R} -> R
   end.
 
-maybe_block(#cnf{blocking=true},{_,_}) -> block();
+maybe_block(#cnf{blocking=true},{I,_}) when is_integer(I) -> block();
 maybe_block(_,R) -> R.
 
 block() ->

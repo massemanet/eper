@@ -1,147 +1,26 @@
-commit f3a70b6ed1a8be61c7faa7a745419eecbc107f9a
+commit 18d317525a65cae55cf1f9f5061f5f5724d96b47
+Merge: d8cf28f ab65492
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Fri Jan 18 06:45:46 2013 -0800
+
+    Merge pull request #13 from massemanet/_blocking
+    
+    implement the blocking option
+
+commit ab65492912ba96eef781bc823d48569699622c69
 Author: mats cronqvist <masse@klarna.com>
-Date:   Wed Jan 16 19:19:10 2013 +0100
+Date:   Fri Jan 18 15:41:33 2013 +0100
 
-    fixed the ability to run redbug from bash
-
-ChangeLog
-priv/bin/redbug
-src/redbug.erl
-
-commit 7f4dd38cf0de3598e321c708beba6f872e181b32
-Author: mats cronqvist <masse@klarna.com>
-Date:   Wed Jan 16 18:35:30 2013 +0100
-
-    cosmetic
-
-ChangeLog
-src/redbug.erl
-src/redbug_msc.erl
-
-commit 836f424746f5234a32972e879896011bffc94bfe
-Author: mats cronqvist <masse@klarna.com>
-Date:   Wed Jan 16 13:31:38 2013 +0100
-
-    autogenerate AUTHORS and ChangeLog
+    implement the blocking option
 
 AUTHORS
 ChangeLog
 INSTALL
 Makefile
-
-commit 25471fee3fba64fdfd498aab2e201f146c3a6670
-Author: mats cronqvist <masse@klarna.com>
-Date:   Wed Jan 16 12:00:13 2013 +0100
-
-    ...and unit test...
-
+priv/bin/redbug
+src/prfTrc.erl
+src/redbug.erl
 src/redbug_msc.erl
-
-commit 23e5cb72de5e2abfc446c5bec74a75073af8ee87
-Author: mats cronqvist <masse@klarna.com>
-Date:   Wed Jan 16 11:46:43 2013 +0100
-
-    better error message
-
-src/redbug_msc.erl
-
-commit 7c70afb36bf6e9126f2278481e877782eeb5c9de
-Author: mats cronqvist <masse@klarna.com>
-Date:   Wed Jan 16 10:25:41 2013 +0100
-
-    redbug:start (normally) returns {no_of_matched_procs,no_of_matched_functions}
-
-src/prfTrc.erl
-src/redbug.erl
-
-commit 830bff2462007b96173c738ce063415ae9c4b3a2
-Author: mats cronqvist <masse@klarna.com>
-Date:   Fri Jan 11 13:56:22 2013 +0530
-
-    implemented 'blocking' option
-
-src/redbug.erl
-
-commit 8c5d9ab314eeda601205888e1561ecbbf6f7a6b2
-Author: mats cronqvist <masse@klarna.com>
-Date:   Fri Jan 11 06:37:31 2013 +0530
-
-    cosmetic
-
-src/redbug.erl
-
-commit afd30bafc24e0fa2b39c201252a58eeb04920e60
-Author: mats cronqvist <masse@klarna.com>
-Date:   Fri Jan 11 06:17:32 2013 +0530
-
-    prettied up print_fun
-
-src/redbug.erl
-
-commit 37a7e8da775ea12f706e1bab26b337ad9006454a
-Author: mats cronqvist <masse@klarna.com>
-Date:   Fri Jan 11 05:53:53 2013 +0530
-
-    cosmetic
-
-src/redbug.erl
-
-commit be8d405b8d48422a568d36c9cb52148579aac3aa
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Jan 10 17:47:04 2013 +0530
-
-    generalized print_loop to take an accumulator
-
-src/redbug.erl
-
-commit a9d7acab0a655e269c6771c13f5d4ee22638dfc9
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Jan 10 17:46:14 2013 +0530
-
-    placeholder blocking mode
-
-src/redbug.erl
-
-commit 67b339a09fb3bb51b220e0fa7beff4b757ae2ef5
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Jan 10 17:45:09 2013 +0530
-
-    get rid of 'import'
-
-src/redbug.erl
-
-commit c8fe197c4cceccb586f6293a36b22dcd1d413834
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Dec 27 23:44:14 2012 +0530
-
-    redbug:start() now returns ok | <error message>
-
-src/redbug.erl
-
-commit e0c28f168c7fea03482f09d42c63263a353e55cb
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Dec 27 23:19:41 2012 +0530
-
-    prettified error messages
-
-src/prfTrc.erl
-src/redbug.erl
-
-commit e0c55a38191cd6a9a8d4ebda6c4839c10919c44d
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Dec 27 22:09:52 2012 +0530
-
-    better reporting of missing modules/function || processes
-
-src/prfTrc.erl
-src/redbug.erl
-
-commit 53a2f68583b726baa15b1e6c189ba8db0ccf6b67
-Merge: a218b9e d8cf28f
-Author: mats cronqvist <masse@klarna.com>
-Date:   Wed Dec 26 18:40:42 2012 +0100
-
-    Merge branch 'master' into blocking
 
 commit d8cf28f98edf26da2e1a9db039503779d8f0bcab
 Author: mats cronqvist <masse@klarna.com>
@@ -260,14 +139,6 @@ Date:   Tue Jul 31 16:55:51 2012 +0200
 
 priv/bin/sherk
 
-commit a218b9eb4b25ec1ad14006b5f7f73ef97b1f4f82
-Author: mats cronqvist <masse@klarna.com>
-Date:   Tue Jul 31 16:53:13 2012 +0200
-
-    keep track of shell
-
-src/redbug.erl
-
 commit 520a77bcc29b4c557b52882258a6091ba13b5e76
 Author: mats cronqvist <masse@klarna.com>
 Date:   Mon Jul 16 11:21:19 2012 +0200
@@ -366,24 +237,6 @@ Date:   Thu Jun 7 12:00:31 2012 +0000
     started getting "exported from case" warnings
 
 src/prfSys.erl
-
-commit df461eb8348f3df03b0b41aa91de6702f1a72ecd
-Merge: 487fc97 cc00384
-Author: mats cronqvist <masse@klarna.com>
-Date:   Fri Jun 1 16:01:13 2012 +0200
-
-    Merge branch 'master' into blocking
-    
-    Conflicts:
-    	src/redbug.erl
-
-commit 487fc9777cb8359673d5b2a8d4c00f47f8231a37
-Author: mats cronqvist <masse@klarna.com>
-Date:   Fri Jun 1 15:58:54 2012 +0200
-
-    placeholder blocking prop
-
-src/redbug.erl
 
 commit cc003844df2a776ea1ead7d94f3302a7743893ff
 Author: mats cronqvist <masse@klarna.com>
