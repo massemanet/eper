@@ -1,3 +1,29 @@
+commit a848417b5d8e7e97833a6b0a4636dfe3295c03cc
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Apr 30 15:19:47 2013 +0200
+
+    changed date in license
+
+COPYING
+
+commit 9ed38a02f2167917ad2a733252960d2d00d3d475
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Apr 30 15:18:45 2013 +0200
+
+    bumped version to 0.69
+
+configure.ac
+src/eper.app.src
+
+commit 9c7be6201e74b35c62b8388123e5524f646d133d
+Author: mats cronqvist <masse@klarna.com>
+Date:   Sat Jan 19 22:28:15 2013 +0100
+
+    using the 'blocking' option borked syntax error reporting
+
+ChangeLog
+src/redbug.erl
+
 commit 18d317525a65cae55cf1f9f5061f5f5724d96b47
 Merge: d8cf28f ab65492
 Author: mats cronqvist <masse@cronqvi.st>
