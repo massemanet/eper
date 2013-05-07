@@ -50,7 +50,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 help() ->
-  Text = 
+  Text =
     ["redbug - the (sensibly) Restrictive Debugger"
      , ""
      , "  redbug:start(Trc) -> start(Trc,[])."
@@ -372,7 +372,7 @@ fix_ts(MS,TS) ->
 ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
 ts_ms({H,M,S,Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w.~3.3.0w",[H,M,S,Us div 1000]).
 
-flat(Form,List) -> 
+flat(Form,List) ->
   lists:flatten(io_lib:fwrite(Form,List)).
 
 

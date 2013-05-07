@@ -8,7 +8,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% gen_server boilerplate
 -behaviour(gen_server).
--export([handle_call/3, handle_cast/2, handle_info/2, 
+-export([handle_call/3, handle_cast/2, handle_info/2,
          init/1, terminate/2, code_change/3]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -28,7 +28,7 @@ start(Args) ->
   gen_server:start_link({local, ?MODULE}, ?MODULE, Args, []).
 
 stop() ->
-  try gen_server:call(?MODULE,stop) 
+  try gen_server:call(?MODULE,stop)
   catch exit:{noproc,_} -> not_started
   end.
 
@@ -58,21 +58,21 @@ noreply(LD) -> {noreply,LD}.
 reply({Reply,LD}) -> {reply,Reply,LD}.
 
 print_term(Term) -> print_term(group_leader(),Term).
-print_term(FD,Term) -> 
+print_term(FD,Term) ->
   case node(FD) == node() of
     true -> error_logger:info_report(Term);
     false-> io:fwrite(FD," ~p~n",[Term])
   end.
 
 expand_recs(List) when is_list(List) -> [expand_recs(L)||L<-List];
-expand_recs(Tup) when is_tuple(Tup) -> 
+expand_recs(Tup) when is_tuple(Tup) ->
   case tuple_size(Tup) of
     L when L < 1 -> Tup;
     L ->
       Fields = ri(element(1,Tup)),
       case L == length(Fields)+1 of
-	false-> list_to_tuple(expand_recs(tuple_to_list(Tup)));
-	true -> expand_recs(lists:zip(Fields,tl(tuple_to_list(Tup))))
+        false-> list_to_tuple(expand_recs(tuple_to_list(Tup)));
+        true -> expand_recs(lists:zip(Fields,tl(tuple_to_list(Tup))))
       end
   end;
 expand_recs(Term) -> Term.

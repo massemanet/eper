@@ -184,7 +184,7 @@ conf(LD) ->
   end.
 
 proxy(LD) ->
-  {Proxy,Cookie,Tick} = 
+  {Proxy,Cookie,Tick} =
     case list_to_atom(g('Gtk_entry_get_text',[conf_proxy_entry])) of
       '' ->
         P = node(),

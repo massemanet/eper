@@ -200,7 +200,7 @@ netload(Node, Mod) ->
     {Mod, Bin, Fname} = code:get_object_code(Mod),
     case rpc:call(Node, code, load_binary, [Mod, Fname, Bin]) of
         {module, Mod} -> ok;
-        {error,badfile} -> 
+        {error,badfile} ->
             I = (catch rpc:call(Node, erlang, system_info, [otp_release])),
             exit({target_emulator_too_old,Node,I})
     end.

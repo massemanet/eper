@@ -2,7 +2,7 @@
 %%% Created : 29 Jun 2010 by Mats Cronqvist <masse@kreditor.se>
 
 %% @doc
-%% Opts - list({Tag,Val}) 
+%% Opts - list({Tag,Val})
 %% {Tag,Val}: {to_file,string(Filename)}
 %%            {count,int()}
 %%            {node,atom()}

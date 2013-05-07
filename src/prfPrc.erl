@@ -134,14 +134,14 @@ msgq([]) -> 0;
 msgq([_,_,{message_queue_len,Msgq}]) -> Msgq.
 
 %% callbacks for app-specific info
-extra_items(Pid,Items) -> 
+extra_items(Pid,Items) ->
   lists:append([extra_item(Pid,I) || I <- Items]).
 
 extra_item(Pid,{M,F}) when is_pid(Pid) ->
   try M:F(Pid)
   catch _:_ -> []
   end;
-extra_item(_,_) -> 
+extra_item(_,_) ->
   [].
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
