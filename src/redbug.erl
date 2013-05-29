@@ -334,23 +334,24 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS,print_pids=PP} = Cnf) ->
         {'call',{MFA,Bin}} ->
           case Cnf#cnf.print_calls of
             true ->
-              OutFun("~n~s <~p> ~P",[MTS,print_pi(PP,PI),MFA,Depth]),
+              OutFun("~n~s ~s ~P",[MTS,to_str(PP,PI),MFA,Depth]),
               lists:foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
             false->
               ok
           end;
-        {'retn',{MFA,Val}} ->
-          OutFun("~n~s ~s ~p -> ~P",[MTS,print_pi(PP,PI),MFA,Val,Depth]);
+        {'retn',{{M,F,A},Val}} ->
+          OutFun("~n~s ~s ~p:~p/~p -> ~P",[MTS,to_str(PP,PI),M,F,A,Val,Depth]);
         {'send',{MSG,ToPI}} ->
-          OutFun("~n~s ~p ~p <<< ~P",
-                 [MTS,print_pi(PP,PI),print_pi(PP,ToPI),MSG,Depth]);
+          OutFun("~n~s ~s ~s <<< ~P",
+                 [MTS,to_str(PP,PI),to_str(PP,ToPI),MSG,Depth]);
         {'recv',MSG} ->
-          OutFun("~n~s ~s <<< ~P",[MTS,print_pi(PP,PI),MSG,Depth])
+          OutFun("~n~s ~s <<< ~P",[MTS,to_str(PP,PI),MSG,Depth])
       end
   end.
 
-print_pi(false,{_,Reg}) -> flat("<~p>",[Reg]);
-print_pi(true, {Pid,_}) -> flat("~w",[Pid]).
+to_str(false,{Pid,Reg}) when is_pid(Pid) -> flat("<~p>",[Reg]);
+to_str(true, {Pid,_})   when is_pid(Pid) -> flat("~w",[Pid]);
+to_str(_, PI)                            -> flat("~w",[PI]).
 
 mk_out(#cnf{print_re=RE,print_file=File}) ->
   fun(F,A) ->

@@ -103,12 +103,8 @@ stop_trace(LD) ->
   unset_tps().
 
 start_trace(HostPid,Conf) ->
-  case {maybe_load_rtps(fetch(rtps,Conf)),
-        is_message_trace(fetch(flags,Conf))} of
-    {[],false}-> exit({prfTrc,no_matching_modules});
-    {Rtps,_}  -> start_trace(from_list([{host_pid,HostPid},
-                                        {conf,store(rtps,Rtps,Conf)}]))
-  end.
+  Rtps = maybe_load_rtps(fetch(rtps,Conf)),
+  start_trace(from_list([{host_pid,HostPid},{conf,store(rtps,Rtps,Conf)}])).
 
 maybe_load_rtps(Rtps) ->
   lists:foldl(fun maybe_load_rtp/2, [], Rtps).
@@ -125,9 +121,6 @@ maybe_load_rtp({{M,_,_},_MatchSpec,_Flags} = Rtp,O) ->
     _:_ -> O
   end.
 
-is_message_trace(Flags) ->
-  (lists:member(send,Flags) orelse lists:member('receive',Flags)).
-
 start_trace(LD) ->
   Conf = fetch(conf,LD),
   Consumer = consumer(fetch(where,Conf),fetch(time,Conf)),
@@ -138,7 +131,7 @@ start_trace(LD) ->
   NoProcs = lists:sum([erlang:trace(P,true,Flags) || P <- Ps]),
   untrace(family(redbug)++family(prfTrc),Flags),
   NoFuncs = set_tps(Rtps),
-  assert_trace_targets(NoProcs,NoFuncs),
+  assert_trace_targets(NoProcs,NoFuncs,Flags),
   fetch(host_pid,LD) ! {prfTrc,{starting,NoProcs,NoFuncs,self(),Consumer}},
   store(consumer,Consumer,LD).
 
@@ -156,15 +149,18 @@ untrace(Pids,Flags) ->
           node(P)==node(),
           {flags,[]}=/=erlang:trace_info(P,flags)].
 
-assert_trace_targets(NoProcs,NoFuncs) ->
+assert_trace_targets(NoProcs,NoFuncs,Flags) ->
   case 0 < NoProcs of
     true -> ok;
     false-> exit({prfTrc,no_matching_processes})
   end,
-  case 0 < NoFuncs of
+  case 0 < NoFuncs orelse is_message_trace(Flags) of
     true -> ok;
     false-> exit({prfTrc,no_matching_functions})
   end.
+
+is_message_trace(Flags) ->
+  (lists:member(send,Flags) orelse lists:member('receive',Flags)).
 
 unset_tps() ->
   erlang:trace_pattern({'_','_','_'},false,[local]),
@@ -395,7 +391,7 @@ pi(P) when is_port(P) ->
   {P,lists:reverse(hd(string:tokens(lists:reverse(Hd),"/")))};
 pi(R) when is_atom(R) -> R;
 pi({R,Node}) when is_atom(R), Node == node() -> R;
-pi({R,Node}) when is_atom(R), is_atom(Node) -> {R, Node}.
+pi({R,Node}) when is_atom(R), is_atom(Node) -> {R,Node}.
 
 ts(Nw) ->
   {_,{H,M,S}} = calendar:now_to_local_time(Nw),
