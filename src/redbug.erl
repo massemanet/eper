@@ -27,6 +27,7 @@
              , blocking     = false        % run blocking; return a list of msgs
              , buffered     = false        % output buffering
              , arity        = false        % arity instead of args
+             , print_pids   = false        % print pids instead of regname
              , print_calls  = true         % print calls
              , print_file   = ""           % file to print to (standard_io)
              , print_msec   = false        % print milliseconds in timestamps?
@@ -325,7 +326,7 @@ wrap_print_fun(#cnf{print_fun=PF}) ->
 
 mk_outer(#cnf{file=[_|_]}) ->
   fun(_) -> ok end;
-mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
+mk_outer(#cnf{print_depth=Depth,print_msec=MS,print_pids=PP} = Cnf) ->
   OutFun = mk_out(Cnf),
   fun({Tag,Data,PI,TS}) ->
       MTS = fix_ts(MS,TS),
@@ -333,19 +334,24 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
         {'call',{MFA,Bin}} ->
           case Cnf#cnf.print_calls of
             true ->
-              OutFun("~n~s <~p> ~P",[MTS,PI,MFA,Depth]),
+              OutFun("~n~s ~s ~P",[MTS,to_str(PP,PI),MFA,Depth]),
               lists:foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
             false->
               ok
           end;
-        {'retn',{MFA,Val}} ->
-          OutFun("~n~s <~p> ~p -> ~P",[MTS,PI,MFA,Val,Depth]);
-        {'send',{MSG,To}} ->
-          OutFun("~n~s <~p> <~p> <<< ~P",[MTS,PI,To,MSG,Depth]);
+        {'retn',{{M,F,A},Val}} ->
+          OutFun("~n~s ~s ~p:~p/~p -> ~P",[MTS,to_str(PP,PI),M,F,A,Val,Depth]);
+        {'send',{MSG,ToPI}} ->
+          OutFun("~n~s ~s ~s <<< ~P",
+                 [MTS,to_str(PP,PI),to_str(PP,ToPI),MSG,Depth]);
         {'recv',MSG} ->
-          OutFun("~n~s <~p> <<< ~P",[MTS,PI,MSG,Depth])
+          OutFun("~n~s ~s <<< ~P",[MTS,to_str(PP,PI),MSG,Depth])
       end
   end.
+
+to_str(false,{Pid,Reg}) when is_pid(Pid) -> flat("<~p>",[Reg]);
+to_str(true, {Pid,_})   when is_pid(Pid) -> flat("~w",[Pid]);
+to_str(_, PI)                            -> flat("~w",[PI]).
 
 mk_out(#cnf{print_re=RE,print_file=File}) ->
   fun(F,A) ->
