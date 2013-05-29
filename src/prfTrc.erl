@@ -378,23 +378,24 @@ msg({'call',Pid,TS,MFA})               -> {'call',{MFA,<<>>},  pi(Pid),ts(TS)}.
 
 pi(P) when is_pid(P) ->
   try process_info(P, registered_name) of
-      [] -> case process_info(P, initial_call) of
-              {_, {proc_lib,init_p,5}} -> proc_lib:translate_initial_call(P);
-              {_,MFA} -> MFA;
-              undefined -> dead
-            end;
-      {_,Nam} -> Nam;
-      undefined -> dead
+      [] ->
+        case process_info(P, initial_call) of
+          {_, {proc_lib,init_p,5}} -> {P,proc_lib:translate_initial_call(P)};
+          {_,MFA}                  -> {P,MFA};
+          undefined                -> {P,dead}
+        end;
+      {_,Nam}   -> {P,Nam};
+      undefined -> {P,dead}
   catch
-    error:badarg -> node(P)
+    error:badarg -> {P,node(P)}
   end;
 pi(P) when is_port(P) ->
   {name,N} = erlang:port_info(P,name),
   [Hd|_] = string:tokens(N," "),
-  lists:reverse(hd(string:tokens(lists:reverse(Hd),"/")));
+  {P,lists:reverse(hd(string:tokens(lists:reverse(Hd),"/")))};
 pi(R) when is_atom(R) -> R;
 pi({R,Node}) when is_atom(R), Node == node() -> R;
-pi({R, Node}) when is_atom(R), is_atom(Node) -> {R, Node}.
+pi({R,Node}) when is_atom(R), is_atom(Node) -> {R, Node}.
 
 ts(Nw) ->
   {_,{H,M,S}} = calendar:now_to_local_time(Nw),

@@ -27,6 +27,7 @@
              , blocking     = false        % run blocking; return a list of msgs
              , buffered     = false        % output buffering
              , arity        = false        % arity instead of args
+             , print_pids   = false        % print pids instead of regname
              , print_calls  = true         % print calls
              , print_file   = ""           % file to print to (standard_io)
              , print_msec   = false        % print milliseconds in timestamps?
@@ -325,7 +326,7 @@ wrap_print_fun(#cnf{print_fun=PF}) ->
 
 mk_outer(#cnf{file=[_|_]}) ->
   fun(_) -> ok end;
-mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
+mk_outer(#cnf{print_depth=Depth,print_msec=MS,print_pids=PP} = Cnf) ->
   OutFun = mk_out(Cnf),
   fun({Tag,Data,PI,TS}) ->
       MTS = fix_ts(MS,TS),
@@ -333,19 +334,23 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
         {'call',{MFA,Bin}} ->
           case Cnf#cnf.print_calls of
             true ->
-              OutFun("~n~s <~p> ~P",[MTS,PI,MFA,Depth]),
+              OutFun("~n~s <~p> ~P",[MTS,print_pi(PP,PI),MFA,Depth]),
               lists:foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
             false->
               ok
           end;
         {'retn',{MFA,Val}} ->
-          OutFun("~n~s <~p> ~p -> ~P",[MTS,PI,MFA,Val,Depth]);
-        {'send',{MSG,To}} ->
-          OutFun("~n~s <~p> <~p> <<< ~P",[MTS,PI,To,MSG,Depth]);
+          OutFun("~n~s ~s ~p -> ~P",[MTS,print_pi(PP,PI),MFA,Val,Depth]);
+        {'send',{MSG,ToPI}} ->
+          OutFun("~n~s ~p ~p <<< ~P",
+                 [MTS,print_pi(PP,PI),print_pi(PP,ToPI),MSG,Depth]);
         {'recv',MSG} ->
-          OutFun("~n~s <~p> <<< ~P",[MTS,PI,MSG,Depth])
+          OutFun("~n~s ~s <<< ~P",[MTS,print_pi(PP,PI),MSG,Depth])
       end
   end.
+
+print_pi(false,{_,Reg}) -> flat("<~p>",[Reg]);
+print_pi(true, {Pid,_}) -> flat("~w",[Pid]).
 
 mk_out(#cnf{print_re=RE,print_file=File}) ->
   fun(F,A) ->
