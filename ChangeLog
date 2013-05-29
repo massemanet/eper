@@ -1,17 +1,59 @@
-commit 775350e613c4dbaa0f2a8bfeed70b2912b361e4b
+commit ea2e1e8efcb70d89d80caf781a24c176732fc7cd
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed May 29 13:57:18 2013 +0200
+
+    minor bug fixes
+
+src/prfTrc.erl
+src/redbug.erl
+
+commit 0a987fe3fab9aa9a2349bb5c4e8286e78cb6f8d4
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed May 29 09:46:10 2013 +0200
+
+    implement redbug 'print_pids' option
+
+src/prfTrc.erl
+src/redbug.erl
+
+commit 8cf87a6088f3a6e779075777578191556c551850
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue May 7 13:40:52 2013 +0200
+
+    whitespace
+
+src/dtopConsumer.erl
+src/gen_serv.hrl
+src/prfPrc.erl
+src/redbug.erl
+src/replay_trc.erl
+src/sherk.erl
+src/sherk_aquire.erl
+
+commit fb9a1ba1a40b19d3c2452c565f517e5010f732c5
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri May 3 15:47:05 2013 +0200
+
+    remove getopt
+
+src/getopt.erl
+
+commit 7122cd5b0b8c047b9f22c5f2c020488b5bc30aaf
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Apr 30 17:14:23 2013 +0200
+
+    doc
+
+Makefile
+
+commit a83963d9e52167e52d2337bade714c2a9e7e99f4
 Author: mats cronqvist <masse@klarna.com>
 Date:   Tue Apr 30 17:07:33 2013 +0200
 
     trying to figure out how to generate a ChangeLog file
 
+ChangeLog
 Makefile
-
-commit 7be7b54b550d070ed260b5bb4e530781195ddbbc
-Merge: a78758b a805b24
-Author: mats cronqvist <masse@klarna.com>
-Date:   Tue Apr 30 15:29:46 2013 +0200
-
-    ChangeLog mishap
 
 commit a78758bba07b111bcdc1a2984fc2d36145f070da
 Author: mats cronqvist <masse@klarna.com>
@@ -57,14 +99,6 @@ Date:   Sat Jan 19 22:28:15 2013 +0100
 ChangeLog
 src/redbug.erl
 
-commit 18d317525a65cae55cf1f9f5061f5f5724d96b47
-Merge: d8cf28f ab65492
-Author: mats cronqvist <masse@cronqvi.st>
-Date:   Fri Jan 18 06:45:46 2013 -0800
-
-    Merge pull request #13 from massemanet/_blocking
-    implement the blocking option
-
 commit ab65492912ba96eef781bc823d48569699622c69
 Author: mats cronqvist <masse@klarna.com>
 Date:   Fri Jan 18 15:41:33 2013 +0100
@@ -98,13 +132,6 @@ Date:   Sun Dec 9 12:31:34 2012 +0100
 src/prfTarg.erl
 src/prfTrc.erl
 src/redbug.erl
-
-commit b5978e5988fe4b587351567cecb191dc39ee388a
-Merge: 255c577 00ee08c
-Author: mats cronqvist <masse@klarna.com>
-Date:   Fri Dec 7 12:34:31 2012 +0100
-
-    Merge branch 'master' of github.com:massemanet/eper
 
 commit 255c577829e8d57214ab86d1dca9ce61cb5d4aa1
 Author: mats cronqvist <masse@klarna.com>
@@ -151,14 +178,6 @@ Date:   Sun Aug 19 14:52:15 2012 +0200
     more testcases
 
 src/redbug_msc.erl
-
-commit d9ae7a8b48601184c7167d7a636b334c1232328a
-Merge: 79e17ad 117ccff
-Author: mats cronqvist <masse@cronqvi.st>
-Date:   Sun Aug 19 05:44:36 2012 -0700
-
-    Merge pull request #12 from liveforeverx/master
-    Version, that I have doesn't accept many guards -> fix it
 
 commit 117ccff249064efd1c1551713027a568b629cec3
 Author: Dmitry Russ <dr@travelping.com>
@@ -235,13 +254,6 @@ Date:   Sun Jul 15 12:15:54 2012 +0200
 
 src/redbug_msc.erl
 
-commit a1debdb452cf7481b18ba89ef1efa2dc248f82ff
-Merge: 90daf70 18be98a
-Author: mats cronqvist <masse@klarna.com>
-Date:   Sun Jul 15 12:13:36 2012 +0200
-
-    Merge branch 'master' of github.com:massemanet/eper
-
 commit 90daf708e7508ab780d17d36b1342a96f89f2b55
 Author: mats cronqvist <masse@klarna.com>
 Date:   Sun Jul 15 12:12:53 2012 +0200
@@ -310,14 +322,6 @@ Date:   Wed May 30 19:00:02 2012 +0200
 
 src/redbug.erl
 
-commit c592ef27f8598039c46ab7b25ca2899646769502
-Merge: 445512f 29b5ac0
-Author: mats cronqvist <masse@cronqvi.st>
-Date:   Tue May 1 08:10:40 2012 -0700
-
-    Merge pull request #10 from massemanet/printer-fix
-    Printer fix
-
 commit 29b5ac082a1d075d5187267dabc87905bbd97f28
 Author: mats cronqvist <masse@klarna.com>
 Date:   Tue May 1 17:06:25 2012 +0200
@@ -379,14 +383,6 @@ Date:   Fri Apr 27 14:36:45 2012 +0000
 
 src/redbug.erl
 
-commit 54690a116ba9888d62cc7400d988db2d0d8cc45b
-Merge: 9042ff8 3a21404
-Author: mats cronqvist <masse@cronqvi.st>
-Date:   Fri Oct 14 03:30:05 2011 -0700
-
-    Merge pull request #8 from eriksoe/master
-    sherk_ets:f2t/3 not tail recursive
-
 commit 3a2140418cfc18aaafe48ea9c32c8894de1340bd
 Author: Erik Søe Sørensen <ess@trifork.com>
 Date:   Wed Oct 5 17:34:10 2011 +0200
@@ -394,14 +390,6 @@ Date:   Wed Oct 5 17:34:10 2011 +0200
     Bugfix: sherk_ets:f2t/3 was not tail recursive because of an exception handler.
 
 src/sherk_ets.erl
-
-commit 9042ff874a73924b01cb044d3ab4f3932ca0ad1d
-Merge: fa82b02 81a51c4
-Author: mats cronqvist <masse@cronqvi.st>
-Date:   Mon Sep 12 07:49:34 2011 -0700
-
-    Merge pull request #6 from ojve/master
-    Don't replace all subscribers with 'ok' just because adding a new one fails
 
 commit fa82b02fd9147ec087c5764d882544f1c31fd370
 Author: mats cronqvist <masse@klarna.com>
@@ -467,14 +455,6 @@ Date:   Mon Jul 11 16:55:28 2011 +0200
 
 src/watchdog.erl
 
-commit 710c110fd43ca6a0d5c29c0de1aa154c965096ff
-Merge: 0f7266a ff81770
-Author: mats cronqvist <masse@cronqvi.st>
-Date:   Wed May 11 14:28:42 2011 -0700
-
-    Merge pull request #5 from hyperthunk/master
-    Relax check on consumers to allow parametrized modules
-
 commit ff8177094f450b66ca9b5dc0e64376d092638494
 Author: Tim Watson <watson.timothy@gmail.com>
 Date:   Wed May 11 16:49:32 2011 +0100
@@ -512,13 +492,6 @@ Date:   Fri Apr 8 19:48:37 2011 +0200
     debug_info
 
 rebar.config
-
-commit 60767ecedbd5923380e29c86c8ac2721f020a003
-Merge: 3199250 989c739
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Mar 10 16:07:10 2011 +0100
-
-    Merge remote branch 'nox/script-fixes'
 
 commit 31992502d9d0e934f5aec61f32b67ad4b23e04ec
 Author: mats cronqvist <masse@klarna.com>
@@ -595,29 +568,6 @@ Date:   Fri Feb 4 23:58:40 2011 +0100
 
 priv/bin/redbug
 
-commit a0fa4706eda942cee26053655f487f1334f8c15d
-Merge: 0c1ad06 54830b9
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Jan 27 11:01:34 2011 +0100
-
-    Merge branch 'master' of github.com:massemanet/eper
-    Conflicts:
-    	src/redbug.erl
-
-commit 0c1ad06c6f6ab496a49ab045a7826090a9cece2b
-Merge: 145d552 dbb37c7
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Jan 13 12:01:45 2011 +0100
-
-    Merge branch 'add-print_p-option' of https://github.com/slfritchie/eper into slfritchie-add-print_p-option
-
-commit 54830b98fc29f5b255c0701a1d593849dc73ce14
-Merge: 4053d9c 145d552
-Author: mats cronqvist <masse@klarna.com>
-Date:   Tue Jan 11 19:16:14 2011 +0100
-
-    Merge branch 'master' of github.com:massemanet/eper
-
 commit 4053d9c2debbd6f50a7c50f9ab676e746fd94936
 Author: mats cronqvist <masse@klarna.com>
 Date:   Tue Jan 11 19:15:59 2011 +0100
@@ -675,13 +625,6 @@ Date:   Tue Jan 4 15:07:07 2011 +0100
     config for extra pid info
 
 src/prfPrc.erl
-
-commit 9270afcf4af2ae39d57c76e0e8be06ba974433a4
-Merge: e275e89 5a35bfa
-Author: mats cronqvist <masse@klarna.com>
-Date:   Tue Jan 4 14:32:53 2011 +0100
-
-    merge
 
 commit e275e89311042f2d914079326cb5c79b1b3f3798
 Author: mats cronqvist <masse@klarna.com>
@@ -743,13 +686,6 @@ Date:   Sun Nov 7 12:51:41 2010 +0100
 
 src/dtop_replay.erl
 
-commit d0c7d7495ca89bd62faa05c100e26654dd8cd78a
-Merge: 2fccb06 ede843c
-Author: mats cronqvist <masse@klarna.com>
-Date:   Sun Nov 7 10:57:21 2010 +0100
-
-    Merge branch 'master' of github.com:massemanet/eper
-
 commit 2fccb06ccfe2e1a332ab75aa102a38bce8cc8f3d
 Author: mats cronqvist <masse@klarna.com>
 Date:   Sun Nov 7 10:56:37 2010 +0100
@@ -757,13 +693,6 @@ Date:   Sun Nov 7 10:56:37 2010 +0100
     sanity check node name
 
 src/dtop_replay.erl
-
-commit ede843c1a62cddb880148a6e4f996221af7e4017
-Merge: 93bf486 7c96364
-Author: mats cronqvist <masse@klarna.com>
-Date:   Thu Oct 28 16:19:26 2010 +0200
-
-    merge
 
 commit 93bf4862c5e6321024f37935e5b284aaeabc5d53
 Author: mats cronqvist <masse@klarna.com>
@@ -922,13 +851,6 @@ Date:   Tue Sep 21 14:36:08 2010 +0200
 
 src/redbug_msc.erl
 
-commit b75b9aac99631800d635b42f3ad70d0d7c4d9a24
-Merge: 9ed170c 27087af
-Author: mats cronqvist <masse@klarna.com>
-Date:   Mon Sep 20 17:43:34 2010 +0200
-
-    Merge branch 'master' of github.com:massemanet/eper
-
 commit 9ed170c1dc583f153927c2989c539cd6c820ca05
 Author: mats cronqvist <masse@klarna.com>
 Date:   Mon Sep 20 17:43:06 2010 +0200
@@ -961,13 +883,6 @@ Date:   Mon Sep 20 17:15:17 2010 +0200
     handle matching of tuples in arglist
 
 src/redbug_msc.erl
-
-commit 41de1116601a052cddee037964cf3ad0870c709f
-Merge: 14b315a ad4293b
-Author: mats cronqvist <mats.cronqvist@gmail.com>
-Date:   Thu Aug 26 09:56:43 2010 +0200
-
-    Merge branch 'master' of github.com:massemanet/eper
 
 commit 14b315a21d5f55d4a6e1067fb226438b9b6a24c6
 Author: mats cronqvist <mats.cronqvist@gmail.com>
@@ -1057,13 +972,6 @@ Date:   Wed Jun 16 16:47:04 2010 +0200
     cosmetic
 
 src/bread.erl
-
-commit 241b49ea484b4af96d44f3f7318ccba39b7bd997
-Merge: 0fdaeb6 4b2a4b5
-Author: mats cronqvist <mats.cronqvist@gmail.com>
-Date:   Thu Apr 29 16:17:36 2010 +0200
-
-    Merge branch 'master' of github.com:massemanet/eper
 
 commit 0fdaeb6abbf1af5ff3aae92a5d67199543554e6b
 Author: mats cronqvist <mats.cronqvist@gmail.com>
