@@ -19,34 +19,38 @@
 
 %% the redbug server data structure
 %% most can be set in the input proplist
--record(cnf,{time         = 15000          % stop trace after this time [ms]
-             , msgs         = 10           % stop trace after this # msgs [unit]
-             , procs        = all          % list of procs (or 'all')
-             , target       = node()       % target node
-             , cookie       = ''           % target node cookie
-             , blocking     = false        % run blocking; return a list of msgs
-             , buffered     = false        % output buffering
-             , arity        = false        % arity instead of args
-             , print_pids   = false        % print pids instead of regname
-             , print_calls  = true         % print calls
-             , print_file   = ""           % file to print to (standard_io)
-             , print_msec   = false        % print milliseconds in timestamps?
-             , print_depth  = 999999       % Limit for "~P" formatting depth
-             , print_re     = ""           % regexp that must match to print
-             , print_fun    = ''           % custom print handler
-             , max_queue    = 5000         % max # of msgs before suicide
-             , max_msg_size = 50000        % max message size before suicide
-             , file         = ""           % file to write trace msgs to
-             , file_size    = 1            % file size (per file [Mb])
-             , file_count   = 8            % number of files in wrap log
-             , debug        = false        % big error messages
-
-             , trc          = []           % cannot be set by user
-             , shell_pid    = []           % cannot be set by user
-             , print_pid    = []           % cannot be set by user
-             , trc_pid      = []           % cannot be set by user
-             , cons_pid     = []           % cannot be set by user
-            }).
+-record(cnf,{
+          %% general
+          time         = 15000,          % stop trace after this time [ms]
+          msgs         = 10,           % stop trace after this # msgs [unit]
+          target       = node(),       % target node
+          cookie       = '',           % target node cookie
+          blocking     = false,        % run blocking; return a list of msgs
+          procs        = all,          % list of procs (or 'all')
+          max_queue    = 5000,         % max # of msgs before suicide
+          max_msg_size = 50000,        % max message size before suicide
+          debug        = false,        % big error messages
+          %% print-related
+          arity        = false,        % arity instead of args
+          buffered     = false,        % output buffering
+          print_pids   = false,        % print pids instead of regname
+          print_calls  = true,         % print calls
+          print_file   = "",           % file to print to (standard_io)
+          print_msec   = false,        % print milliseconds in timestamps?
+          print_depth  = 999999,       % Limit for "~P" formatting depth
+          print_re     = "",           % regexp that must match to print
+          print_fun    = '',           % custom print handler
+          %% trc file-related
+          file         = "",           % file to write trace msgs to
+          file_size    = 1,            % file size (per file [Mb])
+          file_count   = 8,            % number of files in wrap log
+          %% internal
+          trc          = [],           % cannot be set by user
+          shell_pid    = [],           % cannot be set by user
+          print_pid    = [],           % cannot be set by user
+          trc_pid      = [],           % cannot be set by user
+          cons_pid     = []            % cannot be set by user
+         }).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -159,7 +163,7 @@ is_in_shell() ->
 stop() ->
   case whereis(redbug) of
     undefined -> not_started;
-    Pid -> Pid ! {stop,[]}
+    Pid -> Pid ! {stop,[]},stopped
   end.
 
 %% a bunch of aliases for start/2
