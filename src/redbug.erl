@@ -92,19 +92,23 @@ help() ->
      , "time         (15000)       stop trace after this many ms"
      , "msgs         (10)          stop trace after this many msgs"
      , "target       (node())      node to trace on"
-     , "arity        (false)       print arity instead of arg list"
      , "blocking     (false)       block start/2, return a list of messages"
-     , "procs        (all)         (list of) Erlang process(es)"
-     , "                           all|pid()|atom(RegName)|{pid,I2,I3}"
-     , "  print-related opts"
      , "max_queue    (5000)        fail if internal queue gets this long"
      , "max_msg_size (50000)       fail if seeing a msg this big"
+     , "procs        (all)         (list of) Erlang process(es)"
+     , "                             all|pid()|atom(RegName)|{pid,I2,I3}"
+     , "  print-related opts"
+     , "arity        (false)       print arity instead of arg list"
      , "buffered     (no)          buffer messages till end of trace"
+     , "print_pids   (false)       print pids instead of registered names"
      , "print_calls  (true)        print calls"
      , "print_file   (standard_io) print to this file"
      , "print_msec   (false)       print milliseconds on timestamps"
      , "print_depth  (999999)      formatting depth for \"~P\""
-     , "print_re     (\"\")          print only strings that match this"
+     , "print_re     (\"\")        print only strings that match this RE"
+     , "print_fun    ()            custom print handler, fun/1 or fun/2;"
+     , "                             fun(TrcMsg) -> <ignored>"
+     , "                             fun(TrcMsg,AccOld) -> AccNew"
      , "  trc file related opts"
      , "file         (none)        use a trc file based on this name"
      , "file_size    (1)           size of each trc file"
@@ -122,10 +126,10 @@ unix([Node,Trc,Time,Msgs])      -> unix([Node,Trc,Time,Msgs,"all"]);
 unix([Node,Trc,Time,Msgs,Proc]) ->
   try
     Cnf = #cnf{time = to_int(Time),
-               msgs   = to_int(Msgs),
-               trc    = try to_term(Trc) catch _:_ -> Trc end,
-               procs  = [to_atom(Proc)],
-               target = to_atom(Node),
+               msgs      = to_int(Msgs),
+               trc       = try to_term(Trc) catch _:_ -> Trc end,
+               procs     = [to_atom(Proc)],
+               target    = to_atom(Node),
                print_fun = mk_outer(#cnf{})},
     self() ! {start,Cnf},
     init(),
