@@ -99,7 +99,7 @@ help() ->
      , "                             all|pid()|atom(RegName)|{pid,I2,I3}"
      , "  print-related opts"
      , "arity        (false)       print arity instead of arg list"
-     , "buffered     (no)          buffer messages till end of trace"
+     , "buffered     (false)       buffer messages till end of trace"
      , "print_pids   (false)       print pids instead of registered names"
      , "print_calls  (true)        print calls"
      , "print_file   (standard_io) print to this file"
