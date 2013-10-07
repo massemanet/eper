@@ -33,7 +33,6 @@
           %% print-related
           arity        = false,        % arity instead of args
           buffered     = false,        % output buffering
-          print_pids   = false,        % print pids instead of regname
           print_calls  = true,         % print calls
           print_file   = "",           % file to print to (standard_io)
           print_msec   = false,        % print milliseconds in timestamps?
@@ -100,7 +99,6 @@ help() ->
      , "  print-related opts"
      , "arity        (false)       print arity instead of arg list"
      , "buffered     (false)       buffer messages till end of trace"
-     , "print_pids   (false)       print pids instead of registered names"
      , "print_calls  (true)        print calls"
      , "print_file   (standard_io) print to this file"
      , "print_msec   (false)       print milliseconds on timestamps"
@@ -334,7 +332,7 @@ wrap_print_fun(#cnf{print_fun=PF}) ->
 
 mk_outer(#cnf{file=[_|_]}) ->
   fun(_) -> ok end;
-mk_outer(#cnf{print_depth=Depth,print_msec=MS,print_pids=PP} = Cnf) ->
+mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
   OutFun = mk_out(Cnf),
   fun({Tag,Data,PI,TS}) ->
       MTS = fix_ts(MS,TS),
@@ -342,24 +340,23 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS,print_pids=PP} = Cnf) ->
         {'call',{MFA,Bin}} ->
           case Cnf#cnf.print_calls of
             true ->
-              OutFun("~n~s ~s ~P",[MTS,to_str(PP,PI),MFA,Depth]),
+              OutFun("~n~s ~s ~P",[MTS,to_str(PI),MFA,Depth]),
               lists:foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
             false->
               ok
           end;
         {'retn',{{M,F,A},Val}} ->
-          OutFun("~n~s ~s ~p:~p/~p -> ~P",[MTS,to_str(PP,PI),M,F,A,Val,Depth]);
+          OutFun("~n~s ~s ~p:~p/~p -> ~P",[MTS,to_str(PI),M,F,A,Val,Depth]);
         {'send',{MSG,ToPI}} ->
           OutFun("~n~s ~s ~s <<< ~P",
-                 [MTS,to_str(PP,PI),to_str(PP,ToPI),MSG,Depth]);
+                 [MTS,to_str(PI),to_str(ToPI),MSG,Depth]);
         {'recv',MSG} ->
-          OutFun("~n~s ~s <<< ~P",[MTS,to_str(PP,PI),MSG,Depth])
+          OutFun("~n~s ~s <<< ~P",[MTS,to_str(PI),MSG,Depth])
       end
   end.
 
-to_str(false,{Pid,Reg}) when is_pid(Pid) -> flat("<~p>",[Reg]);
-to_str(true, {Pid,_})   when is_pid(Pid) -> flat("~w",[Pid]);
-to_str(_, PI)                            -> flat("~w",[PI]).
+to_str({Pid,Reg}) when is_pid(Pid) -> flat("~w(~p)",[Pid,Reg]);
+to_str({P,Reg})                    -> flat("<~w>(~p)",[P,Reg]).
 
 mk_out(#cnf{print_re=RE,print_file=File}) ->
   fun(F,A) ->
