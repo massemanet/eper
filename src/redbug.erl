@@ -355,8 +355,7 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
       end
   end.
 
-to_str({Pid,Reg}) when is_pid(Pid) -> flat("~w(~p)",[Pid,Reg]);
-to_str({P,Reg})                    -> flat("<~w>(~p)",[P,Reg]).
+to_str({Pid,Reg}) -> flat("~w(~p)",[Pid,Reg]).
 
 mk_out(#cnf{print_re=RE,print_file=File}) ->
   fun(F,A) ->
