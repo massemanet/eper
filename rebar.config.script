@@ -1,0 +1,20 @@
+%% -*- mode: erlang;erlang-indent-level: 2;indent-tabs-mode: nil -*-
+%% vim: set ft=erlang ts=2 sw=2:
+
+WhenExportedDefine = fun ({M, F, Arity}, Define, Opts) ->
+  case erlang:function_exported(M, F, Arity) of
+    true  -> [{d, Define} | Opts];
+    false -> Opts
+  end
+end,
+ExtractErlOpts = fun (Cfg) ->
+  case lists:keyfind(erl_opts, 1, CONFIG) of
+    {erl_opts, Opts} -> Opts;
+    false            -> []
+  end
+end,
+ErlOpts0 = ExtractErlOpts(CONFIG),
+code:ensure_loaded(crypto),
+ErlOpts1 = WhenExportedDefine({crypto, block_encrypt, 4}, 'USE_CRYPTO_BLOCK_CRYPT', ErlOpts0),
+ErlOpts2 = WhenExportedDefine({crypto, hash, 2}, 'USE_CRYPTO_HASH', ErlOpts1),
+lists:keyreplace(erl_opts, 1, CONFIG, {erl_opts, ErlOpts2}).
