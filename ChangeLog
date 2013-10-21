@@ -1,3 +1,112 @@
+commit 088943a92633d9b04c9043d3705e71037a9fa5e8
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Oct 21 15:00:51 2013 +0200
+
+    bumped to 0.71
+
+src/eper.app.src
+
+commit 5e3943f54e846918cf2dcd5b3b367deb6937a3b4
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Oct 18 16:43:35 2013 +0200
+
+    rebar update
+
+rebar
+rebar.config.script
+src/prf_crypto.erl
+
+commit 93654422e86d7bddf1d33450aaca2e6191f75a10
+Author: Susan Potter <me@susanpotter.net>
+Date:   Sun Oct 13 16:20:43 2013 -0500
+
+    Remove crypto module deprecations
+    When compiling with R16B02 the following deprecation warnings were
+    encountered:
+    ```
+    src/prf_crypto.erl:36: Warning: crypto:des_cbc_encrypt/3 is deprecated and will be removed in in a future release; use crypto:block_encrypt/4
+    src/prf_crypto.erl:43: Warning: crypto:des_cbc_decrypt/3 is deprecated and will be removed in in a future release; use crypto:block_decrypt/4
+    src/prf_crypto.erl:46: Warning: crypto:md5/1 is deprecated and will be removed in in a future release; use crypto:hash/2
+    ```
+    Since I use `warnings_as_errors` erlc option I needed to work around these
+    deprecation warnings for newer versions of Erlang (R16B+). I did this using
+    a `rebar.config.script` and the Erlang preprocessor's `-ifdef` construct.
+    Therefore, it should work for previous versions as well as newer versions of
+    Erlang.
+    This does make one assumption, an assumption I believe to be "safe", but
+    worth noting anyway. It assumes that if `crypto:block_encrypt/4` is exported
+    from the `crypto` module that `crypto:block_decrypt/4` will also be exported.
+    Happy to amend that shortcut if necessary.
+
+rebar.config.script
+src/prf_crypto.erl
+
+commit d80eabc7e46eafa2926bbf5d8de6b5b1cf6f967b
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Oct 7 11:32:27 2013 +0200
+
+    bumped to 0.70
+
+src/eper.app.src
+
+commit edcbd793d99cb29f2e4e6dfe443f9f40e46a7552
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Oct 7 11:29:00 2013 +0200
+
+    remove some dead code
+
+src/redbug.erl
+
+commit 4c68c70f0af59d8d4f76ba1dcb3d61a5a9b85320
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Oct 7 11:27:37 2013 +0200
+
+    Remove print_pid conf. Make default print_fun print pid and regname.
+
+src/redbug.erl
+
+commit 5133f50d607c787125d6d9616d9dd850d1972632
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Mar 13 01:06:13 2013 +0100
+
+    disk_log info
+
+src/prfPrc.erl
+
+commit 312e8df2ee996802f9c0b2373396c53c5f6bd194
+Author: mats cronqvist <masse@klarna.com>
+Date:   Sun Oct 6 14:01:08 2013 +0200
+
+    fix typo in "buffered" doc
+
+src/redbug.erl
+
+commit 5acc47215a49b737e5c63ae59136e0e72fb5a5a8
+Author: mats cronqvist <masse@klarna.com>
+Date:   Sun Oct 6 13:56:59 2013 +0200
+
+    documented print_fun
+
+src/redbug.erl
+
+commit 35636bc4de07bc803ea4fc9731fab005d0378c2b
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu May 30 16:21:43 2013 +0200
+
+    redbug documentation now documents the current version of redbug.
+
+doc/redbug.txt
+src/redbug.erl
+
+commit d63141f5c9c3eb0bbc31f92bf328cee5b55ae94b
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed May 29 14:19:28 2013 +0200
+
+    changelog generator
+
+ChangeLog
+Makefile
+
 commit ea2e1e8efcb70d89d80caf781a24c176732fc7cd
 Author: mats cronqvist <masse@klarna.com>
 Date:   Wed May 29 13:57:18 2013 +0200

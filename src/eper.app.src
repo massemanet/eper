@@ -1,7 +1,7 @@
 {application, eper,
  [
   {description, "Erlang Performance and Debugging Tools"},
-  {vsn, "0.70"},
+  {vsn, "0.71"},
   {registered, []},
   {applications, [
                   kernel,
