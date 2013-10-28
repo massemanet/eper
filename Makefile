@@ -1,3 +1,5 @@
+.PHONY : changelog
+
 all:
 	./rebar compile escriptize
 
