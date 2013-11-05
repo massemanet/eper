@@ -1,9 +1,35 @@
-commit 088943a92633d9b04c9043d3705e71037a9fa5e8
+commit e7883d5409ae16ac4bc0dec53cd1e706513e6b72
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Nov 5 20:53:26 2013 +0100
+
+    version 0.72
+
+src/eper.app.src
+
+commit 28643c5dba707b64db0010810317b6f4ebdf82f3
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Nov 5 20:50:34 2013 +0100
+
+    fix mess I made of susan.potter's patch
+
+rebar.config.script
+
+commit 33b60a05098f837f887d68173392c04ffcc41558
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Oct 28 11:42:28 2013 +0100
+
+    phony changelog target
+
+Makefile
+
+commit cce6685123f4e39ffaeae2892e5fe21aa45c1969
 Author: mats cronqvist <masse@klarna.com>
 Date:   Mon Oct 21 15:00:51 2013 +0200
 
     bumped to 0.71
 
+AUTHORS
+ChangeLog
 src/eper.app.src
 
 commit 5e3943f54e846918cf2dcd5b3b367deb6937a3b4
