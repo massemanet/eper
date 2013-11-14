@@ -1,0 +1,6 @@
+M=fun({Proto,_,IP,PortNo,Payload})->{Proto,IP,PortNo,length(Payload)}end.
+F=fun(G)->receive X -> erlang:display(M(X)), G(G) end end.
+L=fun()->{ok,Sck}=gen_udp:open(16#BEBE,[{active,true}]),F(F)end.
+register(udp_echo,spawn(L)).
+
+watchdog:add_send_subscriber(udp,"localhost",16#bebe,"password").

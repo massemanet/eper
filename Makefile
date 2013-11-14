@@ -6,6 +6,9 @@ all:
 clean:
 	./rebar clean
 
+eunit:
+	./rebar eunit
+
 changelog:
 	git log --name-only --no-merges \
 	  | grep -Ev "^[ ]+$$|git-svn-id" > ChangeLog

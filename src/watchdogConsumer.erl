@@ -17,7 +17,7 @@ terminate(_LD) -> ok.
 config(LD,_Data) -> ?log({loopdata,LD}), LD.
 
 tick(LD,Data) ->
-  case orddict:filter(fun({_,Ev},_)->Ev=/=ticker end, Data) of
+  case orddict:filter(fun({_,_,Ev},_)->Ev=/=ticker end, Data) of
     [] -> ok;
     Intriguing -> io:fwrite("~p~n",[Intriguing])
   end,

@@ -181,8 +181,8 @@ to_sec(J) ->
 to_int(J) -> list_to_integer(J).
 
 init_linux() ->
-  {ok,FDs} = file:open("/proc/stat",[read]),
-  {ok,FDss} = file:open("/proc/self/stat",[read]),
+  {ok,FDs} = file:open("/proc/stat",[read,raw]),
+  {ok,FDss} = file:open("/proc/self/stat",[read,raw]),
   #fds{proc_stat=FDs,proc_self_stat=FDss}.
 
 cores({linux,#fds{proc_stat=Proc_stat}}) ->
@@ -196,7 +196,7 @@ cores(_) ->
   1.
 
 total_ram() ->
-  case file:open("/proc/meminfo",[read]) of
+  case file:open("/proc/meminfo",[read,raw]) of
     {ok,FD} ->
       try {ok,Str} = file:pread(FD,0,30),
           ["MemTotal:",T,"kB"|_] = string:tokens(Str," \n"),
