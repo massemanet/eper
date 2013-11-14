@@ -1,9 +1,34 @@
-commit e7883d5409ae16ac4bc0dec53cd1e706513e6b72
+commit e2bb465f37b151b4ad561d14c5d34fd874df3122
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Nov 14 11:46:44 2013 +0100
+
+    v0.73
+
+src/eper.app.src
+
+commit 04cb820efb92c9554c9f57f29798fe20828152e6
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Nov 14 11:35:49 2013 +0100
+
+    reworking of watchdog
+
+.gitignore
+Makefile
+doc/watchdog.txt
+rebar.config
+src/prfDog.erl
+src/prfHost.erl
+src/prfSys.erl
+src/watchdog.erl
+src/watchdogConsumer.erl
+
+commit 11ae389445cd0760750d0bb31c8908755914f074
 Author: mats cronqvist <masse@klarna.com>
 Date:   Tue Nov 5 20:53:26 2013 +0100
 
     version 0.72
 
+ChangeLog
 src/eper.app.src
 
 commit 28643c5dba707b64db0010810317b6f4ebdf82f3
