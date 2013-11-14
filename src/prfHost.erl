@@ -87,7 +87,6 @@ init(Consumer, Node, Proxy) ->
 loop(LD) ->
   receive
     {Stopper,stop} ->
-      ?log(stopping),
       do_stop(LD),
       Stopper ! stopped;
     {timeout, _, {tick}} when LD#ld.server == [] ->
@@ -138,7 +137,7 @@ de_colls(Colls,DogData) ->
   orddict:filter(F1,CD).
 
 dog_data([{prfDog,DogData}|_],Node) ->
-  F = fun({N,_},_) -> N=:=Node end,
+  F = fun({N,_,_},_) -> N=:=Node end,
   orddict:filter(F, DogData).
 
 maybe_conf(CollData, LD) ->

@@ -9,84 +9,80 @@
 %% prf callbacks
 -export([collect/1,config/2]).
 
--import(orddict,[new/0,store/3]).
+% gen_serv callbacks
+-export(
+   [handle_info/2
+    ,handle_call/3
+    ,init/1
+    ,rec_info/1]).
 
--record(ld,{args,acceptor,socket=[],msg=new(),cookie="I'm a Cookie"}).
--include("gen_serv.hrl").
+-include("log.hrl").
+
+-record(ld,{args,acceptor,socket=[],msg=orddict:new(),cookie="I'm a Cookie"}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% prf callbacks, runs in the prfTarg process
 
+collect(init) ->
+  gen_serv:start(?MODULE),
+  {gen_serv:get_state(?MODULE),{?MODULE,[]}};
 collect(LD) ->
-  assert(),
   {LD,{?MODULE,gen_server:call(?MODULE,get_data)}}.
 
 config(LD,Data) ->
   ?log([unknown,{data,Data}]),
   LD.
 
-assert() ->
-  case whereis(?MODULE) of
-    undefined -> start();
-    _ -> ok
-  end.
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% constants
+%% gen_serv callbacks
 
-sock_opts() -> [binary, {reuseaddr,true}, {active,false}, {packet,4}].
+rec_info(ld) -> record_info(fields,ld);
+rec_info(_)  -> [].
 
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% user code
+init(Args) ->
+  LD = #ld{args=Args,acceptor=accept(56669)},
+  watchdog:add_send_subscriber(tcp,"localhost",56669,LD#ld.cookie),
+  LD.
 
-do_init(Args) ->
-  #ld{args=Args, acceptor=accept(producer,56669,sock_opts())}.
+handle_call(get_data,_,LD) ->
+  {LD#ld.msg,LD#ld{msg=orddict:new()}}.
 
-do_terminate(_LD,_Reason) -> ok.
-
-do_code_change(LD,_Xtra) -> LD.
-
-do_call(LD,get_data) -> {LD#ld.msg,LD#ld{msg=new()}};
-do_call(LD,Msg) -> print_term(Msg),{ok,LD}.
-
-do_cast(LD,Msg) -> print_term(Msg),LD.
-
-do_info(LD,{new_socket,producer,Sock}) ->
+handle_info({new_socket,Sock},LD) ->
   %% we accepted a socket towards a producer.
-  inet:setopts(Sock,[{active,once}]),
   LD#ld{socket=[Sock|LD#ld.socket]};
-do_info(LD,{tcp,Sock,Bin}) ->
+handle_info({tcp,Sock,Bin},LD) ->
   case lists:member(Sock,LD#ld.socket) of
     true ->
       %% got data from a known socket. this is good
-      gen_tcp:close(Sock),
-      {watchdog,Node,Trig,Msg} = prf_crypto:decrypt(LD#ld.cookie,Bin),
-      LD#ld{socket=LD#ld.socket--[Sock],msg=store({Node,Trig},Msg,LD#ld.msg)};
+      {watchdog,Node,TS,Trig,Msg} = prf_crypto:decrypt(LD#ld.cookie,Bin),
+      LD#ld{socket=LD#ld.socket,
+            msg=orddict:store({Node,TS,Trig},Msg,LD#ld.msg)};
     false->
       %% got data from unknown socket. wtf?
       ?log([{data_from,Sock},{sockets,LD#ld.socket},{bytes,byte_size(Bin)}]),
       LD
   end;
-do_info(LD,{tcp_closed, Sock}) ->
+handle_info({tcp_closed, Sock},LD) ->
   LD#ld{socket=LD#ld.socket--[Sock]};
-do_info(LD,{tcp_error, Sock, Reason}) ->
+handle_info({tcp_error, Sock, Reason},LD) ->
   ?log([{tcp_error,Reason},{socket,Sock}]),
   LD;
-do_info(LD,Msg) ->
-  ?log([{unrec,Msg}|expand_recs(LD)]),
+handle_info(Msg,LD) ->
+  ?log([{unrec,Msg}]),
   LD.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% accept is blocking, so it runs in its own process
-accept(What,Port,Opts) ->
-  erlang:spawn_link(fun() -> acceptor(What,Port,Opts) end).
+accept(Port) ->
+  erlang:spawn_link(fun() -> acceptor(Port) end).
 
-acceptor(What,Port,Opts) ->
+acceptor(Port) ->
+  Opts = [binary,{reuseaddr,true},{active,true},{packet,4}],
   {ok,ListenSock} = gen_tcp:listen(Port,Opts),
-  acceptor_loop(What,ListenSock).
+  acceptor_loop(ListenSock).
 
-acceptor_loop(What,ListenSock) ->
+acceptor_loop(ListenSock) ->
   {ok,Socket} = gen_tcp:accept(ListenSock),
-  ?MODULE ! {new_socket,What,Socket},
+  ?MODULE ! {new_socket,Socket},
   gen_tcp:controlling_process(Socket,whereis(?MODULE)),
-  acceptor_loop(What,ListenSock).
+  acceptor_loop(ListenSock).
