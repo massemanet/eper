@@ -1,4 +1,4 @@
-.PHONY : changelog
+.PHONY : changelog docs
 
 all:
 	./rebar compile escriptize
