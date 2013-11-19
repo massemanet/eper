@@ -6,7 +6,7 @@ KeyAppend = fun(Tag,[],E,_)         ->[{Tag,[E]}];
                (Tag,[H|T],E,G)      ->[H|G(Tag,T,E,G)]
             end,
 code:ensure_loaded(crypto),
-case erlang:function_exported(crypto,block_encrypt,2) of
+case erlang:function_exported(crypto,block_encrypt,3) of
   true  -> KeyAppend(erl_opts,CONFIG,{d,'CRYPTO_R16'},KeyAppend);
   false -> CONFIG
 end.
