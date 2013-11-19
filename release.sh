@@ -7,7 +7,7 @@ echo $APPSRC
 sed  s/$OVSN/$NVSN/ < $APPSRC > $$ && mv $$ $APPSRC
 git add $APPSRC
 git commit -m"v$NVSN"
-git log --name-only --no-merges | grep -Ev "^[ ]+$$|git-svn-id" > ChangeLog
+git log --name-only --no-merges | grep -Ev '^[ ]+$$|git-svn-id' > ChangeLog
 echo " Mats Cronqvist <masse@cronqvi.st>" > AUTHORS
 git log | grep Author | grep -Evi "vagrant|no author|mats cronqvist" \
   | sort -u | cut -c8- >> AUTHORS
