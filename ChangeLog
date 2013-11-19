@@ -1,4 +1,29 @@
-commit 6aefb7f9e37ed431f96c546e38126c75d6be15d7
+commit 49cc4a93cf5872c8f10284cd0d8a0b8c445c839c
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Nov 19 13:24:22 2013 +0100
+
+    v0.74
+
+src/eper.app.src
+
+commit e15a5e6c165f8af87727a021b97d6a6594fa881b
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Nov 19 13:24:12 2013 +0100
+
+    fix changelog generation
+
+release.sh
+
+commit ba9543786f6b0da4853bef43c099c743bd81c585
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Nov 19 12:31:34 2013 +0100
+
+    make make release release
+
+Makefile
+release.sh
+
+commit 197095c916762e3b8abd990eca7b378cd6971051
 Author: mats cronqvist <masse@klarna.com>
 Date:   Tue Nov 19 12:02:33 2013 +0100
 
@@ -82,26 +107,21 @@ Author: Susan Potter <me@susanpotter.net>
 Date:   Sun Oct 13 16:20:43 2013 -0500
 
     Remove crypto module deprecations
-    
     When compiling with R16B02 the following deprecation warnings were
     encountered:
-    
     ```
     src/prf_crypto.erl:36: Warning: crypto:des_cbc_encrypt/3 is deprecated and will be removed in in a future release; use crypto:block_encrypt/4
     src/prf_crypto.erl:43: Warning: crypto:des_cbc_decrypt/3 is deprecated and will be removed in in a future release; use crypto:block_decrypt/4
     src/prf_crypto.erl:46: Warning: crypto:md5/1 is deprecated and will be removed in in a future release; use crypto:hash/2
     ```
-    
     Since I use `warnings_as_errors` erlc option I needed to work around these
     deprecation warnings for newer versions of Erlang (R16B+). I did this using
     a `rebar.config.script` and the Erlang preprocessor's `-ifdef` construct.
     Therefore, it should work for previous versions as well as newer versions of
     Erlang.
-    
     This does make one assumption, an assumption I believe to be "safe", but
     worth noting anyway. It assumes that if `crypto:block_encrypt/4` is exported
     from the `crypto` module that `crypto:block_decrypt/4` will also be exported.
-    
     Happy to amend that shortcut if necessary.
 
 rebar.config.script
@@ -341,7 +361,6 @@ Author: mats cronqvist <masse@klarna.com>
 Date:   Sun Aug 19 15:18:54 2012 +0200
 
     handle disjunct guards
-    
     I.e. multiple guards separated by ';'. Now handled by substituting ';' with
     'orelse'.
 
@@ -503,7 +522,6 @@ Author: mats cronqvist <masse@klarna.com>
 Date:   Tue May 1 17:06:25 2012 +0200
 
     refactored printing. seems to work.
-    
     fixed the print_calls option.
     new option; print_fun.
     usage example:
@@ -740,7 +758,6 @@ Author: Anthony Ramine <nox@dev-extend.eu>
 Date:   Fri Feb 4 23:58:40 2011 +0100
 
     Fix redbug's script app path logic
-    
     A `dirname` call was missing, making erl be called with `-pa ./priv/ebin`
     instead of `-pa ./ebin`.
 
@@ -1188,8 +1205,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Apr 1 15:38:21 2010 +0000
 
       better detection of oversized trc messages
-    
-    
 
 src/prfTrc.erl
 src/redbug.erl
@@ -1200,8 +1215,6 @@ Date:   Tue Mar 23 20:01:40 2010 +0000
 
       implemented slfritchie's exception_trace patch in issue 4.
       Thank you Scott!
-    
-    
 
 src/prfTrc.erl
 src/redbug_msc.erl
@@ -1211,8 +1224,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Mar 23 19:42:37 2010 +0000
 
       bumped version number after release of 0.51
-    
-    
 
 configure.ac
 src/redbug_msc.erl
@@ -1222,8 +1233,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Mar 23 19:02:35 2010 +0000
 
       documentation in redbug:help/0
-    
-    
 
 src/redbug.erl
 
@@ -1232,8 +1241,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Mar 23 18:26:21 2010 +0000
 
       argument wildcard bug
-    
-    
 
 src/prfTrc.erl
 src/redbug_msc.erl
@@ -1243,7 +1250,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Mar 23 18:25:39 2010 +0000
 
     multiple TP bug
-    
 
 src/redbug.erl
 
@@ -1252,7 +1258,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Sat Mar 20 23:05:40 2010 +0000
 
     new match spec compiler
-    
 
 src/prfTrc.erl
 src/redbug.erl
@@ -1263,8 +1268,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Mar 17 14:28:38 2010 +0000
 
       better error messages
-    
-    
 
 src/redbug_msc.erl
 
@@ -1273,8 +1276,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Mar 17 14:04:30 2010 +0000
 
       handles list of strings as input
-    
-    
 
 src/redbug_msc.erl
 
@@ -1283,8 +1284,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Mar 16 08:21:25 2010 +0000
 
       match spec compiler - work in progress
-    
-    
 
 src/Makefile.am
 src/redbug.erl
@@ -1295,8 +1294,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Feb 4 14:46:11 2010 +0000
 
       added 'cookie' option; for tracing on a remote erlang node.
-    
-    
 
 src/redbug.erl
 
@@ -1305,8 +1302,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Sun Jan 31 16:33:06 2010 +0000
 
       fixed redbug message trace bug.
-    
-    
 
 bin/Makefile.am
 src/prfTrc.erl
@@ -1317,8 +1312,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Jan 26 13:05:53 2010 +0000
 
       refactor/bugfix
-    
-    
 
 src/watchdog.erl
 
@@ -1327,8 +1320,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jan 25 14:42:08 2010 +0000
 
       support for process_info(,last_calls).
-    
-    
 
 src/prfPrc.erl
 
@@ -1337,8 +1328,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Jan 21 12:18:49 2010 +0000
 
       bread ignores trailing garbage at eof, instead of exiting.
-    
-    
 
 src/bread.erl
 
@@ -1347,8 +1336,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jan 18 13:47:14 2010 +0000
 
       buggy stop function
-    
-    
 
 src/bread_server.erl
 
@@ -1357,8 +1344,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jan 18 13:33:08 2010 +0000
 
       reverse-merging unfinished refactor. subversion, I hate you.
-    
-    
 
 src/watchdog.erl
 
@@ -1367,8 +1352,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jan 18 13:30:14 2010 +0000
 
       better start/stop handling
-    
-    
 
 src/bread_server.erl
 src/gen_serv.erl
@@ -1379,7 +1362,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Jan 13 14:41:37 2010 +0000
 
     better glade file detection
-    
 
 src/gperfGtk.erl
 
@@ -1388,8 +1370,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Dec 21 09:35:25 2009 +0000
 
       bad handling of bad arguments in start/2
-    
-    
 
 src/redbug.erl
 
@@ -1398,8 +1378,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Dec 17 15:07:08 2009 +0000
 
       added arity support
-    
-    
 
 src/redbug.erl
 
@@ -1408,8 +1386,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 20 13:32:19 2009 +0000
 
       added banging to watchdog
-    
-    
 
 src/watchdog.erl
 
@@ -1418,8 +1394,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 18 17:04:14 2009 +0000
 
       fixed typos and logging issues
-    
-    
 
 src/prfTrc.erl
 src/redbug.erl
@@ -1429,8 +1403,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 6 09:05:45 2009 +0000
 
       added timestamps to watchdog messages
-    
-    
 
 src/bread_server.erl
 src/dtopConsumer.erl
@@ -1441,11 +1413,8 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Oct 27 13:21:25 2009 +0000
 
       major improvements in trc file handling (internal).
-    
       Tracing to trc files and timeouts can now be combined.
       Printing to a file is supported (with print_file).
-    
-    
 
 src/prfTrc.erl
 src/redbug.erl
@@ -1455,8 +1424,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Oct 27 12:21:33 2009 +0000
 
       bread_server:start/1 guesses the file type from extension
-    
-    
 
 src/bread_server.erl
 
@@ -1465,8 +1432,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Oct 22 13:57:55 2009 +0000
 
       redbug tracing to trc file implemented. changed the redbug API (backwards compatible).
-    
-    
 
 src/bread.erl
 src/bread_server.erl
@@ -1478,8 +1443,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Oct 21 16:35:33 2009 +0000
 
       fixed unix start script
-    
-    
 
 bin/redbug
 src/redbug.erl
@@ -1489,8 +1452,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Oct 19 14:09:35 2009 +0000
 
       bugfix of previous
-    
-    
 
 src/bread.erl
 
@@ -1499,8 +1460,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Oct 19 10:33:16 2009 +0000
 
       support for .zet file (compresssed erlang terms)
-    
-    
 
 src/bread.erl
 
@@ -1509,8 +1468,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Oct 9 14:00:14 2009 +0000
 
       xml bug in bread
-    
-    
 
 src/bread.erl
 src/watchdog.erl
@@ -1520,8 +1477,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Sep 4 12:44:36 2009 +0000
 
       ship fewer procs
-    
-    
 
 src/prfPrc.erl
 
@@ -1530,8 +1485,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Sep 4 12:41:34 2009 +0000
 
       bug in print state function
-    
-    
 
 src/gen_serv.erl
 
@@ -1540,8 +1493,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Sep 4 12:40:28 2009 +0000
 
       bread
-    
-    
 
 src/Makefile.am
 src/bread.erl
@@ -1552,8 +1503,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jul 20 09:50:34 2009 +0000
 
       watchdog compresses its messages
-    
-    
 
 src/prfDog.erl
 src/watchdog.erl
@@ -1563,8 +1512,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Jul 16 18:12:48 2009 +0000
 
       honors {stop, ..., ...} return value from callbacks
-    
-    
 
 src/gen_serv.erl
 
@@ -1573,8 +1520,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Jul 16 18:11:12 2009 +0000
 
       added a log_bt macro (logging with stacktrace)
-    
-    
 
 src/log.hrl
 
@@ -1583,8 +1528,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Jul 16 18:10:37 2009 +0000
 
       bug in "cores" (the number of cores on the machine)
-    
-    
 
 src/prfSys.erl
 
@@ -1593,8 +1536,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Jul 7 16:04:17 2009 +0000
 
       watchdog can now send data over UDP
-    
-    
 
 src/watchdog.erl
 
@@ -1603,8 +1544,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jun 15 13:06:04 2009 +0000
 
       grrr..
-    
-    
 
 src/prfTrc.erl
 
@@ -1613,8 +1552,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jun 15 12:49:39 2009 +0000
 
       bug in module check (disallowed preloaded)
-    
-    
 
 src/prfTrc.erl
 
@@ -1623,8 +1560,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jun 15 12:49:04 2009 +0000
 
       better shutdown
-    
-    
 
 src/gen_serv.erl
 
@@ -1633,7 +1568,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri May 15 10:04:18 2009 +0000
 
     added get_state/2
-    
 
 src/gen_serv.erl
 
@@ -1642,8 +1576,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri May 15 09:12:47 2009 +0000
 
       added get_state/1 function. handle_info can return noreply.
-    
-    
 
 src/gen_serv.erl
 
@@ -1652,7 +1584,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu May 7 12:46:38 2009 +0000
 
     print_state bug
-    
 
 src/gen_serv.erl
 
@@ -1661,7 +1592,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu May 7 11:43:03 2009 +0000
 
     handling absence of /proc
-    
 
 src/dtopConsumer.erl
 
@@ -1670,7 +1600,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu May 7 11:32:35 2009 +0000
 
     misguided attemt to ensure that function to be traced exists
-    
 
 src/prfTrc.erl
 
@@ -1679,7 +1608,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu May 7 11:31:35 2009 +0000
 
     badmatch
-    
 
 src/gen_serv.erl
 
@@ -1688,8 +1616,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue May 5 09:26:05 2009 +0000
 
       In the {Mod,'_'} trace pattern, '_' is expanded to be the exported functions.
-    
-    
 
 src/prfTrc.erl
 
@@ -1698,8 +1624,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue May 5 09:24:41 2009 +0000
 
       cpu_per_red crashed on non-linuxen.
-    
-    
 
 src/dtopConsumer.erl
 
@@ -1708,8 +1632,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Mar 23 17:24:48 2009 +0000
 
       help/0 expanded.
-    
-    
 
 src/redbug.erl
 
@@ -1718,8 +1640,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Mar 23 17:17:48 2009 +0000
 
       when tracing an MFA; if the MFA exists, but is not loaded, load it.
-    
-    
 
 src/gen_serv.hrl
 src/prfTrc.erl
@@ -1730,7 +1650,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Feb 20 16:48:30 2009 +0000
 
     smooth...
-    
 
 src/gen_serv.erl
 
@@ -1739,8 +1658,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Feb 20 13:03:22 2009 +0000
 
       safer and safer
-    
-    
 
 src/gen_serv.erl
 
@@ -1749,8 +1666,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Feb 19 21:39:56 2009 +0000
 
       gen_serv does something
-    
-    
 
 src/Makefile.am
 src/gen_serv.erl
@@ -1760,7 +1675,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Feb 19 20:11:33 2009 +0000
 
     added gen_serv.erl
-    
 
 src/gen_serv.erl
 
@@ -1769,8 +1683,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Feb 17 10:16:53 2009 +0000
 
       be smart(?) about whether we're running in shell or not.
-    
-    
 
 src/prfHost.erl
 src/redbug.erl
@@ -1780,8 +1692,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Jan 14 23:25:11 2009 +0000
 
       watchdog/logging stuff started
-    
-    
 
 src/prfHost.erl
 src/watchdogConsumer.erl
@@ -1791,8 +1701,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Jan 14 21:11:27 2009 +0000
 
       watchdog/logging stuff started
-    
-    
 
 configure.ac
 src/Makefile.am
@@ -1808,8 +1716,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Jan 13 21:55:20 2009 +0000
 
       a logger consumer, being made, and using a proper log file name
-    
-    
 
 src/loggerConsumer.erl
 
@@ -1818,8 +1724,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Jan 13 21:39:43 2009 +0000
 
       a logger consumer, being made
-    
-    
 
 src/Makefile.am
 
@@ -1828,8 +1732,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Jan 13 21:37:25 2009 +0000
 
       a logger consumer
-    
-    
 
 src/loggerConsumer.erl
 src/prfDog.erl
@@ -1839,8 +1741,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Dec 18 13:22:23 2008 +0000
 
       dropping 0.50
-    
-    
 
 ChangeLog
 
@@ -1849,8 +1749,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Dec 18 09:46:29 2008 +0000
 
       had assumed that processes() is sorted. that was dumb.
-    
-    
 
 src/prfPrc.erl
 
@@ -1860,8 +1758,6 @@ Date:   Thu Dec 11 13:50:07 2008 +0000
 
       bug in the dtop printing of a proc that happened to exit while
       prfPrc was inspecting it.
-    
-    
 
 src/dtopConsumer.erl
 src/gperfGtk.erl
@@ -1872,8 +1768,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 9 22:44:43 2008 +0000
 
       -proxy flag
-    
-    
 
 bin/gperf
 
@@ -1882,8 +1776,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 9 21:53:08 2008 +0000
 
       proxified. but doesn't work with watchdog...
-    
-    
 
 bin/ntop
 src/ntop.erl
@@ -1894,8 +1786,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 9 19:10:25 2008 +0000
 
       documentation
-    
-    
 
 src/dtop.erl
 src/dtopConsumer.erl
@@ -1905,8 +1795,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 9 18:55:00 2008 +0000
 
       documentation
-    
-    
 
 bin/gperf
 
@@ -1915,8 +1803,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 9 18:54:35 2008 +0000
 
       added proxy flag
-    
-    
 
 bin/dtop
 
@@ -1925,8 +1811,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 9 18:16:20 2008 +0000
 
       guarded against missing proc info
-    
-    
 
 src/dtopConsumer.erl
 
@@ -1935,8 +1819,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 9 18:15:09 2008 +0000
 
       started 0.50
-    
-    
 
 ChangeLog
 configure.ac
@@ -1946,8 +1828,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Sun Dec 7 09:39:43 2008 +0000
 
       dmem should be sorted on absolute value of diff
-    
-    
 
 src/prfPrc.erl
 
@@ -1956,8 +1836,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Dec 5 08:20:49 2008 +0000
 
       the argument list got reversed...
-    
-    
 
 bin/gperf
 
@@ -1967,8 +1845,6 @@ Date:   Fri Dec 5 08:20:05 2008 +0000
 
       rewrote the conf handling (for proxy)
       type annotated
-    
-    
 
 src/gperfGtk.erl
 
@@ -1977,8 +1853,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 2 15:28:41 2008 +0000
 
       changed jail time to 1.8 sec (a bit elss than the 2 sec used by prf)
-    
-    
 
 src/watchdog.erl
 
@@ -1987,8 +1861,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Sat Nov 29 17:06:08 2008 +0000
 
       begun making gperf proxy-aware
-    
-    
 
 src/gperf.glade
 src/gperfGtk.erl
@@ -1998,8 +1870,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Sat Nov 29 17:04:08 2008 +0000
 
       started 0.49
-    
-    
 
 configure.ac
 
@@ -2008,8 +1878,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Sat Nov 29 17:03:49 2008 +0000
 
       improved debug printouts
-    
-    
 
 bin/gperf
 
@@ -2018,8 +1886,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 15:22:18 2008 +0000
 
       dropped 0.48
-    
-    
 
 ChangeLog
 
@@ -2028,8 +1894,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 15:13:56 2008 +0000
 
       proxy compliant
-    
-    
 
 src/dtop.erl
 
@@ -2038,8 +1902,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 14:33:30 2008 +0000
 
       new data format
-    
-    
 
 src/watchdogConsumer.erl
 
@@ -2048,8 +1910,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 14:32:58 2008 +0000
 
       corner case
-    
-    
 
 src/prfHost.erl
 
@@ -2058,8 +1918,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 14:21:39 2008 +0000
 
       added proxy functionality, based on watchdog/prfDog
-    
-    
 
 src/prfHost.erl
 
@@ -2068,8 +1926,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 14:20:24 2008 +0000
 
       watchdog/prfDog disagreed on protocol
-    
-    
 
 src/prfDog.erl
 src/watchdog.erl
@@ -2079,8 +1935,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 08:52:42 2008 +0000
 
       cosmetic
-    
-    
 
 src/prfDog.erl
 src/prfPrc.erl
@@ -2091,8 +1945,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 08:51:57 2008 +0000
 
       pids were sorted wrong way
-    
-    
 
 src/dtopConsumer.erl
 
@@ -2101,8 +1953,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 08:09:46 2008 +0000
 
      replaced code in watchdog.erl with calls to prfNet and prfPrc
-    
-    
 
 src/prfNet.erl
 src/watchdog.erl
@@ -2112,8 +1962,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 28 08:07:04 2008 +0000
 
       yet another prfPrc rewrite...
-    
-    
 
 src/dtopConsumer.erl
 src/prf.erl
@@ -2126,8 +1974,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 24 10:31:11 2008 +0000
 
       started 0.48. fixed all R12B compiler warnings.
-    
-    
 
 configure.ac
 src/dtop.erl
@@ -2150,8 +1996,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 21 17:12:25 2008 +0000
 
       made it work...
-    
-    
 
 src/watchdog.erl
 
@@ -2160,8 +2004,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 21 17:11:58 2008 +0000
 
       target needs prf_crypto.beam
-    
-    
 
 src/prfTarg.erl
 
@@ -2170,8 +2012,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 21 17:11:26 2008 +0000
 
       bad caching
-    
-    
 
 src/prfDog.erl
 
@@ -2180,8 +2020,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 21 17:10:49 2008 +0000
 
       added watchdogConsumer.erl
-    
-    
 
 src/Makefile.am
 src/prfConsumer.erl
@@ -2192,8 +2030,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 21 17:09:33 2008 +0000
 
       development version 0.47
-    
-    
 
 configure.ac
 
@@ -2202,8 +2038,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 21 09:07:52 2008 +0000
 
       silenced some dialyzer whining
-    
-    
 
 src/sherk.erl
 src/sherk_aquire.erl
@@ -2214,8 +2048,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Nov 20 15:27:08 2008 +0000
 
       silenced some dialyzer whining
-    
-    
 
 src/gperfGtk.erl
 
@@ -2224,8 +2056,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 19 15:20:32 2008 +0000
 
       better formatting in sys status line
-    
-    
 
 src/dtopConsumer.erl
 
@@ -2234,8 +2064,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Nov 18 22:17:46 2008 +0000
 
       dtop shows dets table name as mock-name instead of dets:init/2
-    
-    
 
 src/prfPrc.erl
 
@@ -2244,8 +2072,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 12 21:43:20 2008 +0000
 
       stepped to 0.46
-    
-    
 
 configure.ac
 
@@ -2254,8 +2080,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 12 21:15:46 2008 +0000
 
       tested user/message/logging, ticker and prfSys triggers.
-    
-    
 
 src/prfConsumer.erl
 src/watchdog.erl
@@ -2266,8 +2090,6 @@ Date:   Wed Nov 12 20:26:38 2008 +0000
 
       dialyzer found a couple of bugs.
       added a message/1 function; an API function for logging etc.
-    
-    
 
 src/watchdog.erl
 
@@ -2276,8 +2098,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 12 20:23:41 2008 +0000
 
       dialyzer complained about some dead code
-    
-    
 
 src/sherk_target.erl
 
@@ -2286,8 +2106,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 12 20:23:12 2008 +0000
 
       dialyzer complained about the log macro
-    
-    
 
 src/gen_serv.hrl
 src/gperfGtk.erl
@@ -2300,8 +2118,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 12 20:22:05 2008 +0000
 
       cosmetic
-    
-    
 
 src/Makefile.am
 
@@ -2310,8 +2126,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 12 15:42:32 2008 +0000
 
       cpu% now a percentage!
-    
-    
 
 src/dtopConsumer.erl
 
@@ -2320,8 +2134,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 12 13:40:28 2008 +0000
 
       slowly moving towards a more abstract gen_server
-    
-    
 
 src/Makefile.am
 src/gen_serv.hrl
@@ -2333,8 +2145,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 7 19:13:34 2008 +0000
 
       missing clause for no data
-    
-    
 
 src/prfConsumer.erl
 
@@ -2343,8 +2153,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Nov 6 22:15:29 2008 +0000
 
       cosmetic
-    
-    
 
 src/prfConsumer.erl
 
@@ -2353,8 +2161,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Nov 6 22:14:49 2008 +0000
 
       fixed dialyzer warnings
-    
-    
 
 src/prfTrc.erl
 src/sherk_scan.erl
@@ -2365,8 +2171,6 @@ Date:   Thu Nov 6 22:02:58 2008 +0000
 
       refactored a bit
       better(?) socket error handling
-    
-    
 
 src/gen_server.hrl
 src/prfDog.erl
@@ -2376,8 +2180,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Nov 6 22:01:19 2008 +0000
 
       cosmetic
-    
-    
 
 src/gperfGtk.erl
 src/watchdog.erl
@@ -2387,8 +2189,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 5 17:48:16 2008 +0000
 
       cleaned out some debug printouts.
-    
-    
 
 src/prfConsumer.erl
 src/prfDog.erl
@@ -2399,8 +2199,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Nov 5 15:32:55 2008 +0000
 
       production quality(?) watchdog/prfDog.
-    
-    
 
 ChangeLog
 src/prfDog.erl
@@ -2411,8 +2209,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 3 10:35:55 2008 +0000
 
       cosmetic
-    
-    
 
 src/prfDog.erl
 
@@ -2422,8 +2218,6 @@ Date:   Mon Nov 3 03:22:01 2008 +0000
 
       found pesky bug in watvhdog subscriber handling
       many debug printouts still in
-    
-    
 
 configure.ac
 src/prfDog.erl
@@ -2434,8 +2228,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Sat Nov 1 13:22:40 2008 +0000
 
       cosmetic
-    
-    
 
 src/sherk_ets.erl
 
@@ -2444,8 +2236,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Oct 31 21:39:22 2008 +0000
 
       basically cosmetic
-    
-    
 
 src/watchdog.erl
 
@@ -2454,8 +2244,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Oct 23 22:21:57 2008 +0000
 
       watchdog/prfDog mostly works
-    
-    
 
 src/prfHost.erl
 src/prfTarg.erl
@@ -2466,8 +2254,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Oct 23 21:22:57 2008 +0000
 
       using tail calls in the loop is, for some reason, recommended practice.
-    
-    
 
 src/dtop.erl
 src/dtopConsumer.erl
@@ -2479,8 +2265,6 @@ Date:   Wed Oct 22 14:44:44 2008 +0000
 
       config was propagated to all collectors, instead of just the one
       that was to be config'd
-    
-    
 
 src/prf.erl
 src/prfHost.erl
@@ -2493,8 +2277,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Oct 22 14:02:06 2008 +0000
 
       had left the main method unimplemented...
-    
-    
 
 src/prfDog.erl
 
@@ -2503,8 +2285,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Oct 22 12:50:46 2008 +0000
 
       watchdog integration
-    
-    
 
 src/prfConsumer.erl
 src/prfDog.erl
@@ -2516,8 +2296,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Oct 22 10:32:04 2008 +0000
 
       watchdog integegration
-    
-    
 
 src/Makefile.am
 src/prfClient.erl
@@ -2534,8 +2312,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Oct 20 19:52:19 2008 +0000
 
       preparing for integration of prfTarg and watchdog_proxy
-    
-    
 
 src/prfHost.erl
 src/watchdog.erl
@@ -2546,8 +2322,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Oct 17 19:20:13 2008 +0000
 
       crypto buggy
-    
-    
 
 src/watchdog_proxy.erl
 
@@ -2556,8 +2330,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Oct 17 14:38:33 2008 +0000
 
       proxying not yet finished.
-    
-    
 
 src/watchdog.erl
 src/watchdog_proxy.erl
@@ -2567,8 +2339,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Oct 17 14:26:25 2008 +0000
 
       added some files.
-    
-    
 
 src/prf_crypto.erl
 src/watchdog_proxy.erl
@@ -2578,8 +2348,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Oct 17 14:25:37 2008 +0000
 
       added some files. self-tracing avoidance mechanism fixed.
-    
-    
 
 src/Makefile.am
 src/prfTrc.erl
@@ -2591,8 +2359,6 @@ Date:   Wed Oct 15 08:03:39 2008 +0000
 
       bug in prfTrace: tried to untrace Pids even if they werer on another node
       watchdog; mostly works
-    
-    
 
 src/prfTrc.erl
 src/watchdog.erl
@@ -2602,8 +2368,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Oct 7 21:31:20 2008 +0000
 
       added watchdog. not tested, probably broken...
-    
-    
 
 bin/gperf
 src/Makefile.am
@@ -2615,8 +2379,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Sep 23 21:36:27 2008 +0000
 
      bash script error
-    
-    
 
 src/gperf.erl
 
@@ -2625,8 +2387,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Sep 23 21:25:55 2008 +0000
 
      doc error
-    
-    
 
 src/gperf.glade
 
@@ -2635,24 +2395,18 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Aug 6 14:43:37 2008 +0000
 
       new eper
-    
-    
 
 commit 9880e80963dcdc4b612cd18aaaeaa4e74aed88d1
 Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Aug 6 14:40:18 2008 +0000
 
       new eper
-    
-    
 
 commit d6cc76f7fcefc2cfc868253e2cfd7c46a9b3f341
 Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Aug 6 13:13:35 2008 +0000
 
      v 0.44
-    
-    
 
 configure.ac
 
@@ -2661,8 +2415,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Aug 6 13:06:33 2008 +0000
 
      don't trace on redbug
-    
-    
 
 src/prfTrc.erl
 
@@ -2671,8 +2423,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Aug 6 08:46:46 2008 +0000
 
      don't trace on self()
-    
-    
 
 src/prfTrc.erl
 src/redbug.erl
@@ -2682,8 +2432,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Jul 31 14:37:15 2008 +0000
 
       autoconf stuff was all messed up...
-    
-    
 
 configure.ac
 src/Makefile.am
@@ -2693,8 +2441,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Jul 31 13:02:01 2008 +0000
 
       changed copyriight to 2008
-    
-    
 
 COPYING
 configure.ac
@@ -2704,8 +2450,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jun 23 13:29:32 2008 +0000
 
       vers 0.41
-    
-    
 
 configure.ac
 
@@ -2714,8 +2458,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Jun 23 13:26:14 2008 +0000
 
       cosmetic
-    
-    
 
 src/dtopConsumer.erl
 src/gperfConsumer.erl
@@ -2728,8 +2470,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Apr 16 16:24:47 2008 +0000
 
      new mail address
-    
-    
 
 AUTHORS
 configure.ac
@@ -2739,8 +2479,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Apr 16 16:20:46 2008 +0000
 
      new and improved logging macro
-    
-    
 
 AUTHORS
 src/sherk_prof.erl
@@ -2754,8 +2492,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Apr 15 21:48:37 2008 +0000
 
      failed if running on local node w/o distribution
-    
-    
 
 src/prfHost.erl
 src/prfTarg.erl
@@ -2765,8 +2501,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Apr 3 09:01:44 2008 +0000
 
       honors -pa
-    
-    
 
 bin/gperf
 
@@ -2775,8 +2509,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Apr 3 09:01:07 2008 +0000
 
       new logger macro
-    
-    
 
 src/gperf.erl
 src/gperfGtk.erl
@@ -2799,8 +2531,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Dec 12 15:28:17 2007 +0000
 
       use /proc on linux
-    
-    
 
 src/prfSys.erl
 
@@ -2809,8 +2539,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 5 15:02:20 2007 +0000
 
       version 0.38
-    
-    
 
 ChangeLog
 
@@ -2819,8 +2547,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 5 14:47:59 2007 +0000
 
       version 0.38
-    
-    
 
 configure.ac
 
@@ -2829,8 +2555,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 5 14:46:17 2007 +0000
 
       collector was called even though there were no subscribers...
-    
-    
 
 src/prfTarg.erl
 
@@ -2839,8 +2563,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 2 10:35:23 2007 +0000
 
       linked from the wrong process
-    
-    
 
 src/prfHost.erl
 
@@ -2849,8 +2571,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Oct 26 15:17:08 2007 +0000
 
       had left some io:fwrites in....
-    
-    
 
 src/sherk_prof.erl
 src/sherk_scan.erl
@@ -2861,8 +2581,6 @@ Date:   Fri Oct 26 15:03:00 2007 +0000
 
       cpu_timestamp check was broken
       got rid of some hardcoded numbers
-    
-    
 
 src/prfTrc.erl
 src/redbug.erl
@@ -2873,8 +2591,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Oct 18 15:43:51 2007 +0000
 
       less logging
-    
-    
 
 src/redbug.erl
 
@@ -2883,8 +2599,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Sep 28 12:00:54 2007 +0000
 
       rewrote the exit handling
-    
-    
 
 src/prfHost.erl
 src/prfTrc.erl
@@ -2899,8 +2613,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Sep 13 15:25:00 2007 +0000
 
        probes for 'cpu_timestamp', on failure falls back to 'timestamp
-    
-    
 
 ChangeLog
 configure.ac
@@ -2911,15 +2623,12 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu May 17 12:59:48 2007 +0000
 
     new file structure
-    
 
 commit 6daec596501d1ad51f0ce9690b68e0ab8896377b
 Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu May 17 12:43:50 2007 +0000
 
       changed the file structure to the traditional src/ebin/priv etc.
-    
-    
 
 ntop/Makefile.am
 prf/Makefile.am
@@ -2932,8 +2641,6 @@ Date:   Thu May 17 12:38:21 2007 +0000
 
       changed the file structure to the traditional src/ebin/priv etc.
       fixed a bug in sherk_ets:f2t
-    
-    
 
 ChangeLog
 Makefile.am
@@ -3020,8 +2727,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu May 10 13:46:19 2007 +0000
 
       more permissive api. internal changes.
-    
-    
 
 ChangeLog
 redbug/redbug.erl
@@ -3034,8 +2739,6 @@ Date:   Thu May 10 13:26:00 2007 +0000
       turns out inet:gethostbyname hangs 5 secs if the hostname is unknown.
       prfNet calls this 2 times per sec for every open tcp port.
       now it memoizes the data.
-    
-    
 
 gperf/gperf.erl
 prf/prfNet.erl
@@ -3045,8 +2748,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Apr 17 09:07:19 2007 +0000
 
       version 0.34. documented the build procedure, put in the right license etc.
-    
-    
 
 COPYING
 ChangeLog
@@ -3061,8 +2762,6 @@ Date:   Fri Apr 13 14:34:40 2007 +0000
 
       changed the buffering behaviour of redbug; buffers if run from Erlang,
     streams if run from Unix. can't make my mind up how i want it.
-    
-    
 
 prf/prfTrc.erl
 redbug/redbug
@@ -3073,8 +2772,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Apr 2 15:28:58 2007 +0000
 
       threw out silly old erl version handling in dtop script
-    
-    
 
 dtop/dtop
 
@@ -3084,8 +2781,6 @@ Date:   Fri Mar 9 11:05:46 2007 +0000
 
       bug in port_info handling
       (assumed that port_info returned a list or crashed, not true)
-    
-    
 
 prf/prfNet.erl
 
@@ -3094,8 +2789,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Mar 9 11:03:18 2007 +0000
 
       checked in some crap by mistake
-    
-    
 
 prf/prfSys.erl
 
@@ -3104,8 +2797,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Mar 9 10:56:17 2007 +0000
 
       support for running redbug from the unix shell
-    
-    
 
 prf/prfSys.erl
 redbug/Makefile.am
@@ -3118,8 +2809,6 @@ Date:   Fri Mar 2 16:00:25 2007 +0000
 
       evil bug in the glade file; a button had "has default" but not "can default"
       this crashes GTK. cool.
-    
-    
 
 sherk/sherk.glade
 
@@ -3128,8 +2817,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Feb 27 10:27:08 2007 +0000
 
       version 0.32
-    
-    
 
 configure.ac
 redbug/redbug
@@ -3140,8 +2827,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Feb 15 16:49:37 2007 +0000
 
       fixed some bugs in the prfTrc port scanning
-    
-    
 
 configure.ac
 gperf/gperfConsumer.erl
@@ -3155,8 +2840,6 @@ Date:   Thu Feb 15 12:00:47 2007 +0000
 
       merged in the prfTrc branch.
       redbug now user prf.
-    
-    
 
 Makefile.am
 configure.ac
@@ -3189,8 +2872,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Feb 14 13:33:36 2007 +0000
 
       cosmetic
-    
-    
 
 gperf/gperfGtk.erl
 
@@ -3199,8 +2880,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Jan 23 13:25:07 2007 +0000
 
       cosmetic
-    
-    
 
 dtop/dtop.erl
 gperf/gperfGtk.erl
@@ -3211,11 +2890,8 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Jan 16 14:52:48 2007 +0000
 
       this is v0.22
-    
       config data is held in an orddict, one entry per text entry
       field. we use orddict so in folding/mapping order is predictable.
-    
-    
 
 configure.ac
 gperf/gperfGtk.erl
@@ -3225,8 +2901,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Jan 10 16:53:10 2007 +0000
 
       set window title
-    
-    
 
 gperf/gperfGtk.erl
 
@@ -3235,8 +2909,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Jan 10 16:43:12 2007 +0000
 
       fixed documentation in the about dialog
-    
-    
 
 gperf/gperf.glade
 
@@ -3245,8 +2917,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Jan 10 15:19:44 2007 +0000
 
       some documentation in the about dialog
-    
-    
 
 gperf/gperf.glade
 
@@ -3255,8 +2925,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Jan 10 13:02:14 2007 +0000
 
       more config stuff
-    
-    
 
 gperf/gperf.glade
 gperf/gperfGtk.erl
@@ -3266,8 +2934,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Jan 10 11:50:48 2007 +0000
 
       config stuff implemented
-    
-    
 
 gperf/gperf.glade
 gperf/gperfConsumer.erl
@@ -3279,8 +2945,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Jan 5 16:38:29 2007 +0000
 
       fixed prfNet to show bytes per socket. woohoo!
-    
-    
 
 dtop/dtop.erl
 gperf/gperfConsumer.erl
@@ -3294,8 +2958,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Dec 15 16:55:31 2006 +0000
 
       added sherk:scan/{1,2,3,4,5}
-    
-    
 
 sherk/sherk.erl
 sherk/sherk_scan.erl
@@ -3306,8 +2968,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 12 14:18:32 2006 +0000
 
       logging
-    
-    
 
 gperf/gperfConsumer.erl
 redbug/redbug.erl
@@ -3317,8 +2977,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Dec 12 09:45:26 2006 +0000
 
       refactored away (yuck) an include file
-    
-    
 
 dtop/Makefile.am
 dtop/dtop.erl
@@ -3340,8 +2998,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Dec 8 16:26:41 2006 +0000
 
       spawning into a fun was not handled
-    
-    
 
 sherk/sherk_scan.erl
 
@@ -3350,8 +3006,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Dec 8 15:53:05 2006 +0000
 
       start script troubles
-    
-    
 
 gperf/gperf.erl
 gperf/gperfGtk.erl
@@ -3361,12 +3015,9 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Dec 8 15:52:36 2006 +0000
 
       now sets net_ticktime to be that of the target.
-    
       if the host has several different targets, that in turn have
       different ticktimes, there'll be trouble. alas, since the emu (R11)
       only supports a node-wide ticktime, that's unavoidable.
-    
-    
 
 prf/prfHost.erl
 prf/prfTarg.erl
@@ -3376,8 +3027,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Dec 7 17:09:43 2006 +0000
 
       minor tree-handling changes
-    
-    
 
 sherk/sherk.erl
 sherk/sherk_prof.erl
@@ -3389,8 +3038,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Wed Dec 6 16:16:32 2006 +0000
 
       internal changes
-    
-    
 
 README
 sherk/sherk
@@ -3402,8 +3049,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Dec 1 14:58:55 2006 +0000
 
       upgraded gperf with a config dialog
-    
-    
 
 gperf/gperf
 gperf/gperf.erl
@@ -3418,8 +3063,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Nov 30 13:42:26 2006 +0000
 
       added redbug
-    
-    
 
 Makefile.am
 configure.ac
@@ -3432,8 +3075,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 27 15:47:35 2006 +0000
 
       new gtknode:cmd
-    
-    
 
 sherk/sherk.erl
 
@@ -3442,10 +3083,7 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 24 15:23:20 2006 +0000
 
       wierd GTK bug
-    
       replacing an *expanded* tree with a list in a treeview caused later failure
-    
-    
 
 sherk/sherk.erl
 sherk/sherk_tab.erl
@@ -3455,8 +3093,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 24 11:35:19 2006 +0000
 
       renamed sherk_new_prof.erl to sherk_prof.erl
-    
-    
 
 sherk/sherk_new_prof.erl
 
@@ -3465,8 +3101,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 24 11:34:15 2006 +0000
 
       dummy
-    
-    
 
 sherk/sherk_new_prof.erl
 
@@ -3475,8 +3109,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Fri Nov 24 11:30:15 2006 +0000
 
       implemented call-graph. phew.
-    
-    
 
 sherk/sherk.erl
 sherk/sherk.glade
@@ -3492,8 +3124,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 20 16:04:02 2006 +0000
 
       better logging
-    
-    
 
 sherk/sherk_list.erl
 sherk/sherk_tab.erl
@@ -3503,8 +3133,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 20 13:53:48 2006 +0000
 
       port_info bug; start script fix
-    
-    
 
 sherk/sherk
 sherk/sherk.erl
@@ -3515,8 +3143,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Mon Nov 20 09:18:14 2006 +0000
 
       process tagging
-    
-    
 
 sherk/sherk_list.erl
 sherk/sherk_scan.erl
@@ -3526,8 +3152,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Nov 2 12:25:17 2006 +0000
 
      removed lame echo
-    
-    
 
 sherk/sherk
 
@@ -3536,8 +3160,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Nov 2 11:48:32 2006 +0000
 
       minor packaging issues
-    
-    
 
 gperf/Makefile.am
 sherk/Makefile.am
@@ -3547,8 +3169,6 @@ Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Thu Nov 2 10:30:24 2006 +0000
 
       initial checkin of vsn 0.10
-    
-    
 
 AUTHORS
 COPYING
@@ -3600,4 +3220,3 @@ Author: (no author) <(no author)@5f96f306-4121-0410-aeb0-fb9935354dc2>
 Date:   Thu Nov 2 10:24:40 2006 +0000
 
     Initial directory structure.
-    
