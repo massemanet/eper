@@ -1,4 +1,4 @@
-.PHONY : all clean eunit release
+.PHONY : all doc clean eunit release
 
 all:
 	./rebar compile escriptize
@@ -11,3 +11,6 @@ eunit:
 
 release:
 	./release.sh
+
+docs:
+	./rebar doc skip_deps=true
