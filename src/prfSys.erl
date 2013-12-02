@@ -131,11 +131,11 @@ init_cst(Cst) ->
 
 strategy() ->
   Os_mon_p = [ok||{os_mon,_,_}<-application:which_applications()],
-  case {os:type(),os:version()} of
-    {{unix,linux},{2,N,_}} when 6 =< N -> {linux,init_linux()};
-    _ when Os_mon_p == [ok]            -> {os_mon,[]};
-    {{unix,_},_}                       -> {ps,init_ps()};
-    _                                  -> {none,[]}
+  case os:type() of
+    {unix,linux}            -> {linux,init_linux()};
+    _ when Os_mon_p == [ok] -> {os_mon,[]};
+    {{unix,_},_}            -> {ps,init_ps()};
+    _                       -> {none,[]}
   end.
 
 %% OS info
