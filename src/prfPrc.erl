@@ -39,7 +39,7 @@
                     stack_size,heap_size,total_heap_size]).
 -define(TAGS,?SORT_ITEMS++?INFO_ITEMS).
 
-config(init,Config) -> config(#cst{},Config);
+config(init,Config) -> config(init_cst(),Config);
 config(State,{items,Items}) when is_number(Items) -> State#cst{items=Items};
 config(State,{max_procs,MP}) when is_number(MP) -> State#cst{max_procs=MP};
 config(State,{add_extra,M,F}) -> add_extra(State,{M,F});
@@ -51,10 +51,13 @@ rm_extra (S=#cst{extra_items=X},MF) -> S#cst{extra_items=X--[MF]}.
 
 %%% returns {State, Data}
 collect(init) ->
-  collect(#cst{old_info=get_info(#cst{})});
+  collect(init_cst());
 collect(Cst = #cst{items=Items})->
   Info = get_info(Cst),
   {Cst#cst{old_info=Info}, {?MODULE,select(Cst,Info,Items)}}.
+
+init_cst() ->
+  #cst{old_info=get_info(#cst{})}.
 
 get_info(Cst) ->
   case Cst#cst.max_procs < erlang:system_info(process_count) of
