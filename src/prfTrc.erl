@@ -12,10 +12,6 @@
 %% internal
 -export([active/1,idle/0,wait_for_local/1]).
 
--import(dict,[fetch/2
-              , store/3
-              , from_list/1]).
-
 %% states
 -define(ACTIVE         , ?MODULE:active).
 -define(IDLE           , ?MODULE:idle).
@@ -72,8 +68,8 @@ active({not_started,R,HostPid}) ->
   HostPid ! {prfTrc,{not_started,R,self()}},
   ?IDLE();
 active(LD) ->
-  Cons = fetch(consumer,LD),
-  HostPid = fetch(host_pid,LD),
+  Cons = dict:fetch(consumer,LD),
+  HostPid = dict:fetch(host_pid,LD),
   receive
     {start,{Pid,_}}     -> Pid ! {prfTrc,{already_started,self()}},?ACTIVE(LD);
     {stop,_}            -> remote_stop(Cons,LD),?WAIT_FOR_LOCAL(Cons);
@@ -99,12 +95,14 @@ remote_stop(Consumer, LD) ->
   consumer_stop(Consumer).
 
 stop_trace(LD) ->
-  erlang:trace(all,false,fetch(flags,fetch(conf,LD))),
+  erlang:trace(all,false,dict:fetch(flags,dict:fetch(conf,LD))),
   unset_tps().
 
 start_trace(HostPid,Conf) ->
-  Rtps = maybe_load_rtps(fetch(rtps,Conf)),
-  start_trace(from_list([{host_pid,HostPid},{conf,store(rtps,Rtps,Conf)}])).
+  Rtps = maybe_load_rtps(dict:fetch(rtps,Conf)),
+  start_trace(
+    dict:from_list([{host_pid,HostPid},
+                    {conf,dict:store(rtps,Rtps,Conf)}])).
 
 maybe_load_rtps(Rtps) ->
   lists:foldl(fun maybe_load_rtp/2, [], Rtps).
@@ -122,18 +120,18 @@ maybe_load_rtp({{M,_,_},_MatchSpec,_Flags} = Rtp,O) ->
   end.
 
 start_trace(LD) ->
-  Conf = fetch(conf,LD),
-  Consumer = consumer(fetch(where,Conf),fetch(time,Conf)),
-  Ps = lists:foldl(fun mk_prc/2,[],fetch(procs,Conf)),
-  Rtps = fetch(rtps,Conf),
-  Flags = [{tracer,real_consumer(Consumer)}|fetch(flags,Conf)],
+  Conf = dict:fetch(conf,LD),
+  Consumer = consumer(dict:fetch(where,Conf),dict:fetch(time,Conf)),
+  Ps = lists:foldl(fun mk_prc/2,[],dict:fetch(procs,Conf)),
+  Rtps = dict:fetch(rtps,Conf),
+  Flags = [{tracer,real_consumer(Consumer)}|dict:fetch(flags,Conf)],
   unset_tps(),
   NoProcs = lists:sum([erlang:trace(P,true,Flags) || P <- Ps]),
   untrace(family(redbug)++family(prfTrc),Flags),
   NoFuncs = set_tps(Rtps),
   assert_trace_targets(NoProcs,NoFuncs,Flags),
-  fetch(host_pid,LD) ! {prfTrc,{starting,NoProcs,NoFuncs,self(),Consumer}},
-  store(consumer,Consumer,LD).
+  dict:fetch(host_pid,LD) ! {prfTrc,{starting,NoProcs,NoFuncs,self(),Consumer}},
+  dict:store(consumer,Consumer,LD).
 
 family(Daddy) ->
   try D = whereis(Daddy),
@@ -206,32 +204,35 @@ consumer_stop(Pid) -> Pid ! stop.
 
 consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Time) ->
   Conf =
-    from_list([{daddy,self()},
-               {count,Cnt},
-               {time,Time},
-               {maxsize,MaxSize},
-               {maxqueue,MaxQueue},
-               {where,Pid},
-               {buffering,Buf}]),
+    dict:from_list(
+      [{daddy,self()},
+       {count,Cnt},
+       {time,Time},
+       {maxsize,MaxSize},
+       {maxqueue,MaxQueue},
+       {where,Pid},
+       {buffering,Buf}]),
   spawn_link(fun() -> init_local_pid(Conf) end).
 
 consumer_file(File,Size,WrapCount,Time) ->
   Conf =
-    from_list([{style,file}
-               , {file,File}
-               , {size,Size}
-               , {wrap_count,WrapCount}
-               , {time,Time}
-               , {daddy, self()}]),
+    dict:from_list(
+      [{style,file}
+       , {file,File}
+       , {size,Size}
+       , {wrap_count,WrapCount}
+       , {time,Time}
+       , {daddy, self()}]),
   spawn_link(fun() -> init_local_port(Conf) end).
 
 consumer_ip(Port,QueueSize,Time) ->
   Conf =
-    from_list([{style,ip}
-               , {port_no,Port}
-               , {queue_size,QueueSize}
-               , {time,Time}
-               , {daddy, self()}]),
+    dict:from_list(
+      [{style,ip}
+       , {port_no,Port}
+       , {queue_size,QueueSize}
+       , {time,Time}
+       , {daddy, self()}]),
   spawn_link(fun() -> init_local_port(Conf) end).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -242,14 +243,14 @@ consumer_ip(Port,QueueSize,Time) ->
 %%%    timeout
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init_local_port(Conf) ->
-  erlang:start_timer(fetch(time,Conf),self(),fetch(daddy,Conf)),
+  erlang:start_timer(dict:fetch(time,Conf),self(),dict:fetch(daddy,Conf)),
   Port = mk_port(Conf),
-  loop_local_port(store(port,Port,Conf)).
+  loop_local_port(dict:store(port,Port,Conf)).
 
 loop_local_port(Conf) ->
-  Daddy = fetch(daddy, Conf),
+  Daddy = dict:fetch(daddy, Conf),
   receive
-    {show_port,Pid}   -> Pid ! fetch(port,Conf),
+    {show_port,Pid}   -> Pid ! dict:fetch(port,Conf),
                          loop_local_port(Conf);
     stop              -> dbg:flush_trace_port(),
                          exit(local_done);
@@ -259,15 +260,15 @@ loop_local_port(Conf) ->
   end.
 
 mk_port(Conf) ->
-  case fetch(style,Conf) of
+  case dict:fetch(style,Conf) of
     ip ->
-      Port = fetch(port_no,Conf),
-      QueueSize = fetch(queue_size,Conf),
+      Port = dict:fetch(port_no,Conf),
+      QueueSize = dict:fetch(queue_size,Conf),
       (dbg:trace_port(ip,{Port, QueueSize}))();
     file ->
-      File = fetch(file,Conf),
-      WrapCount = fetch(wrap_count,Conf),
-      WrapSize = fetch(size,Conf)*1024*1024,% file size (per file) in MB.
+      File = dict:fetch(file,Conf),
+      WrapCount = dict:fetch(wrap_count,Conf),
+      WrapSize = dict:fetch(size,Conf)*1024*1024,% file size (per file) in MB.
       Suffix = ".trc",
       (dbg:trace_port(file,{File, wrap, Suffix, WrapSize, WrapCount}))()
   end.
@@ -285,13 +286,13 @@ mk_port(Conf) ->
 -record(ld,{daddy,where,count,maxqueue,maxsize}).
 
 init_local_pid(Conf) ->
-  erlang:start_timer(fetch(time,Conf),self(),fetch(daddy,Conf)),
-  loop_lp({#ld{daddy=fetch(daddy,Conf),
-               where=fetch(where,Conf),
-               maxsize=fetch(maxsize,Conf),
-               maxqueue=fetch(maxqueue,Conf)},
-           buffering(fetch(buffering,Conf)),
-           fetch(count,Conf)}).
+  erlang:start_timer(dict:fetch(time,Conf),self(),dict:fetch(daddy,Conf)),
+  loop_lp({#ld{daddy=dict:fetch(daddy,Conf),
+               where=dict:fetch(where,Conf),
+               maxsize=dict:fetch(maxsize,Conf),
+               maxqueue=dict:fetch(maxqueue,Conf)},
+           buffering(dict:fetch(buffering,Conf)),
+           dict:fetch(count,Conf)}).
 
 buffering(yes) -> [];
 buffering(no) -> no.

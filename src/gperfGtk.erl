@@ -10,9 +10,6 @@
 -export([start/0,stop/0,init/0]).
 -export([loop/1]).                              %internal export
 
--import(lists,[foreach/2,flatten/1,keysearch/3,nth/2,reverse/1,seq/2,sort/1]).
--import(orddict,[new/0,store/3,is_key/2,fold/3,update/3,fetch/2,from_list/1]).
-
 -include("log.hrl").
 
 -define(LP(X), ?MODULE:loop(X)).
@@ -84,8 +81,8 @@ loop(LD) ->
 
     %% start args
     {args,['']}         -> ?LP(LD);
-    {args,[Node]}       -> ?LP(conf(LD,from_list([{anode,Node}])));
-    {args,[Node,Proxy]} -> ?LP(conf(LD,from_list([{aproxy,Proxy},
+    {args,[Node]}       -> ?LP(conf(LD,orddict:from_list([{anode,Node}])));
+    {args,[Node,Proxy]} -> ?LP(conf(LD,orddict:from_list([{aproxy,Proxy},
                                                   {anode,Node}])));
 
     %% ticker
@@ -100,37 +97,40 @@ loop(LD) ->
 
 dump_ld(LD) ->
   F = fun({N,V})->io:fwrite("~p~n",[{N,V}]) end,
-  foreach(F,zip(record_info(fields,ld),tl(tuple_to_list(LD)))),
+  lists:foreach(F,zip(record_info(fields,ld),tl(tuple_to_list(LD)))),
   LD.
 
 %% initialize the conf dialog
 -spec conf() -> confs().
 conf() ->
-  from_list([{anode, #conf{widget=conf_node,  val='',  type=atom}},
-             {cookie,#conf{widget=conf_cookie,val='',  type=atom}},
-             {aproxy,#conf{widget=conf_proxy, val='',  type=atom}},
-             {cpu,   #conf{widget=conf_cpu,   val=300, type=integer}},
-             {mem,   #conf{widget=conf_mem,   val=8*1024,type=integer}},
-             {net,   #conf{widget=conf_net,   val=32*1024,type=integer}}]).
+  orddict:from_list(
+    [{anode, #conf{widget=conf_node,  val='',     type=atom}},
+     {cookie,#conf{widget=conf_cookie,val='',     type=atom}},
+     {aproxy,#conf{widget=conf_proxy, val='',     type=atom}},
+     {cpu,   #conf{widget=conf_cpu,   val=300,    type=integer}},
+     {mem,   #conf{widget=conf_mem,   val=8*1024, type=integer}},
+     {net,   #conf{widget=conf_net,   val=32*1024,type=integer}}]).
 
 %% sets and allpies conf values
 %% TagVals and Confs are dicts
 -spec conf(#ld{},tag_vals()) -> #ld{}.
 conf(LD,TagVals) ->
-  Confs = fold(fun conf_upd/3,LD#ld.conf,TagVals),
+  Confs = orddict:fold(fun conf_upd/3,LD#ld.conf,TagVals),
   conf_apply(TagVals,Confs),
   LD#ld{conf=Confs}.
 
 -spec conf_upd(atom(),any(),confs()) -> confs().
 conf_upd(Key,Val,Confs) ->
-  update(Key, fun(Conf) -> Conf#conf{val=Val} end, Confs).
+  orddict:update(Key, fun(Conf) -> Conf#conf{val=Val} end, Confs).
 
 %% check if any conf values have changed, i.e. if the GUI and the conf
 %% struct differ. if so, take the value from the GUI
 %% TagVals and Confs are dicts
 -spec conf(#ld{}) -> #ld{}.
 conf(LD) ->
-  {TagVals,Confs} = fold(fun conf_chk/3, {new(),LD#ld.conf}, LD#ld.conf),
+  {TagVals,Confs} = orddict:fold(fun conf_chk/3,
+                                 {orddict:new(),LD#ld.conf},
+                                 LD#ld.conf),
   conf_apply(TagVals,Confs),
   LD#ld{conf=Confs}.
 
@@ -140,7 +140,8 @@ conf_chk(Tag,Conf,{TagVals,Confs}) ->
   Val = get_gui_val(Conf#conf.widget,Conf#conf.type,Conf#conf.val),
   case Val == Conf#conf.val of
     true -> {TagVals,Confs};
-    false-> {store(Tag,Val,TagVals), store(Tag,Conf#conf{val=Val},Confs)}
+    false-> {orddict:store(Tag,Val,TagVals),
+             orddict:store(Tag,Conf#conf{val=Val},Confs)}
   end.
 
 %% TagVals are the items that has changed
@@ -151,7 +152,7 @@ conf_apply(TagVals,Confs) ->
   if_there([cpu,net,mem,cookie],TagVals,fun do_conf/2,Confs).
 
 if_there(Tags,TagVals,Fun,Confs) ->
-  _ = [Fun(Tag,Confs) || Tag<-Tags,is_key(Tag,TagVals)].
+  _ = [Fun(Tag,Confs) || Tag<-Tags,orddict:is_key(Tag,TagVals)].
 
 do_conf(cpu,Confs)   -> conf_send(cpu,conf_val(cpu,Confs));
 do_conf(net,Confs)   -> conf_send(net,conf_val(net,Confs));
@@ -160,7 +161,7 @@ do_conf(cookie,Confs)-> setcookie(conf_val(anode,Confs),conf_val(cookie,Confs)).
 
 conf_send(Key, Val) -> prf:config(gperf_prf,consumer,{Key,Val}).
 
-conf_fill(Confs) -> fold(fun conf_fill/3, [], Confs).
+conf_fill(Confs) -> orddict:fold(fun conf_fill/3, [], Confs).
 
 conf_fill(_Key,#conf{widget=Widget, val=Val},_) ->
   g('Gtk_entry_set_text',[Widget,to_str(Val)]).
@@ -168,7 +169,7 @@ conf_fill(_Key,#conf{widget=Widget, val=Val},_) ->
 conf_val(Key,LD) when is_record(LD,ld) ->
   conf_val(Key,LD#ld.conf);
 conf_val(Key,Confs) ->
-  (fetch(Key,Confs))#conf.val.
+  (orddict:fetch(Key,Confs))#conf.val.
 
 get_gui_val(Widget,Type,Val) ->
   X = g('Gtk_entry_get_text',[Widget]),
@@ -178,7 +179,7 @@ get_gui_val(Widget,Type,Val) ->
   end.
 
 at_least_one_of(Tags,TagVals,Fun,Confs) ->
-  case [Tag || Tag<-Tags,is_key(Tag,TagVals)] of
+  case [Tag || Tag<-Tags,orddict:is_key(Tag,TagVals)] of
     []-> ok;
     _ -> Fun(Confs)
   end.
@@ -249,7 +250,7 @@ resize_toplevel(Widget) ->
 
 %%%
 redraw(LD) ->
-  foreach(fun({DA,_Colors}) -> redraw(DA,LD) end, ?DAREAS),
+  lists:foreach(fun({DA,_Colors}) -> redraw(DA,LD) end, ?DAREAS),
   LD.
 
 redraw(Darea,LD = #ld{x=X,dAreas=Dareas}) ->
@@ -264,8 +265,8 @@ stuff(LD = #ld{dAreas=Dareas,x=X},Datas) ->
 
 stuffit(_X,[],[]) -> ok;
 stuffit(X,[Data|Datas],[{_DAname,Darea}|Dareas]) ->
-  VIs = reverse(sort(zip(Data,seq(1,length(Data))))),
-  foreach(fun(VI) -> stuffer(X,Darea,VI) end, VIs),
+  VIs = lists:reverse(lists:sort(zip(Data,lists:seq(1,length(Data))))),
+  lists:foreach(fun(VI) -> stuffer(X,Darea,VI) end, VIs),
   stuffit(X,Datas,Dareas).
 
 stuffer(X,Darea,{Val,I}) ->
@@ -277,7 +278,7 @@ timeline(LD = #ld{state=conn}, no_time) -> stat_change(down,LD);
 %%timeline(LD = #ld{minute=undefined},{_H,M,_S}) -> LD#ld{minute=M};
 timeline(LD = #ld{minute=M},{_H,M,_S}) -> LD;
 timeline(LD = #ld{dAreas=Dareas},{_,M,_}=HMS) ->
-  foreach(fun(Darea)->draw_timeline(Darea,LD,HMS) end,Dareas),
+  lists:foreach(fun(Darea)->draw_timeline(Darea,LD,HMS) end,Dareas),
   LD#ld{minute=M}.
 
 stat_change(up,LD) ->
@@ -299,7 +300,7 @@ draw_timeline({_,Darea},LD,{H,M,_S}) ->
   draw_time(Darea,LD,{H,M}).
 
 draw_time(#dArea{px_fg=Pxfg,px_bg=Pxbg,layout=Layout,gc_fg=GC},LD,{H,M}) ->
-  Tm = flatten(io_lib:fwrite("~2.2.0w:~2.2.0w",[H,M])),
+  Tm = lists:flatten(io_lib:fwrite("~2.2.0w:~2.2.0w",[H,M])),
   g('GN_pango_layout_set_text',[Layout,Tm,"geneva 6"]),
   g('Gdk_draw_layout',[Pxfg,GC,LD#ld.x,90,Layout]),
   g('Gdk_draw_layout',[Pxbg,GC,LD#ld.x-?XHALF,90,Layout]).
@@ -313,7 +314,7 @@ draw_line(DA,GCtag,X,Y) ->
   g('Gdk_draw_line',[DA#dArea.px_fg,GC,X,Y0,X,Y1]),
   g('Gdk_draw_line',[DA#dArea.px_bg,GC,X-?XHALF,Y0,X-?XHALF,Y1]).
 
-get_gc(DA,N) when is_integer(N) -> nth(N,DA#dArea.gcs);
+get_gc(DA,N) when is_integer(N) -> lists:nth(N,DA#dArea.gcs);
 get_gc(DA,fg) -> DA#dArea.gc_fg;
 get_gc(DA,bg) -> DA#dArea.gc_bg.
 
@@ -359,7 +360,7 @@ pixmaps(N,Win) ->
   [Pixmap|pixmaps(N-1,Win)].
 
 clear_all(LD) ->
-  foreach(fun(DA)->clear_one(DA) end, LD#ld.dAreas),
+  lists:foreach(fun(DA)->clear_one(DA) end, LD#ld.dAreas),
   LD.
 
 clear_one({_,#dArea{px_fg=Px1,px_bg=Px2,gc_fg=GCfg,gc_bg=GCbg}}) ->
@@ -385,7 +386,7 @@ g(C,As) -> g([{C,As}]).
 g(CAs) -> gtknode:cmd(gperf_gtk,CAs).
 
 lks(Tag,List) ->
-  {value,{Tag,Val}} = keysearch(Tag,1,List),
+  {value,{Tag,Val}} = lists:keysearch(Tag,1,List),
   Val.
 
 %%%GUI=gperf_GUI,G = fun(Wid,Cmd,Args)->GUI! {self(),[{Cmd,[Wid|Args]}]}, receive {GUI,{reply,[{ok,Rep}]}} -> Rep;{GUI,{reply,[{error,Rep}]}} -> erlang:fault({Cmd,Args,Rep}) end end.

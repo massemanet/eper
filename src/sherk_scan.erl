@@ -12,8 +12,6 @@
 
 -export([go/5]).
 
--import(lists,[member/2,reverse/1,foreach/2]).
-
 -include("log.hrl").
 
 -record(state, {seq=0, hits=0, cbs, pattern, out, min, max, eof = false}).
@@ -94,7 +92,7 @@ to_cb({'',Out})                         -> {fun write_msg/3,Out};
 to_cb({Mod,Init}) when is_atom(Mod)     -> is_cb(Mod),{{Mod,go},Init};
 to_cb({Fun,Init}) when is_function(Fun) -> is_cb(Fun),{Fun,Init}.
 
-is_cb(M) when is_atom(M) -> true = member({go,3},M:module_info(exports));
+is_cb(M) when is_atom(M) -> true = lists:member({go,3},M:module_info(exports));
 is_cb(F) when is_function(F) -> {arity,3} = erlang:fun_info(F,arity).
 
 do(end_of_trace, State) ->
@@ -123,7 +121,7 @@ do_do(Mess, #state{pattern=Patt, cbs=CBs, seq=Seq} = State) ->
                   cbs=do_safe_cbs(CBs, Mess, Seq, [])}
   end.
 
-do_safe_cbs([], _, _, O) -> reverse(O);
+do_safe_cbs([], _, _, O) -> lists:reverse(O);
 do_safe_cbs([CB|CBs], Msg, Seq, O) ->
   do_safe_cbs(CBs, Msg, Seq, [safe_cb(CB,Msg,Seq)|O]).
 
@@ -272,9 +270,9 @@ pi(Pid) when is_pid(Pid) ->
 find_pid(Name) -> ets_lup(Name).
 
 
-handle_porti(Is) -> foreach(fun(I)->ins(I) end, Is).
+handle_porti(Is) -> lists:foreach(fun(I)->ins(I) end, Is).
 
-handle_proci(Is) -> foreach(fun(I)->ins(I) end, Is).
+handle_proci(Is) -> lists:foreach(fun(I)->ins(I) end, Is).
 
 handle_traci(_I) -> ok.
 
@@ -311,7 +309,7 @@ mangle_ic(MFA) ->
   end.
 
 atomize(FileName) ->
-  list_to_atom(hd(reverse(string:tokens(FileName, "/")))).
+  list_to_atom(hd(lists:reverse(string:tokens(FileName, "/")))).
 
 funi(Fun) ->
   case erlang:fun_info(Fun, module) of

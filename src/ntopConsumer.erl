@@ -9,8 +9,6 @@
 
 -export([init/1, terminate/1, tick/2, collectors/0, config/2]).
 
--import(orddict,[from_list/1,fetch/2,new/0,store/3,fold/3]).
-
 -record(ld,{node,prfNet=[],prfSys=[]}).
 
 collectors() -> [prfNet,prfSys].
@@ -26,8 +24,8 @@ tick(LD,Data) ->
   end.
 
 print(LD, PrfNet, PrfSys) ->
-  Net = from_list(PrfNet),
-  Sys = from_list(PrfSys),
+  Net = orddict:from_list(PrfNet),
+  Sys = orddict:from_list(PrfSys),
   print(LD#ld.prfNet,Net),
   LD#ld{prfSys=Sys,prfNet=Net}.
 
@@ -47,11 +45,11 @@ print_port(Name,Data) ->
                                  str("~n",[])])]).
 
 net(NetN,NetO) ->
-  {_,O} = fold(fun foldf/3,{NetO,new()},NetN),
+  {_,O} = orddict:fold(fun foldf/3,{NetO,orddict:new()},NetN),
   O.
 
 foldf(Key,Val,{KVs,O}) ->
-  try {KVs,store(Key,zipsub(Val,fetch(Key,KVs)),O)}
+  try {KVs,orddict:store(Key,zipsub(Val,orddict:fetch(Key,KVs)),O)}
   catch _:_ -> {KVs,O}
   end.
 

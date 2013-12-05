@@ -8,52 +8,49 @@
 -module(sherk_tree).
 
 -export([go/1]).
--import(lists,[foldl/3,reverse/1,sort/1,sort/2]).
--import(sherk,[to_str/1]).
--import(sherk_ets,[lup/2]).
 
 -define(LOG(T), sherk:log(process_info(self()),T)).
 
 go(procs) ->
-    Tot = lup(sherk_prof,{total,time}),
+    Tot = sherk_ets:lup(sherk_prof,{total,time}),
     PTs = ets:match(sherk_prof,{{{pid,time},'$1'},'$2'}),
     L = [{[reg(P),P],[garb(P),T]} || [P,T] <- PTs],
     Pf = fun(Key,Data,Out) -> procsf(Tot,Key,Data,Out) end,
     make_tree(L, Pf, fun sortpf/1);
 
 go({callgraph,PidStr}) ->
-    case lup(sherk_prof,PidStr) of
+    case sherk_ets:lup(sherk_prof,PidStr) of
         [] -> [];
         Pid -> callgraph(Pid)
     end.
 
 callgraph(Pid) ->
-    Tot = lup(sherk_prof,{{pid,time},Pid}),
+    Tot = sherk_ets:lup(sherk_prof,{{pid,time},Pid}),
     L = ets:match(sherk_prof,{{{stack,time},Pid,'$1'},'$2'}),
-    LS = [{reverse(Stak),{T,called(Pid,Stak)}} || [Stak,T] <- L],
+    LS = [{lists:reverse(Stak),{T,called(Pid,Stak)}} || [Stak,T] <- L],
     Gf = fun(Key,Data,Out) -> graphf(Tot,Key,Data,Out) end,
     make_tree(LS, Gf, fun sortgf/1).
 
 sortpf(L) ->
-    sort(fun({_,[_,_,_,T1],_},{_,[_,_,_,T2],_}) -> T2<T1 end,L).
+    lists:sort(fun({_,[_,_,_,T1],_},{_,[_,_,_,T2],_}) -> T2<T1 end,L).
 
 procsf(_Tot,Pid,[Garb,Time],[]) when is_pid(Pid) ->
-    [to_str(Pid),1,Garb,Time];
+    [sherk:to_str(Pid),1,Garb,Time];
 procsf(_Tot,_Rg,[Garb,Time],[Tag,N,G,T]) ->
     [Tag,N+1,G+Garb,T+Time];
 procsf(_Tot,Reg,[Garb,Time],[]) ->
-    [to_str(Reg),1,Garb,Time].
+    [sherk:to_str(Reg),1,Garb,Time].
 
 sortgf(L) ->
-    sort(fun({_,[_,_,_,CT1],_},{_,[_,_,_,CT2],_}) -> CT2<CT1 end, L).
+    lists:sort(fun({_,[_,_,_,CT1],_},{_,[_,_,_,CT2],_}) -> CT2<CT1 end, L).
 
 graphf(_Tot,MFA,{Time,Calls},[]) ->
-    [to_str(MFA),Calls,Time,Time];
+    [sherk:to_str(MFA),Calls,Time,Time];
 graphf(_Tot,_,{Time,_},[Tag,Calls,T,CT]) ->
     [Tag,Calls,T,CT+Time].
 
 called(Pid,Stak) ->
-    lup(sherk_prof,{{stack,calls},Pid,Stak}).
+    sherk_ets:lup(sherk_prof,{{stack,calls},Pid,Stak}).
 
 reg(P) ->
     case ets:lookup(sherk_scan,P) of
@@ -63,7 +60,7 @@ reg(P) ->
     end.
 
 garb(Pid) ->
-    case lup(sherk_prof,{{pid,sched},Pid,gc_start}) of
+    case sherk_ets:lup(sherk_prof,{{pid,sched},Pid,gc_start}) of
         [] -> 0;
         V -> V
     end.
@@ -76,7 +73,7 @@ garb(Pid) ->
 
 make_tree(L,DataF,SortF) ->
     F = fun({Key,Data},A) -> tree_ins(Key,Data,DataF,SortF,A) end,
-    foldl(F, [], sort(L)).
+    lists:foldl(F, [], lists:sort(L)).
 
 %%% node() := {Key,Data,[nodes()]}
 tree_ins([],_,_,_,[]) ->

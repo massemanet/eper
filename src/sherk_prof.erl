@@ -8,7 +8,6 @@
 -module(sherk_prof).
 
 -export([go/3]).
--import(lists,[dropwhile/2,member/2,prefix/2]).
 
 -include("log.hrl").
 
@@ -133,20 +132,20 @@ push_stack(MFA,S) ->
   end.
 
 pop_stack(MFA,S) ->
-  case member(MFA,S#s.stack) of
+  case lists:member(MFA,S#s.stack) of
     false ->
       ?log([dropped_headless_stack,{mfa,MFA},{state,S}]),
       erase_bad_stack(S),
       S#s{stack=[MFA]};
     true ->
-      S#s{stack=dropwhile(fun(Mfa) -> MFA =/= Mfa end, S#s.stack)}
+      S#s{stack=lists:dropwhile(fun(Mfa) -> MFA =/= Mfa end, S#s.stack)}
   end.
 
 truncate([MFA|Stack] = X) ->
-  case member(MFA,Stack) of
+  case lists:member(MFA,Stack) of
     true ->
       {H,[MFA|T]} = lists:splitwith(fun(E)->E/=MFA end,Stack),
-      case prefix(H,T) of
+      case lists:prefix(H,T) of
         true -> [MFA|T];
         false -> X
       end;

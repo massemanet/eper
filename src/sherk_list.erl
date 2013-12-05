@@ -8,7 +8,7 @@
 -module(sherk_list).
 
 -export([go/1]).
--import(lists,[reverse/1,sort/1,flatten/1,sort/1]).
+
 -define(LOG(T), sherk:log(process_info(self()),T)).
 
 go({call,PidStr}) ->
@@ -19,10 +19,12 @@ go({call,PidStr}) ->
 
 get_list(Pid) ->
     Tot = sherk_ets:lup(sherk_prof,{{pid,time}, Pid}),
-    TMFAs = reverse(sort(ets:match(sherk_prof,{{{func,time},Pid,'$2'},'$1'}))),
+    TMFAs = lists:reverse(
+              lists:sort(
+                ets:match(sherk_prof,{{{func,time},Pid,'$2'},'$1'}))),
     [[str(MFA),calls(Pid,MFA),percent(T,Tot)] || [T,MFA] <- TMFAs].
 
-str(X) -> flatten(io_lib:fwrite("~p",[X])).
+str(X) -> lists:flatten(io_lib:fwrite("~p",[X])).
 
 %% tag(P) ->
 %%     case sherk_ets:lup(sherk_scan,P) of

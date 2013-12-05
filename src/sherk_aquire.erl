@@ -12,9 +12,6 @@
 -export([check_dir/1]).
 -export([ass_loaded/2]).
 
--import(dict,[from_list/1,fetch/2,store/3]).
--import(lists,[foldl/3,map/2,member/2]).
-
 -include_lib("kernel/include/file.hrl").
 -include("log.hrl").
 
@@ -37,18 +34,19 @@ kill() -> catch exit(erlang:whereis(sherk_host),kill).
 %% to be deferred to the target
 
 check_and_spawn(Time,Flags,RTPs,Procs,Targs,Dest) ->
-    LD = from_list([{time,chk_time(Time)},
-                    {flags,chk_flags(Flags)},
-                    {rtps,chk_rtps(RTPs)},
-                    {procs,chk_procs(Procs)},
-                    {dest,chk_dest(Dest)},
-                    {targs,chk_conns(Targs)},
-                    {daddy,self()}]),
+    LD = dict:from_list(
+           [{time,chk_time(Time)},
+            {flags,chk_flags(Flags)},
+            {rtps,chk_rtps(RTPs)},
+            {procs,chk_procs(Procs)},
+            {dest,chk_dest(Dest)},
+            {targs,chk_conns(Targs)},
+            {daddy,self()}]),
 
     (Pid = spawn(fun init/0)) ! {init,LD},
     Pid.
 
-chk_conns(Targs) -> map(fun(T)->chk_conn(T) end,Targs).
+chk_conns(Targs) -> lists:map(fun(T)->chk_conn(T) end,Targs).
 
 chk_conn(T) when T==node() -> T;
 chk_conn(T) ->
@@ -61,7 +59,7 @@ chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> exit({bad_time,X}).
 
 chk_procs(X) when all==X; existing==X; new==X -> [X];
-chk_procs(Ps) when is_list(Ps) -> map(fun chk_proc/1, Ps);
+chk_procs(Ps) when is_list(Ps) -> lists:map(fun chk_proc/1, Ps);
 chk_procs(X) -> exit({bad_proc_spec,X}).
 
 chk_proc(X) when X==all; X==existing; X==new -> exit({not_allowed,X});
@@ -74,21 +72,21 @@ chk_dest({ip,P,S}) when is_integer(P),is_integer(S) ->{ip,{P,S}};
 chk_dest({file,F,S,T}) when $/==hd(F),is_integer(S),$/==hd(T) ->{file,{F,S,T}};
 chk_dest(X) -> exit({bad_dest,X}).
 
-chk_flags(Fs) -> map(fun chk_flag/1, Fs).
+chk_flags(Fs) -> lists:map(fun chk_flag/1, Fs).
 
 chk_flag(F) ->
-    case member(F,trace_flags()) of
+    case lists:member(F,trace_flags()) of
         true -> F;
         false -> exit({bad_flag,F})
     end.
 
-chk_rtps(RTPs) -> map(fun chk_rtp/1, RTPs).
+chk_rtps(RTPs) -> lists:map(fun chk_rtp/1, RTPs).
 
 chk_rtp({M,F}) when is_atom(M), is_atom(F) -> {{M,F,'_'},[],[local]};
 chk_rtp({M,F,MS}) when is_atom(M), is_atom(F) -> {{M,F,'_'},ms(MS),[local]};
 chk_rtp(X) -> exit({bad_rtp,X}).
 
-ms(MS) -> foldl(fun msf/2, [{'_',[],[]}], MS).
+ms(MS) -> lists:foldl(fun msf/2, [{'_',[],[]}], MS).
 
 msf(stack, [{Head,Cond,Body}]) -> [{Head,Cond,[{message,{process_dump}}|Body]}];
 msf(return, [{Head,Cond,Body}]) -> [{Head,Cond,[{return_trace}|Body]}];
@@ -107,11 +105,11 @@ init() ->
     process_flag(trap_exit,true),
     receive
         {init,LD} ->
-            Targs = fetch(targs,LD),
+            Targs = dict:fetch(targs,LD),
             Pids = [spawn_link(T, fun sherk_target:init/0) || T <- Targs],
-            [ P ! {init,store(daddy,self(),LD)} || P <- Pids],
-            Timer = erlang:start_timer(fetch(time,LD),self(),{die}),
-            loop(store(pids,Pids,store(timer,Timer,LD)))
+            [ P ! {init,dict:store(daddy,self(),LD)} || P <- Pids],
+            Timer = erlang:start_timer(dict:fetch(time,LD),self(),{die}),
+            loop(dict:store(pids,Pids,dict:store(timer,Timer,LD)))
     end.
 
 loop(LD) ->
@@ -123,16 +121,16 @@ loop(LD) ->
             stop(LD);
         {'EXIT',P,R} ->
             ?log([got_exit,{from,node(P)},{reason,R}]),
-            case fetch(pids,LD) of
+            case dict:fetch(pids,LD) of
                 [P] -> ?log(all_clients_dead);
-                Ps -> loop(store(pids,Ps--[P],LD))
+                Ps -> loop(dict:store(pids,Ps--[P],LD))
             end
     end.
 
 stop(LD) ->
-    Pids = fetch(pids,LD),
+    Pids = dict:fetch(pids,LD),
     [P ! stop || P <- Pids],
-    recv(Pids,fetch(dest,LD),dict:new()).
+    recv(Pids,dict:fetch(dest,LD),dict:new()).
 
 recv(_,{ip,_},_) -> ok;
 recv(Pids,{file,{Dir,_,_}},FDs) -> recv(Pids,Dir,FDs);
@@ -150,7 +148,7 @@ recv(Pids,Dir,FDs) ->
     end.
 
 stuff(P,B,Dir,FDs) ->
-    try fetch(P,FDs) of
+    try dict:fetch(P,FDs) of
         FD ->
             file:write(FD,B),
             FDs
@@ -160,11 +158,11 @@ stuff(P,B,Dir,FDs) ->
             filelib:ensure_dir(File),
             {ok,FD} = file:open(File,[raw,write,compressed]),
             ?log({opened,File}),
-            stuff(P,B,Dir,store(P,FD,FDs))
+            stuff(P,B,Dir,dict:store(P,FD,FDs))
     end.
 
 close(P,FDs) ->
-    try fetch(P,FDs) of
+    try dict:fetch(P,FDs) of
         FD ->
             file:close(FD),
             dict:erase(P,FDs)

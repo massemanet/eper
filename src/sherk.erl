@@ -18,9 +18,6 @@
 -export([log/2]).
 -export([loop/1]).
 
--import(lists,[member/2,flatten/1,usort/1,foldl/3]).
--import(dict,[from_list/1,to_list/1,fetch/2,store/3,append/3]).
-
 -include("log.hrl").
 
 -define(LOOP(X), ?MODULE:loop(X)).
@@ -88,18 +85,19 @@ init() ->
   %% init calls combobox
   init_combobox(ProcsTree),
 
-  loop(from_list([{targs         ,[]},
-                  {bad_targs     ,[]},
-                  {aq_mon        ,undefined},
-                  {proxy         ,node()},
-                  {orig_ticktime ,net_kernel:get_net_ticktime()},
-                  {targ_mon      ,query_targs(node())},
-                  {call_list     ,CallList},
-                  {call_tree     ,CallTree}])).
+  loop(dict:from_list(
+         [{targs         ,[]},
+          {bad_targs     ,[]},
+          {aq_mon        ,undefined},
+          {proxy         ,node()},
+          {orig_ticktime ,net_kernel:get_net_ticktime()},
+          {targ_mon      ,query_targs(node())},
+          {call_list     ,CallList},
+          {call_tree     ,CallTree}])).
 
 loop(LD) ->
-  AqMon = fetch(aq_mon,LD),
-  TargMon = fetch(targ_mon,LD),
+  AqMon = dict:fetch(aq_mon,LD),
+  TargMon = dict:fetch(targ_mon,LD),
   receive
     %% user bored
     quit                                 -> ok;
@@ -158,7 +156,7 @@ loop(LD) ->
   end.
 
 show_ld(LD) ->
-  ?log(to_list(LD)),
+  ?log(dict:to_list(LD)),
   LD.
 
 check_file() ->
@@ -189,7 +187,7 @@ proxy(LD) ->
       '' ->
         P = node(),
         C = erlang:get_cookie(),
-        T = fetch(orig_ticktime,LD),
+        T = dict:fetch(orig_ticktime,LD),
         {P,C,T};
       P ->
         C = list_to_atom(g('Gtk_entry_get_text',[conf_cookie_entry])),
@@ -198,10 +196,10 @@ proxy(LD) ->
         {P,C,T}
   end,
   net_kernel:set_net_ticktime(Tick),
-  store(cookie,Cookie,
-        store(proxy,Proxy,
-              store(targs,[],
-                    store(bad_targs,[],LD)))).
+  dict:store(cookie,Cookie,
+             dict:store(proxy,Proxy,
+                        dict:store(targs,[],
+                                   dict:store(bad_targs,[],LD)))).
 
 bad_proxy_cancel() ->
   g('Gtk_widget_set_sensitive',[conf_window,true]),
@@ -233,11 +231,11 @@ aq_go(LD) ->
         {targs,Targs},
         {dest,Dest}]),
   P = sherk_aquire:go(Time,Flags,RTPs,Procs,Targs,Dest),
-  store(aq_mon,erlang:monitor(process,P),LD).
+  dict:store(aq_mon,erlang:monitor(process,P),LD).
 
 aq_stop(LD) ->
   sherk_aquire:stop(),
-  do_aq_stop(LD,aq_stop_wait(fetch(aq_mon,LD))).
+  do_aq_stop(LD,aq_stop_wait(dict:fetch(aq_mon,LD))).
 
 aq_stop_wait(Monitor) ->
   receive
@@ -253,7 +251,7 @@ do_aq_stop(LD,Reason) ->
   g('Gtk_widget_set_sensitive',[aq_treeview,true]),
   g('Gtk_widget_set_sensitive',[aq_stop_button,false]),
   aq_check(),
-  store(aq_mon,undefined,LD).
+  dict:store(aq_mon,undefined,LD).
 
 aq_check() ->
   try
@@ -276,7 +274,7 @@ aq_get_flags(Nodes) ->
   end.
 
 aq_get_rtps(Flags) ->
-  case member(call,Flags) of
+  case lists:member(call,Flags) of
     true -> [{'_','_'}];
     false -> []
   end.
@@ -300,7 +298,7 @@ toggle_aq_window() ->
   end.
 
 re_query_targs(LD) ->
-  store(targ_mon,query_targs(fetch(proxy,LD)),LD).
+  dict:store(targ_mon,query_targs(dict:fetch(proxy,LD)),LD).
 
 query_targs(Proxy) ->
   sherk_aquire:ass_loaded(Proxy,sherk_target),
@@ -310,40 +308,42 @@ chk_targs(LD,Atom) when is_atom(Atom) -> ?log({no_proxy,Atom}),LD;
 chk_targs(LD,{Pid,Nodes,EpmdStr}) when is_pid(Pid) ->
   try
     erlang:start_timer(5000,self(),re_query),
-    OldTargs = fetch(targs,LD),
-    BadTargs = fetch(bad_targs,LD),
+    OldTargs = dict:fetch(targs,LD),
+    BadTargs = dict:fetch(bad_targs,LD),
     [_,Host] = string:tokens(to_str(node(Pid)),"@"),
     Nods = string:tokens(EpmdStr,"\n"),
     CPs = [N || ["name",N|_] <- [string:tokens(Str," ") || Str <- Nods]],
     EpmdTargs = [list_to_atom(CP++"@"++Host) || CP <-CPs],
-    Targs = usort(Nodes++EpmdTargs)--[node()],
-    foldl(fun new_target/2, LD, (Targs--OldTargs)--BadTargs)
+    Targs = lists:usort(Nodes++EpmdTargs)--[node()],
+    lists:foldl(fun new_target/2, LD, (Targs--OldTargs)--BadTargs)
   catch
     _:R -> ?log([{r,R},{pid,Pid},{nodes,Nodes},{epmd,EpmdStr}]),LD
   end.
 
 downed_target(Node,LD) ->
-  Ts = fetch(targs,LD),
-  BTs = fetch(bad_targs,LD),
-  case {member(Node,Ts),member(Node,BTs)} of
+  Ts = dict:fetch(targs,LD),
+  BTs = dict:fetch(bad_targs,LD),
+  case {lists:member(Node,Ts),lists:member(Node,BTs)} of
     {false,true} -> LD;
-    {true,false} -> update_targs(Ts--[Node], append(bad_targs,Node,LD));
-    {false,false}-> wierd(down,Node,Ts,BTs),append(bad_targs,Node,LD);
+    {true,false} -> update_targs(Ts--[Node],dict:append(bad_targs,Node,LD));
+    {false,false}-> wierd(down,Node,Ts,BTs),dict:append(bad_targs,Node,LD);
     {true,true}  -> wierd(down,Node,Ts,BTs),update_targs(Ts--[Node], LD)
   end.
 
 new_target(Node,LD) ->
-  Ts = fetch(targs,LD),
-  BTs = fetch(bad_targs,LD),
-  case {member(Node,Ts),member(Node,BTs)} of
+  Ts = dict:fetch(targs,LD),
+  BTs = dict:fetch(bad_targs,LD),
+  case {lists:member(Node,Ts),lists:member(Node,BTs)} of
     {false,false} -> new_target(Node,Ts,LD);
-    {false,true} -> new_target(Node,Ts,store(bad_targs,BTs--[Node],LD));
+    {false,true} -> new_target(Node,Ts,dict:store(bad_targs,BTs--[Node],LD));
     {true,false} -> wierd(up,Node,Ts,BTs),LD;
-    {true,true} -> wierd(up,Node,Ts,BTs),store(bad_targs,BTs--[Node],LD)
+    {true,true} -> wierd(up,Node,Ts,BTs),dict:store(bad_targs,BTs--[Node],LD)
   end.
 
 new_target(Node,Ts,LD) ->
-  catch erlang:set_cookie(Node,fetch(cookie,LD)),
+  try erlang:set_cookie(Node,dict:fetch(cookie,LD))
+  catch _:_ -> ok
+  end,
   erlang:monitor_node(Node,true),
   update_targs([Node|Ts], LD).
 
@@ -352,7 +352,7 @@ wierd(UpDown,Node,Ts,BTs) ->
 
 update_targs(Ts,LD) ->
   update_treeview_list(aq_treeview,[[to_str(T)]||T<-Ts]),
-  store(targs,Ts,LD).
+  dict:store(targs,Ts,LD).
 
 proc_flags(Nodes) ->
   ['procs','running','garbage_collection',
@@ -401,11 +401,11 @@ update_call(LD,Model,Path) ->
   [PidStr] = get_data(Model,0,[Path]),
   case g('Gtk_toggle_button_get_active',[call_heavy_radio]) of
     true ->
-      init_tree_view(call_treeview,fetch(call_list,LD)),
+      init_tree_view(call_treeview,dict:fetch(call_list,LD)),
       List = sherk_list:go({call,PidStr}),
       update_treeview_list(call_treeview,List);
     false->
-      init_tree_view(call_treeview,fetch(call_tree,LD)),
+      init_tree_view(call_treeview,dict:fetch(call_tree,LD)),
       Tree = sherk_tree:go({callgraph,PidStr}),
       update_treeview_tree(call_treeview,Tree)
   end,
@@ -459,8 +459,8 @@ update_treeview_list(View,List) ->
 
 list_insert(Store,Rows) ->
   Row_f = fun() -> {'Gtk_list_store_append',[Store,iter]} end,
-  Col_f = fun(Row) -> foldl(fun col_f/2, {0,Store,[]}, Row) end,
-  g(flatten([[Row_f()|element(3,Col_f(Row))] || Row<-Rows])).
+  Col_f = fun(Row) -> lists:foldl(fun col_f/2, {0,Store,[]}, Row) end,
+  g(lists:flatten([[Row_f()|element(3,Col_f(Row))] || Row<-Rows])).
 
 col_f(Val,{N,Store,O}) ->
   {N+1,Store,
@@ -492,7 +492,7 @@ update_treeview_tree(View,Tree) ->
   show(View).
 
 tree_insert(Store,Tree) ->
-  g(flatten(tree_insert(Store,[0],Tree))).
+  g(lists:flatten(tree_insert(Store,[0],Tree))).
 
 tree_insert(_Store,_Path,[]) -> [];
 tree_insert(Store,Path,[{_,Row,SubTree}|T]) ->
@@ -516,7 +516,7 @@ update_iter([I|D], Store) ->
   [{'Gtk_tree_model_get_iter_from_string',[Store,daddy,pth(D)]},
    {'Gtk_tree_store_insert',[Store,iter,daddy,I]}].
 
-pth(P) -> flatten(pth(P,[])).
+pth(P) -> lists:flatten(pth(P,[])).
 pth([I],O) -> [to_str(I)|O];
 pth([H|T],O) -> pth(T,[$:,to_str(H)|O]).
 
@@ -552,9 +552,9 @@ to_str(X) when is_float(X) ->  float_to_list(X);
 to_str(X) when is_list(X) ->
   case is_string(X) of
     true -> X;
-    false -> flatten(io_lib:fwrite("~p",[X]))
+    false -> lists:flatten(io_lib:fwrite("~p",[X]))
   end;
-to_str(X) -> flatten(io_lib:fwrite("~p",[X])).
+to_str(X) -> lists:flatten(io_lib:fwrite("~p",[X])).
 
 is_string(X) when not is_list(X) -> false;
 is_string([]) -> true;

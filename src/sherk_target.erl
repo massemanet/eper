@@ -10,9 +10,6 @@
 -export([init/0,self_register/1]).
 -export([get_nodes/0]).
 
--import(dict,[fetch/2,store/3]).
--import(lists,[foreach/2,reverse/1]).
-
 -include("log.hrl").
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -36,15 +33,15 @@ loop(LD) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 start(LD) ->
   unset_tps(),
-  set_tps(fetch(rtps,LD)),
+  set_tps(dict:fetch(rtps,LD)),
   start_trace(LD).
 
 start_trace(LD) ->
-  Cons = consumer(fetch(dest,LD)),
+  Cons = consumer(dict:fetch(dest,LD)),
   send2port(Cons,{trace_info,dict:to_list(LD)}),
-  Flags = [{tracer,Cons}|fetch(flags,LD)],
-  foreach(fun(P) -> erlang:trace(P,true,Flags) end, fetch(procs,LD)),
-  store(consumer,Cons,LD).
+  Flags = [{tracer,Cons}|dict:fetch(flags,LD)],
+  lists:foreach(fun(P) -> erlang:trace(P,true,Flags)end, dict:fetch(procs,LD)),
+  dict:store(consumer,Cons,LD).
 
 consumer(Dest) ->
   Port = mk_port(Dest),
@@ -59,15 +56,15 @@ mk_port({file,{Size,File}}) ->
 mk_port({ip,Port,QueSize}) ->
   (dbg:trace_port(ip,{Port, QueSize}))().
 
-set_tps(TPs) -> foreach(fun set_tps_f/1,TPs).
+set_tps(TPs) -> lists:foreach(fun set_tps_f/1,TPs).
 
 set_tps_f({MFA,MS,Fs}) -> erlang:trace_pattern(MFA,MS,Fs).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 stop_trace(LD) ->
-  erlang:trace(all,false,fetch(flags,LD)),
+  erlang:trace(all,false,dict:fetch(flags,LD)),
   unset_tps(),
-  consumer_stop(fetch(consumer,LD)).
+  consumer_stop(dict:fetch(consumer,LD)).
 
 consumer_stop(Port) -> erlang:port_close(Port).%%dbg:flush_trace_port().
 
@@ -77,7 +74,7 @@ unset_tps() ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 check_dest(LD) ->
-  store(dest,mk_dest(fetch(dest,LD)),LD).
+  dict:store(dest,mk_dest(dict:fetch(dest,LD)),LD).
 
 mk_dest({ip,IP}) -> {ip,IP};
 mk_dest({file,{_,0,Tmp}}) -> {file,{0,mk_file(Tmp)}};
@@ -90,7 +87,7 @@ mk_file(Dir) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 check_procs(LD) ->
-  store(procs,[check_proc(P) || P <- fetch(procs,LD)],LD).
+  dict:store(procs,[check_proc(P) || P <- dict:fetch(procs,LD)],LD).
 
 check_proc(X) ->
   case mk_prc(X) of
@@ -120,9 +117,9 @@ mk_prc(Reg) when is_atom(Reg) ->
 -define(CHUNKSIZE,8192).
 
 send_files(LD) ->
-  case fetch(dest,LD) of
+  case dict:fetch(dest,LD) of
     {ip,_} -> ok;
-    {file,{0,Tmp}} -> send_chunks(Tmp,fetch(daddy,LD)), rm(Tmp);
+    {file,{0,Tmp}} -> send_chunks(Tmp,dict:fetch(daddy,LD)), rm(Tmp);
     {file,{_,_}} -> exit({many_files,not_yet_implemented})
   end.
 
@@ -161,7 +158,7 @@ pi(P) when is_port(P) ->
   case erlang:port_info(P,name) of
     {name,N} ->
       [Hd|_] = string:tokens(N," "),
-      reverse(hd(string:tokens(reverse(Hd),"/")));
+      lists:reverse(hd(string:tokens(lists:reverse(Hd),"/")));
     undefined ->
       "dead"
   end.

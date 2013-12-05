@@ -7,10 +7,7 @@
 -export([config/1,subscribe/3,unsubscribe/2]).
 -export([init/0,loop/1]).                %internal; otp r5 compatible!
 
--import(net_kernel,[get_net_ticktime/0]).
--import(orddict,[new/0,store/3,fold/3,map/2,find/2,is_key/2,append/3]).
-
--record(st, {collectors=new()}).
+-record(st, {collectors=orddict:new()}).
 -record(collector, {subscribers=[],state=init}).
 
 -include("log.hrl").
@@ -94,14 +91,14 @@ init() ->
     undefined ->
       case catch register(?MODULE, self()) of
         {'EXIT', {badarg, _}} ->       %somebody beat us to it
-          exit({use_me, whereis(?MODULE),get_net_ticktime()});
+          exit({use_me, whereis(?MODULE),net_kernel:get_net_ticktime()});
         true ->
-          Pid ! {ack, self(),get_net_ticktime()},
+          Pid ! {ack, self(),net_kernel:get_net_ticktime()},
           prf:ticker_odd(),
           loop(#st{})
       end;
     PID ->
-      exit({use_me, PID,get_net_ticktime()})
+      exit({use_me, PID, net_kernel:get_net_ticktime()})
   end.
 
 loop(St) ->
@@ -120,14 +117,15 @@ loop(St) ->
       ?MODULE:loop(config(St,CollData));
     dbg ->
       F = fun(M,#collector{subscribers=S},A) -> [{mod,M},{subsc,S}|A] end,
-      ?log([{pid,self()} | fold(F,[],St#st.collectors)]),
+      ?log([{pid,self()} | orddict:fold(F,[],St#st.collectors)]),
       ?MODULE:loop(St);
     stop ->
       ok
   end.
 
 config(St,CollData) ->
-  St#st{collectors=map(fun(K,V)->conf(K,V,CollData) end,St#st.collectors)}.
+  St#st{collectors=orddict:map(fun(K,V)->conf(K,V,CollData) end,
+                               St#st.collectors)}.
 
 conf(C,Collector,{C,Data}) ->
   State = C:config(Collector#collector.state,Data),
@@ -141,10 +139,10 @@ subscr(St, Pid, Cs) ->
   St#st{collectors=Collectors}.
 
 subs(C, {Pid, Collectors}) ->
-  {Pid,store(C,collector(Collectors,Pid,C),Collectors)}.
+  {Pid,orddict:store(C,collector(Collectors,Pid,C),Collectors)}.
 
 collector(Colls,Pid,C) ->
-  case find(C, Colls) of
+  case orddict:find(C, Colls) of
     {ok, Coll = #collector{subscribers=Subs}} ->
       Coll#collector{subscribers=lists:umerge(Subs,[Pid])};
     error ->
@@ -152,7 +150,7 @@ collector(Colls,Pid,C) ->
   end.
 
 unsubscr(St = #st{collectors = Colls}, Pid) ->
-  St#st{collectors=map(fun(_K,V)->unsubs(Pid,V) end, Colls)}.
+  St#st{collectors=orddict:map(fun(_K,V)->unsubs(Pid,V) end, Colls)}.
 
 unsubs(Pid,C) ->
   C#collector{subscribers=C#collector.subscribers--[Pid]}.
@@ -162,7 +160,7 @@ collect_and_send(St) ->
   St#st{collectors=cns(St#st.collectors)}.
 
 cns(Colls) ->
-  {NewColls,Datas} = fold(fun cns/3,{Colls,new()},Colls),
+  {NewColls,Datas} = orddict:fold(fun cns/3,{Colls,orddict:new()},Colls),
   send(Datas),
   NewColls.
 
@@ -172,18 +170,19 @@ cns(Module,Coll,{Colls,Datas}) ->
       {Colls,Datas};
     Subs ->
       {NState, Data} = (Module):collect(Coll#collector.state),
-      {store(Module,Coll#collector{state=NState},Colls),stall(Data,Subs,Datas)}
+      {orddict:store(Module,Coll#collector{state=NState},Colls),
+       stall(Data,Subs,Datas)}
   end.
 
 stall(Data,Subs,Datas) ->
   lists:foldl(fun(S,Dict)->stll(S,Dict,Data) end,Datas,Subs).
 
 stll(Sub,Dict,Data) ->
-  case is_key(Sub,Dict) of
-    true -> append(Sub,Data,Dict);
-    false-> store(Sub,[Data],Dict)
+  case orddict:is_key(Sub,Dict) of
+    true -> orddict:append(Sub,Data,Dict);
+    false-> orddict:store(Sub,[Data],Dict)
   end.
 
-send(Dict) -> fold(fun sendf/3, [], Dict).
+send(Dict) -> orddict:fold(fun sendf/3, [], Dict).
 
 sendf(Sub,Data,_) -> Sub ! {{data,node()},Data}.
