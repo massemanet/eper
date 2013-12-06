@@ -691,7 +691,10 @@ validate_recv({Pid,Ref},Match) ->
         {watchdog,_,_,user,Match} -> true;
         Match                     -> true
       end
-  after 1000 -> false
+  after
+    1000 ->
+      [exit(Pid,kill) || is_process_alive(Pid)],
+      false
   end.
 
 mk_tmpfile() ->
