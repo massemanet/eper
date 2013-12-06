@@ -1,9 +1,111 @@
-commit 49cc4a93cf5872c8f10284cd0d8a0b8c445c839c
+commit 322b5925e90c2be84bea2bbca5c0ef0a5fe32cd3
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Dec 6 12:41:04 2013 +0100
+
+    v0.75
+
+src/eper.app.src
+
+commit 3ae6aacc5c63ea80e290c11fa30577eb9a09a895
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Dec 6 12:35:45 2013 +0100
+
+    fix broken watchdog:eunit
+
+src/watchdog.erl
+
+commit 205433666bb7e6015cf9bd993db2fcd73365a31a
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Dec 6 12:35:17 2013 +0100
+
+    remove broken bread:sax function
+
+src/bread.erl
+
+commit 2d13ecb91f43bcffdd8ab2bd48d6da64c012a386
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Dec 6 11:35:16 2013 +0100
+
+    xreffing
+
+Makefile
+rebar
+rebar.config
+
+commit 8b847d33006f4e4daa399cb25d4ac849e8e4a49a
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Dec 6 11:34:40 2013 +0100
+
+    adding getopt.erl to quiet xref
+
+src/getopt.erl
+
+commit 5048c5d57c5f9ed8ccc7a7bf23a8d24c23d28646
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Dec 5 13:11:39 2013 +0100
+
+    remove "-import"
+
+src/gperfGtk.erl
+src/ntopConsumer.erl
+src/prfTarg.erl
+src/prfTrc.erl
+src/sherk.erl
+src/sherk_aquire.erl
+src/sherk_list.erl
+src/sherk_prof.erl
+src/sherk_scan.erl
+src/sherk_target.erl
+src/sherk_tree.erl
+
+commit eee3daa22a11caa2cfc83aa70252909aa160a097
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Dec 5 12:07:48 2013 +0100
+
+    fix race condition in prfPrc state initializer
+
+src/prfPrc.erl
+
+commit 19fda1818f2250e2c5ba4ee13896aae2f51ed40a
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Dec 2 13:21:27 2013 +0100
+
+    drop attempt to handle linux 2.4 or older
+
+src/prfSys.erl
+
+commit 6293d10bc1e64dd6cde4f3e461f91787c9da79ab
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Dec 2 13:20:46 2013 +0100
+
+    prfPrc fails to config unless collect is alled first
+
+src/prfPrc.erl
+
+commit 9c55d1653de26dc7492aeae986fb4a81d6c84fd9
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Nov 20 12:10:46 2013 +0100
+
+    new rebar
+
+rebar
+
+commit 29afc2e61ebc2788e0e0a4cdafd872ca6ded09ca
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Nov 20 11:55:41 2013 +0100
+
+    make docs
+
+.gitignore
+Makefile
+
+commit e98741578fd683f5355b75ad8d4852166fda202f
 Author: mats cronqvist <masse@klarna.com>
 Date:   Tue Nov 19 13:24:22 2013 +0100
 
     v0.74
 
+ChangeLog
 src/eper.app.src
 
 commit e15a5e6c165f8af87727a021b97d6a6594fa881b
