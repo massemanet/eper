@@ -7,8 +7,7 @@
 -module('bread').
 -author('Mats Cronqvist').
 
--export([sax/3
-         , xml/3
+-export([xml/3
          , term/3
          , line/3
          , trc/3
@@ -31,9 +30,6 @@
 line(Filename,Fun,Acc) ->
   fold(Filename,Fun,Acc,[line]).
 
-sax(Filename,Fun,Acc) ->
-  fold(Filename,Fun,Acc,[sax]).
-
 xml(Filename,Fun,Acc) ->
   fold(Filename,Fun,Acc,[xml]).
 
@@ -44,7 +40,7 @@ trc(Filename,Fun,Acc) ->
  fold(Filename,Fun,Acc,[trc]).
 
 fold(Filename,Fun,Acc,Opts) ->
-  Type = take_first(Opts,[line,sax,xml,term,trc]),
+  Type = take_first(Opts,[line,xml,term,trc]),
   case file:open(Filename, [read, raw, binary, compressed]) of
     {ok, FD} ->
       try fold(read(FD),FD,wrap(Fun,Type),chunker(Type),?state(Acc,?tail_0()))
@@ -55,7 +51,6 @@ fold(Filename,Fun,Acc,Opts) ->
   end.
 
 wrap(Fun,line) -> Fun;
-wrap(Fun,sax)  -> sax_f(Fun);
 wrap(Fun,xml)  -> Fun;
 wrap(Fun,term) -> term_f(Fun);
 wrap(Fun,trc)  -> Fun.
@@ -76,38 +71,6 @@ to_term(Bin) ->
     Term
   catch
     _:R -> throw({parsing_failed,R})
-  end.
-
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%% SAX funs
-sax_f(Fun) ->
-  fun(RawXML,O) ->
-      try [erlsom:sax(encoding(RawXML),[],sax_if(Fun))|O]
-      catch error:R -> ?log([{bt,erlang:get_stacktrace()},{doc,RawXML}]),
-                       exit(R)
-      end
-  end.
-
--define(BEG(El,Attrs), {startElement,_,El,_,Attrs}).
--define(END(El),       {endElement,_,El,_}).
--define(CHS(Cs),       {characters,Cs}).
--define(ATT(Id,Val),   {attribute,Id,_,_,Val}).
-sax_if(Fun) ->
-  fun(startDocument,_)   -> Fun(startDoc,[]);
-     (?BEG(El,As),State) -> Fun({startEl,El,[{Id,V}||?ATT(Id,V)<-As]},State);
-     (?END(El),State)    -> Fun({endEl,El},State);
-     (?CHS(Cs),State)    -> Fun({chs,Cs},State);
-     (endDocument,State) -> Fun(endDoc,State);
-     (_,State)           -> State
-  end.
-
-%% here I assume that the input file is encoded in latin-1
-%% If the XML claims to be utf-8, we convert latin-1 -> utf-8
-%% This will fail silently if the input file is utf-8 :<
-encoding(Bin) ->
-  case re:run(Bin,"<\\?xml.*iso-8859-1.*\\?>",[caseless,ungreedy,anchored]) of
-    nomatch  -> unicode:characters_to_binary(Bin,latin1);
-    {match,_}-> binary_to_list(Bin)
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
