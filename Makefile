@@ -1,4 +1,4 @@
-.PHONY : all doc clean eunit release
+.PHONY : all doc clean eunit release xref
 
 all:
 	./rebar compile escriptize
@@ -9,7 +9,10 @@ clean:
 eunit:
 	./rebar eunit
 
-release:
+xref: all
+	./rebar xref
+
+release: xref eunit
 	./release.sh
 
 docs:
