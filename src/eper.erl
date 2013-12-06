@@ -11,11 +11,11 @@ getopt_spec() ->
     ].
 
 usage() ->
-    getopt:usage(getopt_spec(), "eper"),
+    getoptw:usage(getopt_spec(), "eper"),
     halt(1).
 
 parse_args(Args) ->
-    case getopt:parse(getopt_spec(), Args) of
+    case getoptw:parse(getopt_spec(), Args) of
         {ok, {Options, ArgsRest}} ->
             case lists:member(help, Options) of
                 true ->

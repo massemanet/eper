@@ -1,3 +1,6 @@
+%%% this is getopt.erl from https://github.com/jcomellas/getopt
+%%% renamed to solve a module name clash
+%%%
 %%% Copyright (c) 2009 Juan Jose Comellas
 %%% All rights reserved.
 %%%
@@ -41,7 +44,7 @@
 %%% not, it can be retrieved from:
 %%% http://www.opensource.org/licenses/bsd-license.php
 %%% -------------------------------------------------------------------
--module(getopt).
+-module(getoptw).
 -author('juanjo@comellas.org').
 
 -export([parse/2, check/2, parse_and_check/2, format_error/2,
