@@ -3,7 +3,7 @@
 [ -f $PWD/src/*.app.src ] && APPSRC=`echo $PWD/src/*.app.src` || exit
 OVSN=`grep vsn src/eper.app.src | cut -f2 -d"\""`
 NVSN=`echo $OVSN | cut -f1 -d"."`.$((`echo $OVSN | cut -f2 -d"."` + 1))
-echo $APPSRC
+echo $APPSRC $OVSN"->"$NVSN
 sed  s/$OVSN/$NVSN/ < $APPSRC > $$ && mv $$ $APPSRC
 git add $APPSRC
 git commit -m"v$NVSN"
