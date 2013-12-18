@@ -1,9 +1,26 @@
-commit 5d2e977f9dc741af4190b8794c812d2d12198d2d
+commit 6c0706119f0f52f36136ae750f5e5f00d537c456
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Dec 18 22:40:17 2013 +0100
+
+    v0.77
+
+src/eper.app.src
+
+commit 171efd5262f506de46bbe7f59d6c96f2c029053f
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Dec 18 22:39:09 2013 +0100
+
+    .gitignore priv/bin/eper
+
+.gitignore
+
+commit bfd00bd0265fdecda3e829a3dc0a9cbba997aa96
 Author: mats cronqvist <masse@klarna.com>
 Date:   Wed Dec 18 22:22:54 2013 +0100
 
     v0.76
 
+ChangeLog
 src/eper.app.src
 
 commit 9e598ddc67dbb5d09643b2acc30e1bfe219c53a0
