@@ -369,7 +369,7 @@ mk_out(#cnf{print_re=RE,print_file=File}) ->
 
 get_fd("") -> standard_io;
 get_fd(FN) ->
-  case file:open(FN,[write]) of
+  case file:open(FN,[append]) of
     {ok,FD} -> FD;
     _ -> throw({cannot_open,FN})
   end.
