@@ -236,6 +236,33 @@ assert(Fun,Tag) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% eunit tests
 
+t_0_test() ->
+  ?assert(
+     unit(
+       {"f:c(<<>>)",
+        bad_type})).
+t_1_test() ->
+  ?assert(
+     unit(
+       {"f:c(0.1)",
+        bad_type})).
+t_2_test() ->
+  ?assert(
+     unit(
+       {"f:c(<0.0.1>)",
+        syntax_error})).
+t_8_test() ->
+  ?assert(
+     unit(
+       {1,
+        illegal_input})).
+t9_test() ->
+  ?assert(
+     unit(
+       {erlang,
+        {{erlang,'_','_'},
+         [{'_',[],[]}],
+         [local]}})).
 t01_test() ->
   ?assert(
      unit(
@@ -555,12 +582,15 @@ t47_test() ->
         {{lists,'_','_'},
          [{'_',[],[]}],
          [global]}})).
+t48_test() ->
+  ?assert(
+     unit(
+       {"x:c(A)when [A,A] == [A]++[A]",
+        {{x,c,1},
+         [{['$1'],[{'==',['$1','$1'],{'++',['$1'],['$1']}}],[]}],
+         [local]}})).
 
 unit({Str,MS}) ->
   try MS = transform(Str),true
-  catch
-    _:{MS,_}       -> Str,true;
-    _:{{MS,_},_}   -> Str,true;
-    _:{{MS,_},_,_} -> Str,true;
-    _:R            -> exit({Str,R,MS})
+  catch _:{MS,_} -> Str,true
   end.
