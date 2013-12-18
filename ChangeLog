@@ -1,9 +1,52 @@
-commit 322b5925e90c2be84bea2bbca5c0ef0a5fe32cd3
+commit 5d2e977f9dc741af4190b8794c812d2d12198d2d
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Dec 18 22:22:54 2013 +0100
+
+    v0.76
+
+src/eper.app.src
+
+commit 9e598ddc67dbb5d09643b2acc30e1bfe219c53a0
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Dec 18 22:22:32 2013 +0100
+
+    put eper script in priv/bin
+
+rebar.config
+
+commit ebc436bdf3e41d49d886d64ffe993d1439a53754
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Dec 18 22:19:27 2013 +0100
+
+    fix redbug print-to-text-file
+
+src/redbug.erl
+
+commit 7b5739427adca68136b011a3cea76571b9c26812
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Dec 6 17:46:15 2013 +0100
+
+    renamed getopt to solve name clash
+
+src/eper.erl
+src/getopt.erl
+src/getoptw.erl
+
+commit 1bd0d0212a563c1249fb66e9acd5760be30ff438
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Dec 10 10:43:07 2013 +0100
+
+    cosmetic
+
+release.sh
+
+commit 2ad3cdcb41823eea2512e2d2d6fe3392582d3297
 Author: mats cronqvist <masse@klarna.com>
 Date:   Fri Dec 6 12:41:04 2013 +0100
 
     v0.75
 
+ChangeLog
 src/eper.app.src
 
 commit 3ae6aacc5c63ea80e290c11fa30577eb9a09a895
