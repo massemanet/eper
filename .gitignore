@@ -3,7 +3,7 @@
 *~
 /.eunit/
 /ebin/
-/priv/eper
+/priv/bin/eper
 /priv/bin/Makefile
 /src/Makefile
 Makefile.in
