@@ -358,11 +358,12 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
 to_str({Pid,Reg}) -> flat("~w(~p)",[Pid,Reg]).
 
 mk_out(#cnf{print_re=RE,print_file=File}) ->
+  FD = get_fd(File),
   fun(F,A) ->
       Str=flat(F,A),
-      case RE =:= "" andalso re:run(Str,RE) =:= nomatch of
-        true  -> ok;
-        false -> io:fwrite(get_fd(File),"~s~n",[Str])
+      case RE =:= "" orelse re:run(Str,RE) =/= nomatch of
+        true  -> io:fwrite(FD,"~s~n",[Str]);
+        false -> ok
       end
   end.
 
