@@ -436,11 +436,18 @@ mk_send(Where) ->
 mk_send(Proto,Host,Port,Cookie,LD) ->
   mk_send({Proto,LD#ld.cache_connections},Host,Port,Cookie).
 
-mk_send({udp,true},Host,Port,Cookie) ->
+mk_send({UdpPort,Cache},Host,Port,Cookie) when is_integer(UdpPort)->
+  mk_send_udp(Cache,UdpPort,Host,Port,Cookie);
+mk_send({udp,Cache},Host,Port,Cookie) ->
+  mk_send_udp(Cache,0,Host,Port,Cookie);
+mk_send({tcp,Cache},Host,Port,Cookie) ->
+  mk_send_tcp(Cache,Host,Port,Cookie).
+
+mk_send_udp(true,UdpPort,Host,Port,Cookie) ->
   try
     {ok,Hostent} = inet:gethostbyname(Host),
     Addr = hd(Hostent#hostent.h_addr_list),
-    {ok,Sck} = gen_udp:open(0,[binary]),
+    {ok,Sck} = gen_udp:open(UdpPort,[binary]),
     fun(close,_) ->
         gen_udp:close(Sck);
        (reset,NLD) ->
@@ -457,20 +464,21 @@ mk_send({udp,true},Host,Port,Cookie) ->
        (send,_)    -> ok
     end
   end;
-mk_send({udp,false},Host,Port,Cookie) ->
+mk_send_udp(false,UdpPort,Host,Port,Cookie) ->
   fun(close,_) ->
       ok;
      (reset,NLD) ->
       mk_send(udp,Host,Port,Cookie,NLD);
      (send,Chunk) ->
       try
-        {ok,Sck} = gen_udp:open(0,[binary]),
+        {ok,Sck} = gen_udp:open(UdpPort,[binary]),
         gen_udp:send(Sck,Host,Port,mk_payload(Chunk,Cookie)),
         gen_udp:close(Sck)
       catch _:_ -> ok
       end
-  end;
-mk_send({tcp,false},Host,Port,Cookie) ->
+  end.
+
+mk_send_tcp(false,Host,Port,Cookie) ->
   fun(close,_) ->
       ok;
      (reset,NLD) ->
@@ -486,7 +494,7 @@ mk_send({tcp,false},Host,Port,Cookie) ->
       catch _:_ -> ok
       end
   end;
-mk_send({tcp,true},Host,Port,Cookie) ->
+mk_send_tcp(true,Host,Port,Cookie) ->
   try
     ConnOpts = [{send_timeout,100},{active,false},binary],
     ConnTimeout = 100,
@@ -564,6 +572,15 @@ expand_recs(Term) -> Term.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% eunit
 %%lists:member(shell,[element(1,T)||T<-erlang:get_stacktrace()]).
+
+udp_port_test() ->
+  watchdog:start(),
+  watchdog:config(timeout_release,0),
+  PR0 = mk_receiver(udp),
+  watchdog:add_send_subscriber(16#babe,"localhost",16#dada,"PWD"),
+  watchdog:message(troglodyte),
+  ?assert(validate_recv(PR0,troglodyte)),
+  watchdog:stop().
 
 delete_trigger_test() ->
   watchdog:start(),
