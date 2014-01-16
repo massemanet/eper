@@ -1,9 +1,42 @@
-commit 6c0706119f0f52f36136ae750f5e5f00d537c456
+commit c6b6e439ed81fe6b9ce16082c38ea897ee2674eb
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Jan 16 15:02:31 2014 +0100
+
+    v0.78
+
+src/eper.app.src
+
+commit 8477496ad8aa2673eae0eb610b132addc9dd6d09
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Jan 16 14:49:52 2014 +0100
+
+    fix watchdog:add_send_subscriber(integer(),,,)
+
+src/watchdog.erl
+
+commit f12c23120ec17c1abdc75a136aacf91fe0813d13
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Dec 19 00:42:24 2013 +0100
+
+    add redbug_msc unit tests
+
+src/redbug_msc.erl
+
+commit 7fc126fd743f9b14a78ebfb62e84cc26831d7417
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Dec 18 23:23:30 2013 +0100
+
+    eunit-ify redbug_msc unit tests
+
+src/redbug_msc.erl
+
+commit 5cf62f174494ad351c4b08d124803821b26741ac
 Author: mats cronqvist <masse@klarna.com>
 Date:   Wed Dec 18 22:40:17 2013 +0100
 
     v0.77
 
+ChangeLog
 src/eper.app.src
 
 commit 171efd5262f506de46bbe7f59d6c96f2c029053f
