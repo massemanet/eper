@@ -1,9 +1,26 @@
-commit c6b6e439ed81fe6b9ce16082c38ea897ee2674eb
+commit dbcba024c1ceff2c29765565f32a540e7714d810
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Jan 20 15:38:55 2014 +0100
+
+    v0.79
+
+src/eper.app.src
+
+commit fad22c4e670fb9fb2ec3272485e160a29e0def36
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Jan 20 15:38:17 2014 +0100
+
+    work around edoc choking on spec x()->A..B.
+
+src/getoptw.erl
+
+commit 69364c7dc8387c937bf76d260cfa9bd1163c9b6a
 Author: mats cronqvist <masse@klarna.com>
 Date:   Thu Jan 16 15:02:31 2014 +0100
 
     v0.78
 
+ChangeLog
 src/eper.app.src
 
 commit 8477496ad8aa2673eae0eb610b132addc9dd6d09
