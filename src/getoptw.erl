@@ -928,7 +928,7 @@ get_env_var(Prefix, Suffix, []) ->
     Prefix ++ Suffix.
 
 
--spec line_length() -> 0..?LINE_LENGTH.
+-spec line_length() -> non_neg_integer(). % 0..?LINE_LENGTH.
 line_length() ->
     case io:columns() of
         {ok, Columns} when Columns < ?LINE_LENGTH ->
