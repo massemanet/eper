@@ -11,6 +11,15 @@
 
 t_0_test() ->
   Filename = "redbug.txt",
+  {_, _} = redbug:start("lists:sort", [{print_file, Filename}]),
+  [1,2,3] = lists:sort([3,2,1]),
+  timer:sleep(100),
+  redbug:stop(),
+  ?assertEqual(trc_to_lines(Filename),
+               [<<"{lists,sort,[[3,2,1]]}">>]).
+
+t_1_test() ->
+  Filename = "redbug.txt",
   {_, _} = redbug:start("lists:sort->return", [{print_file, Filename}]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
@@ -19,7 +28,7 @@ t_0_test() ->
                [<<"{lists,sort,[[3,2,1]]}">>,
                 <<"lists:sort/1->[1,2,3]">>]).
 
-t_1_test() ->
+t_2_test() ->
   Filename = "redbug.txt",
   {_, _} = redbug:start("lists:sort->stack", [{print_file, Filename}]),
   [1,2,3] = lists:sort([3,2,1]),
