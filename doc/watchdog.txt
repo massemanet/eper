@@ -1,6 +1,17 @@
-M=fun({Proto,_,IP,PortNo,Payload})->{Proto,IP,PortNo,length(Payload)}end.
-F=fun(G)->receive X -> erlang:display(M(X)), G(G) end end.
-L=fun()->{ok,Sck}=gen_udp:open(16#BEBE,[{active,true}]),F(F)end.
-register(udp_echo,spawn(L)).
+local demo of watchdog
 
-watchdog:add_send_subscriber(udp,"localhost",16#bebe,"password").
+target@machine> M=fun({_Proto,_,_IP,_PortNo,Payload})->length(Payload) end.
+target@machine> F=fun(G)->receive X -> erlang:display(M(X)), G(G) end end.
+target@machine> L=fun()->{ok,Sck}=gen_udp:open(16#BEBE,[{active,true}]),F(F)end.
+target@machine> register(udp_echo,spawn(L)).
+
+target@machine> watchdog:add_send_subscriber(udp,"localhost",16#bebe,"pwd").
+
+
+example usage of watchdogConsumer;
+
+target@machine> watchdog:add_send_subscriber(tcp,"127.0.0.1",56669,"password")
+
+host@machine> prf:start (foo, 'target@machine', watchdogConsumer, node())
+host@machine> prf:config(foo, prfDog, {port,56669})
+host@machine> prf:config(foo, prfDog, {secret,"TopSecret"})
