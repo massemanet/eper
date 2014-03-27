@@ -143,7 +143,9 @@ dog_data([{prfDog,DogData}|_],Node) ->
 maybe_conf(CollData, LD) ->
   case LD#ld.proxy == [] of
     true -> do_config(CollData, LD);
-    false-> ?log({no_config,running_with_proxy}),LD
+    false-> ?log([{running_with_proxy,LD#ld.proxy},
+                  {server,process_info(LD#ld.server)}]),
+            do_config(CollData, LD)
   end.
 
 do_config(CollData, LD) ->

@@ -18,60 +18,111 @@
 
 -include("log.hrl").
 
--record(ld,{args,acceptor,socket=[],msg=orddict:new(),cookie="I'm a Cookie"}).
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% prf callbacks, runs in the prfTarg process
 
 collect(init) ->
   gen_serv:start(?MODULE),
-  {gen_serv:get_state(?MODULE),{?MODULE,[]}};
+  {[],{?MODULE,[]}};
 collect(LD) ->
   {LD,{?MODULE,gen_server:call(?MODULE,get_data)}}.
 
-config(LD,Data) ->
-  ?log([unknown,{data,Data}]),
+config(LD,{port,Port}) when is_integer(Port) ->
+  gen_server:call(?MODULE,{config,{port,Port}}),
+  LD;
+config(LD,{secret,Secret}) when is_list(Secret) ->
+  gen_server:call(?MODULE,{config,{secret,Secret}}),
   LD.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% gen_serv callbacks
 
+-record(ld,{port,
+            acceptor,
+            udp_socket,
+            tcp_sockets=[],
+            msg=orddict:new(),
+            secret}).
+
 rec_info(ld) -> record_info(fields,ld);
 rec_info(_)  -> [].
 
-init(Args) ->
-  LD = #ld{args=Args,acceptor=accept(56669)},
-  watchdog:add_send_subscriber(tcp,"localhost",56669,LD#ld.cookie),
-  LD.
+init([]) ->
+  #ld{}.
+
+handle_call({config,{port,Port}},_,LD) ->
+  {[],LD#ld{acceptor=accept(Port),udp_socket=udp_open(Port)}};
+
+handle_call({config,{secret,Secret}},_,LD) ->
+  {[],LD#ld{secret=Secret}};
 
 handle_call(get_data,_,LD) ->
   {LD#ld.msg,LD#ld{msg=orddict:new()}}.
 
 handle_info({new_socket,Sock},LD) ->
   %% we accepted a socket towards a producer.
-  LD#ld{socket=[Sock|LD#ld.socket]};
+  LD#ld{tcp_sockets=[Sock|LD#ld.tcp_sockets]};
 handle_info({tcp,Sock,Bin},LD) ->
-  case lists:member(Sock,LD#ld.socket) of
+  case lists:member(Sock,LD#ld.tcp_sockets) of
     true ->
       %% got data from a known socket. this is good
-      {watchdog,Node,TS,Trig,Msg} = prf_crypto:decrypt(LD#ld.cookie,Bin),
-      LD#ld{socket=LD#ld.socket,
-            msg=orddict:store({Node,TS,Trig},Msg,LD#ld.msg)};
+      decrypt(Bin,LD);
     false->
       %% got data from unknown socket. wtf?
-      ?log([{data_from,Sock},{sockets,LD#ld.socket},{bytes,byte_size(Bin)}]),
+      ?log([{data_from,Sock},{bytes,byte_size(Bin)}]),
       LD
   end;
 handle_info({tcp_closed, Sock},LD) ->
-  LD#ld{socket=LD#ld.socket--[Sock]};
+  case lists:member(Sock,LD#ld.tcp_sockets) of
+    true ->
+      LD#ld{tcp_sockets=LD#ld.tcp_sockets--[Sock]};
+    false ->
+      ?log([{unknown_socket_exited,Sock}]),
+      LD
+  end;
 handle_info({tcp_error, Sock, Reason},LD) ->
   ?log([{tcp_error,Reason},{socket,Sock}]),
   LD;
+handle_info({udp,Socket,_IP,_Port,Bin},LD) ->
+  case Socket == LD#ld.udp_socket of
+    true ->
+      inet:setopts(Socket,[{active,once}]),
+      decrypt(Bin,LD);
+    false ->
+      %% got data from unknown socket. wtf?
+      ?log([{unknown_socket,Socket},{bytes,byte_size(Bin)}]),
+      LD
+  end;
 handle_info(Msg,LD) ->
   ?log([{unrec,Msg}]),
   LD.
 
+decrypt(Bin,LD) ->
+  case LD#ld.secret of
+    undefined ->
+      ?log([{no_secret}]),
+      LD;
+    Secret ->
+      case prf_crypto:decrypt(Secret,Bin) of
+        {watchdog,Node,TS,Trig,Msg} ->
+          LD#ld{msg=orddict:store({Node,TS,Trig},Msg,LD#ld.msg)};
+        _ ->
+          ?log({decrypt_failed}),
+          LD
+      end
+  end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% UPD socket
+udp_open(Port) ->
+  {ok,Socket} = gen_udp:open(Port,
+                             [binary,
+                              {recbuf,1024*1024},
+                              {reuseaddr, true},
+                              {active, once}]),
+  Socket.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% TCP socket
 %% accept is blocking, so it runs in its own process
 accept(Port) ->
   erlang:spawn_link(fun() -> acceptor(Port) end).

@@ -46,8 +46,12 @@ pad(Term) ->
   <<BinSize:32,Bin/binary,0:PadBits>>.
 
 unpad(<<BinSize:32,R/binary>>) ->
-  <<Bin:BinSize/binary,_/binary>> = R,
-  binary_to_term(Bin).
+  try
+    <<Bin:BinSize/binary,_/binary>> = R,
+    binary_to_term(Bin)
+  catch
+    _:_ -> []
+  end.
 
 assert_crypto() ->
   case whereis(crypto) of
