@@ -119,7 +119,7 @@ loop(LD) ->
       Cdata = (LD#ld.consumer):config(LD#ld.consumer_data, Data),
       ?LOOP(LD#ld{consumer_data = Cdata});
     {config,CollData} ->
-      ?LOOP(maybe_conf(CollData, LD))
+      ?LOOP(do_config(CollData, LD))
   end.
 
 de_proxy(_,[]) -> [];
@@ -139,14 +139,6 @@ de_colls(Colls,DogData) ->
 dog_data([{prfDog,DogData}|_],Node) ->
   F = fun({N,_,_},_) -> N=:=Node end,
   orddict:filter(F, DogData).
-
-maybe_conf(CollData, LD) ->
-  case LD#ld.proxy == [] of
-    true -> do_config(CollData, LD);
-    false-> ?log([{running_with_proxy,LD#ld.proxy},
-                  {server,process_info(LD#ld.server)}]),
-            do_config(CollData, LD)
-  end.
 
 do_config(CollData, LD) ->
   case LD#ld.server of
