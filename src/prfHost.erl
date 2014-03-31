@@ -50,7 +50,6 @@ config(Name,Type,Data) ->
 
 assert_proxy(no_proxy) -> ok;
 assert_proxy(Node) ->
-  erlang:set_cookie(Node,watchdog),
   case net_adm:ping(Node) of
     pong -> ok;
     _    -> exit({no_proxy,Node})
@@ -67,10 +66,10 @@ init(Consumer, Node, Proxy) ->
   process_flag(trap_exit,true),
   prf:ticker_even(),
   Collectors = Consumer:collectors(),
-  case Proxy of
-    no_proxy when Collectors=:=watchdog ->
+  case {Proxy,lists:member(prfDog,Collectors)} of
+    {no_proxy,true} ->
       exit(specify_proxy);
-    no_proxy ->
+    {no_proxy,false} ->
       loop(#ld{node = Node,
                proxy = [],
                consumer = Consumer,
@@ -80,7 +79,7 @@ init(Consumer, Node, Proxy) ->
       loop(#ld{node = Proxy,
                proxy = {Node,Collectors},
                consumer = Consumer,
-               collectors = subscribe(Proxy,[prfDog]),
+               collectors = subscribe(Proxy,Collectors),
                consumer_data = Consumer:init(Node)})
   end.
 
@@ -97,7 +96,7 @@ loop(LD) ->
     {timeout, _, {tick}} ->
       prf:ticker_even(),
       {Data,NLD} = get_data(LD),
-      Cdata = (NLD#ld.consumer):tick(NLD#ld.consumer_data, de_proxy(LD,Data)),
+      Cdata = (NLD#ld.consumer):tick(NLD#ld.consumer_data,de_proxy(LD,Data)),
       ?LOOP(NLD#ld{consumer_data = Cdata});
     {'EXIT',Pid,Reason} when Pid == LD#ld.server ->
       ?log({lost_target, Reason}),
@@ -126,7 +125,7 @@ de_proxy(_,[]) -> [];
 de_proxy(LD,Data) ->
   case LD#ld.proxy of
     []              -> Data;
-    {Node,watchdog} -> dog_data(Data,Node);
+    {Node,[prfDog]} -> dog_data(Data,Node);
     {Node,Colls}    -> de_colls(Colls,dog_data(Data,Node))
   end.
 
