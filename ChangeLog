@@ -1,9 +1,94 @@
-commit dbcba024c1ceff2c29765565f32a540e7714d810
+commit 8483779d48f3b5c4e6dac40cac9c927fea384223
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Apr 10 15:27:20 2014 +0200
+
+    v0.80.0
+
+src/eper.app.src
+
+commit 27e5cdebe13adbdf96bdf3c26bdae22a27d0ff48
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Apr 10 15:25:00 2014 +0200
+
+    make make magic
+
+Makefile
+bin/release.sh
+release.sh
+
+commit 8dc9c9e7ba21ce1b59bc370eab46cba64ca3c7cf
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Apr 10 14:55:43 2014 +0200
+
+    cosmetic
+
+Makefile
+
+commit 7c7d0f76900b7aa6b85c3920baf60bb3092b8996
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Mar 31 09:21:00 2014 +0000
+
+    fix some prfDog bugs
+
+src/prfHost.erl
+
+commit 3d8421d2f461ebaff38ac7e0899c61c965770ec4
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Mar 28 08:47:35 2014 +0000
+
+    cosmetic
+
+src/watchdogConsumer.erl
+
+commit 815bdf84e6cab179456e2f37326a56e743799414
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Mar 28 08:47:18 2014 +0000
+
+    remove dead code
+
+src/prfHost.erl
+
+commit 19c2fb43c23f31678c58ba5483216b0dd699e2ff
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Mar 27 17:38:20 2014 +0000
+
+    doc
+
+doc/watchdog.txt
+
+commit 6cef9ce50e084a4c63237f70b80350f7be982fa2
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Mar 27 17:29:12 2014 +0000
+
+    rewrite of prfDog
+
+src/prfDog.erl
+src/prfHost.erl
+src/prf_crypto.erl
+
+commit 8a74f4e2161500eb26bdd490c2d5440e386216ad
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Feb 7 12:09:00 2014 +0100
+
+    add testcase
+
+src/redbug_eunit.erl
+
+commit 9e929e042c25df332cef038c9c24a9ba4258ffd8
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Feb 5 13:35:55 2014 +0100
+
+    add eunit suite for redbug
+
+src/redbug_eunit.erl
+
+commit aa2b872d08ea93e5bfd58c4609081579e40a90b2
 Author: mats cronqvist <masse@klarna.com>
 Date:   Mon Jan 20 15:38:55 2014 +0100
 
     v0.79
 
+ChangeLog
 src/eper.app.src
 
 commit fad22c4e670fb9fb2ec3272485e160a29e0def36
