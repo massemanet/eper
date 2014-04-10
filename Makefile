@@ -1,11 +1,12 @@
 REBAR = ./rebar
 
-.PHONY : all doc clean eunit release xref
+.PHONY: all clean eunit xref release release_minor release_major
 
 all:
 	@$(REBAR) compile escriptize
 
 clean:
+	@find . -name "*~" -exec rm {} \;
 	@$(REBAR) clean
 
 eunit:
@@ -14,8 +15,11 @@ eunit:
 xref: all
 	@$(REBAR) xref
 
-release: xref eunit
-	./release.sh
+release_major: xref eunit
+	./bin/release.sh major
 
-docs:
-	@$(REBAR) doc skip_deps=true
+release_minor: xref eunit
+	./bin/release.sh minor
+
+release: xref eunit
+	./bin/release.sh patch
