@@ -1,19 +1,21 @@
+REBAR = ./rebar
+
 .PHONY : all doc clean eunit release xref
 
 all:
-	./rebar compile escriptize
+	@$(REBAR) compile escriptize
 
 clean:
-	./rebar clean
+	@$(REBAR) clean
 
 eunit:
-	./rebar eunit
+	@$(REBAR) eunit
 
 xref: all
-	./rebar xref
+	@$(REBAR) xref
 
 release: xref eunit
 	./release.sh
 
 docs:
-	./rebar doc skip_deps=true
+	@$(REBAR) doc skip_deps=true
