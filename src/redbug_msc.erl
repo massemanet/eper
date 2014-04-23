@@ -35,7 +35,7 @@ compile({M,OF,As,Gs,Actions}) ->
   {Vars,Args} = compile_args(As),
   {{M,F,A}, [{Args,compile_guards(Gs,Vars),compile_acts(Actions)}], Flags}.
 
-chk_fa('X',_) -> {'_','_',[global]};
+chk_fa(' ',_) -> {'_','_',[global]};
 chk_fa('_',_) -> {'_','_',[local]};
 chk_fa(F,'_') -> {F,'_',[local]};
 chk_fa(F,As)  -> {F,length(As),[local]}.
@@ -160,19 +160,19 @@ body_fun(Str) ->
       {done,{ok,Toks,1},[]} = erl_scan:tokens([],Str++". ",1),
       case erl_parse:parse_exprs(Toks) of
         {ok,[{op,1,'/',{remote,1,{atom,1,M},{atom,1,F}},{integer,1,Ari}}]} ->
-          {M,F,Ari};
+          {M,F,Ari};                   % m:f/2
         {ok,[{call,1,{remote,1,{atom,1,M},{atom,1,F}},Args}]} ->
-          {M,F,[arg(A) || A<-Args]};
+          {M,F,[arg(A) || A<-Args]};   % m:f(...)
         {ok,[{call,1,{remote,1,{atom,1,M},{var,1,'_'}},Args}]} ->
-          {M,'_',[arg(A) || A<-Args]};
+          {M,' ',[arg(A) || A<-Args]}; % m:_(...)
         {ok,[{call,1,{remote,1,{atom,1,M},{var,1,_}},Args}]} ->
-          {M,'X',[arg(A) || A<-Args]};
+          {M,' ',[arg(A) || A<-Args]}; % m:V(...)
         {ok,[{remote,1,{atom,1,M},{atom,1,F}}]} ->
-          {M,F,'_'};
+          {M,F,'_'};                   % m:f
         {ok,[{remote,1,{atom,1,M},{var,1,'_'}}]} ->
-          {M,'_','_'};
+          {M,' ','_'};                 % m:_
         {ok,[{remote,1,{atom,1,M},{var,1,_}}]} ->
-          {M,'X','_'};
+          {M,' ','_'};                 % m:V
         {ok,[{atom,1,M}]} ->
           {M,'_','_'};                 % m
         {ok,C} ->
@@ -529,27 +529,27 @@ t40_test() ->
        {"a:_(a)",
         {{a,'_','_'},
          [{[a],[],[]}],
-         [local]}})).
+         [global]}})).
 t41_test() ->
   ?assert(
      unit(
        {"a:_",
         {{a,'_','_'},[{'_',[],[]}],
-         [local]}})).
+         [global]}})).
 t42_test() ->
   ?assert(
      unit(
        {"a:_->return",
         {{a,'_','_'},
          [{'_',[],[{exception_trace}]}],
-         [local]}})).
+         [global]}})).
 t43_test() ->
   ?assert(
      unit(
        {"erlang:_({A}) when hd(A)=={}",
         {{erlang,'_','_'},
          [{[{'$1'}],[{'==',{hd,'$1'},{{}}}],[]}],
-         [local]}})).
+         [global]}})).
 t44_test() ->
   ?assert(
      unit(
