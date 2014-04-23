@@ -28,22 +28,26 @@ to_string(X)                    -> exit({illegal_input,X}).
 %% returns {{Module,Function,Arity},[{Head,Cond,Body}],[Flag]}
 %% i.e. the args to erlang:trace_pattern/3
 
-compile({M,OF,As,Gs,Actions}) ->
-  {F,A,Flags} = chk_fa(OF,As),
+compile({Mod,F,As,Gs,Acts}) ->
+  {Fun,Arg}   = chk_fa(F,As),
   {Vars,Args} = compile_args(As),
-  {{M,F,A}, [{Args,compile_guards(Gs,Vars),compile_acts(Actions)}], Flags}.
+  Guards      = compile_guards(Gs,Vars),
+  Actions     = compile_acts(Acts),
+  Flags       = compile_flags(F,Acts),
+  {{Mod,Fun,Arg},[{Args,Guards,Actions}],Flags}.
 
-chk_fa(' ',_) -> {'_','_',[global]};
-chk_fa('_',_) -> {'_','_',[local]};
-chk_fa(F,'_') -> {F,'_',[local]};
-chk_fa(F,As)  -> {F,length(As),[local]}.
+chk_fa(' ',_) -> {'_','_'};
+chk_fa(F,'_') -> {F,  '_'};
+chk_fa(F,As)  -> {F,length(As)}.
+
+compile_flags(' ',_) -> [global];
+compile_flags(_,_)   -> [local].
 
 compile_acts(As) ->
-  [ac_fun(A)|| A <- As].
+  lists:foldr(fun(E,A)->try [ac_fun(E)|A] catch _:_ -> A end end,[],As).
 
 ac_fun("stack") -> {message,{process_dump}};
-ac_fun("return")-> {exception_trace};
-ac_fun(X)       -> exit({unknown_action,X}).
+ac_fun("return")-> {exception_trace}.
 
 compile_guards(Gs,Vars) ->
   {Vars,O} = lists:foldr(fun gd_fun/2,{Vars,[]},Gs),
@@ -126,7 +130,7 @@ assert_type(Type,Val) ->
 %%   "a:b(X,Y)when is_record(X,rec) and Y==0, (X==z)"
 %%   "a:b->stack", "a:b(X)whenX==2->return"
 %% returns
-%%   {atom(M),atom(F),list(Arg)|integer(Arity),list(Guard),list(Action)}
+%%   {atom(M),atom(F),list(Arg)|atom('_'),list(Guard),list(Action)}
 parse(Str) ->
   {Body,Guard,Action} = assert(split_fun(Str),{split_string,Str}),
   {M,F,A}             = assert(body_fun(Body),{parse_body,Str}),
@@ -160,19 +164,19 @@ body_fun(Str) ->
         {ok,[{op,1,'/',{remote,1,{atom,1,M},{atom,1,F}},{integer,1,Ari}}]} ->
           {M,F,lists:duplicate(Ari,{var,'_'})}; % m:f/2
         {ok,[{call,1,{remote,1,{atom,1,M},{atom,1,F}},Args}]} ->
-          {M,F,[arg(A) || A<-Args]};   % m:f(...)
+          {M,F,[arg(A) || A<-Args]};            % m:f(...)
         {ok,[{call,1,{remote,1,{atom,1,M},{var,1,'_'}},Args}]} ->
-          {M,' ',[arg(A) || A<-Args]}; % m:_(...)
+          {M,' ',[arg(A) || A<-Args]};          % m:_(...)
         {ok,[{call,1,{remote,1,{atom,1,M},{var,1,_}},Args}]} ->
-          {M,' ',[arg(A) || A<-Args]}; % m:V(...)
+          {M,' ',[arg(A) || A<-Args]};          % m:V(...)
         {ok,[{remote,1,{atom,1,M},{atom,1,F}}]} ->
-          {M,F,'_'};                   % m:f
+          {M,F,'_'};                            % m:f
         {ok,[{remote,1,{atom,1,M},{var,1,'_'}}]} ->
-          {M,' ','_'};                 % m:_
+          {M,' ','_'};                          % m:_
         {ok,[{remote,1,{atom,1,M},{var,1,_}}]} ->
-          {M,' ','_'};                 % m:V
+          {M,' ','_'};                          % m:V
         {ok,[{atom,1,M}]} ->
-          {M,'_','_'};                 % m
+          {M,'_','_'};                          % m
         {ok,C} ->
           exit({this_is_too_confusing,C})
      end
@@ -215,14 +219,20 @@ arg_list(V)            -> arg(V).
 
 actions_fun(Str) ->
   fun() ->
-      string:tokens(Str,";,")
+      Acts = string:tokens(Str,";,"),
+      [exit({unknown_action,A}) || A <- Acts, not lists:member(A,acts())],
+      Acts
   end.
+
+acts() ->
+  ["stack","return","time","calls"].
 
 assert(Fun,Tag) ->
   try Fun()
   catch
     _:{this_is_too_confusing,C}  -> exit({syntax_error,{C,Tag}});
     _:{_,{error,{1,erl_parse,L}}}-> exit({syntax_error,{lists:flatten(L),Tag}});
+    _:{unknown_action,A}         -> exit({syntax_error,{unknown_action,A}});
     _:R                          -> exit({R,Tag,erlang:get_stacktrace()})
   end.
 
@@ -437,7 +447,7 @@ t27_test() ->
   ?assert(
      unit(
        {"x:y(z)->bla",
-        unknown_action})).
+        syntax_error})).
 t28_test() ->
   ?assert(
      unit(
@@ -583,8 +593,15 @@ t48_test() ->
         {{x,c,1},
          [{['$1'],[{'==',['$1','$1'],{'++',['$1'],['$1']}}],[]}],
          [local]}})).
+t49_test() ->
+  ?assert(
+     unit(
+       {"x:c(Aw)hen [A,A] == [A]++[A]",
+        syntax_error})).
 
 unit({Str,MS}) ->
-  try MS = transform(Str),true
-  catch _:{MS,_} -> Str,true
+  try
+    MS = transform(Str),true
+  catch
+    _:{MS,_}     -> Str,true
   end.
