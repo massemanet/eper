@@ -147,16 +147,10 @@ split_fun(Str) ->
           nomatch       -> {Str,""}
         end,
       % strip off the guards, if any
-      {S,Guard} =
+      {Body,Guard} =
         case re:run(St,"^(.+[\\s)])+when\\s(.+)\$",[{capture,[1,2],list}]) of
           {match,[Y,G]} -> {Y,G};
           nomatch       -> {St,""}
-        end,
-      % add a wildcard F, if Body is just an atom (presumably a module)
-      Body =
-        case re:run(S,"^\\s*[a-zA-Z0-9_]+\\s*\$") of
-          nomatch -> S;
-          _       -> S++":'_'"
         end,
       {Body,Guard,Action}
   end.
@@ -179,6 +173,8 @@ body_fun(Str) ->
           {M,'_','_'};
         {ok,[{remote,1,{atom,1,M},{var,1,_}}]} ->
           {M,'X','_'};
+        {ok,[{atom,1,M}]} ->
+          {M,'_','_'};                 % m
         {ok,C} ->
           exit({this_is_too_confusing,C})
      end
