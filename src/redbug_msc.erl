@@ -40,8 +40,16 @@ chk_fa(' ',_) -> {'_','_'};
 chk_fa(F,'_') -> {F,  '_'};
 chk_fa(F,As)  -> {F,length(As)}.
 
-compile_flags(' ',_) -> [global];
-compile_flags(_,_)   -> [local].
+compile_flags(F,Acts) ->
+  LG =
+    case F of
+      ' ' -> global;
+      _   -> local
+    end,
+  lists:foldr(fun(E,A)->try [fl_fun(E)|A] catch _:_ -> A end end,[LG],Acts).
+
+fl_fun("count") -> call_count;
+fl_fun("time")  -> call_time.
 
 compile_acts(As) ->
   lists:foldr(fun(E,A)->try [ac_fun(E)|A] catch _:_ -> A end end,[],As).
@@ -225,7 +233,7 @@ actions_fun(Str) ->
   end.
 
 acts() ->
-  ["stack","return","time","calls"].
+  ["stack","return","time","count"].
 
 assert(Fun,Tag) ->
   try Fun()
