@@ -28,8 +28,6 @@ to_string(X)                    -> exit({illegal_input,X}).
 %% returns {{Module,Function,Arity},[{Head,Cond,Body}],[Flag]}
 %% i.e. the args to erlang:trace_pattern/3
 
-compile({M,F,Ari,[],Actions}) when is_integer(Ari) ->
-  compile({M,F,lists:duplicate(Ari,{var,'_'}),[],Actions});
 compile({M,OF,As,Gs,Actions}) ->
   {F,A,Flags} = chk_fa(OF,As),
   {Vars,Args} = compile_args(As),
@@ -160,7 +158,7 @@ body_fun(Str) ->
       {done,{ok,Toks,1},[]} = erl_scan:tokens([],Str++". ",1),
       case erl_parse:parse_exprs(Toks) of
         {ok,[{op,1,'/',{remote,1,{atom,1,M},{atom,1,F}},{integer,1,Ari}}]} ->
-          {M,F,Ari};                   % m:f/2
+          {M,F,lists:duplicate(Ari,{var,'_'})}; % m:f/2
         {ok,[{call,1,{remote,1,{atom,1,M},{atom,1,F}},Args}]} ->
           {M,F,[arg(A) || A<-Args]};   % m:f(...)
         {ok,[{call,1,{remote,1,{atom,1,M},{var,1,'_'}},Args}]} ->
