@@ -346,10 +346,11 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
           OutFun("~n~w:~w/~w : ~w : ~w",[M,F,A,Count,Time]);
         {'call_count',{{M,F,A},Count}} ->
           OutFun("~n~w:~w/~w : ~w",[M,F,A,Count]);
-        {'call',{MFA,Bin}} ->
+        {'call',{{M,F,A},Bin}} ->
           case Cnf#cnf.print_calls of
             true ->
-              OutFun("~n~s ~s ~P",[MTS,to_str(PI),MFA,Depth]),
+              As = string:join([flat("~P",[E,Depth]) || E <- A],", "),
+              OutFun("~n% ~s ~s~n% ~w:~w(~s)",[MTS,to_str(PI),M,F,As]),
               lists:foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
             false->
               ok
