@@ -161,8 +161,8 @@ is_message_trace(Flags) ->
   (lists:member(send,Flags) orelse lists:member('receive',Flags)).
 
 unset_tps() ->
-  erlang:trace_pattern({'_','_','_'},false,[local]),
-  erlang:trace_pattern({'_','_','_'},false,[global]).
+  erlang:trace_pattern({'_','_','_'},false,[local,call_count,call_time]),
+  erlang:trace_pattern({'_','_','_'},false,[global,call_time]).
 
 set_tps(TPs) ->
   lists:foldl(fun set_tps_f/2,0,TPs).
