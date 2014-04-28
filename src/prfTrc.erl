@@ -99,10 +99,44 @@ stop_trace(LD) ->
   unset_tps().
 
 start_trace(HostPid,Conf) ->
-  Rtps = maybe_load_rtps(dict:fetch(rtps,Conf)),
+  Rtps = expand_underscores(maybe_load_rtps(dict:fetch(rtps,Conf))),
   start_trace(
     dict:from_list([{host_pid,HostPid},
                     {conf,dict:store(rtps,Rtps,Conf)}])).
+
+expand_underscores(Rtps) ->
+  lists:foldl(fun expand_underscore/2,[],Rtps).
+
+expand_underscore({{'_','_','_'},MatchSpec,Flags},O) ->
+  ExpandModule =
+    fun(M,A) -> expand_underscore({{M,'_','_'},MatchSpec,Flags},A) end,
+  lists:foldl(ExpandModule,O,modules());
+expand_underscore({{M,'_','_'},MatchSpec,Flags},O) ->
+  ExpandFunction =
+    fun({F,Ari},A) -> expand_underscore({{M,F,Ari},MatchSpec,Flags},A) end,
+  lists:foldl(ExpandFunction,O,functions(M));
+expand_underscore({{M,F,'_'},MatchSpec,Flags},O) ->
+  ExpandArity =
+    fun(Ari,A) -> expand_underscore({{M,F,Ari},MatchSpec,Flags},A) end,
+  lists:foldl(ExpandArity,O,arities(M,F));
+expand_underscore(ExpandedRtp,O) ->
+  [ExpandedRtp|O].
+
+modules() ->
+  [M || {M,F} <- code:all_loaded(), is_list(F), filelib:is_regular(F)].
+
+functions(M) ->
+  locals(M)++globals(M).
+
+arities(M,F) ->
+  [Ari || {Fun,Ari} <- functions(M), Fun =:= F].
+
+locals(M) ->
+  {ok,{M,[{locals,Locals}]}} = beam_lib:chunks(code:which(M),[locals]),
+  Locals.
+
+globals(M) ->
+  M:module_info(exports).
 
 maybe_load_rtps(Rtps) ->
   lists:foldl(fun maybe_load_rtp/2, [], Rtps).
@@ -121,7 +155,7 @@ maybe_load_rtp({{M,_,_},_MatchSpec,_Flags} = Rtp,O) ->
 
 start_trace(LD) ->
   Conf = dict:fetch(conf,LD),
-  Consumer = consumer(dict:fetch(where,Conf),dict:fetch(time,Conf)),
+  Consumer = consumer(dict:fetch(where,Conf),Conf),
   Ps = lists:foldl(fun mk_prc/2,[],dict:fetch(procs,Conf)),
   Rtps = dict:fetch(rtps,Conf),
   Flags = [{tracer,real_consumer(Consumer)}|dict:fetch(flags,Conf)],
@@ -162,7 +196,7 @@ is_message_trace(Flags) ->
 
 unset_tps() ->
   erlang:trace_pattern({'_','_','_'},false,[local,call_count,call_time]),
-  erlang:trace_pattern({'_','_','_'},false,[global,call_time]).
+  erlang:trace_pattern({'_','_','_'},false,[global]).
 
 set_tps(TPs) ->
   lists:foldl(fun set_tps_f/2,0,TPs).
@@ -195,45 +229,46 @@ real_consumer(C) ->
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-consumer({term_buffer,Term},Time)     -> consumer_pid(Term,yes,Time);
-consumer({term_stream,Term},Time)     -> consumer_pid(Term,no,Time);
-consumer({file,File,Size,Count},Time) -> consumer_file(File,Size,Count,Time);
-consumer({ip,Port,Queue},Time)        -> consumer_ip(Port,Queue,Time).
+consumer({term_buffer,Term},Conf)     -> consumer_pid(Term,yes,Conf);
+consumer({term_stream,Term},Conf)     -> consumer_pid(Term,no,Conf);
+consumer({file,File,Size,Count},Conf) -> consumer_file(File,Size,Count,Conf);
+consumer({ip,Port,Queue},Conf)        -> consumer_ip(Port,Queue,Conf).
 
 consumer_stop(Pid) -> Pid ! stop.
 
-consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Time) ->
-  Conf =
+consumer_pid({Pid,Cnt,MaxQueue,MaxSize},Buf,Conf) ->
+  Cnf =
     dict:from_list(
       [{daddy,self()},
        {count,Cnt},
-       {time,Time},
+       {time,dict:fetch(time,Conf)},
        {maxsize,MaxSize},
        {maxqueue,MaxQueue},
+       {rtps,dict:fetch(rtps,Conf)},
        {where,Pid},
        {buffering,Buf}]),
-  spawn_link(fun() -> init_local_pid(Conf) end).
+  spawn_link(fun() -> init_local_pid(Cnf) end).
 
-consumer_file(File,Size,WrapCount,Time) ->
-  Conf =
+consumer_file(File,Size,WrapCount,Conf) ->
+  Cnf =
     dict:from_list(
       [{style,file}
        , {file,File}
        , {size,Size}
        , {wrap_count,WrapCount}
-       , {time,Time}
+       , {time,dict:fetch(time,Conf)}
        , {daddy, self()}]),
-  spawn_link(fun() -> init_local_port(Conf) end).
+  spawn_link(fun() -> init_local_port(Cnf) end).
 
-consumer_ip(Port,QueueSize,Time) ->
-  Conf =
+consumer_ip(Port,QueueSize,Conf) ->
+  Cnf =
     dict:from_list(
       [{style,ip}
        , {port_no,Port}
        , {queue_size,QueueSize}
-       , {time,Time}
+       , {time,dict:fetch(time,Conf)}
        , {daddy, self()}]),
-  spawn_link(fun() -> init_local_port(Conf) end).
+  spawn_link(fun() -> init_local_port(Cnf) end).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%%  local consumer process for port-style tracing.
@@ -242,16 +277,16 @@ consumer_ip(Port,QueueSize,Time) ->
 %%%    it gets a stop from the controller
 %%%    timeout
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-init_local_port(Conf) ->
-  erlang:start_timer(dict:fetch(time,Conf),self(),dict:fetch(daddy,Conf)),
-  Port = mk_port(Conf),
-  loop_local_port(dict:store(port,Port,Conf)).
+init_local_port(Cnf) ->
+  erlang:start_timer(dict:fetch(time,Cnf),self(),dict:fetch(daddy,Cnf)),
+  Port = mk_port(Cnf),
+  loop_local_port(dict:store(port,Port,Cnf)).
 
-loop_local_port(Conf) ->
-  Daddy = dict:fetch(daddy, Conf),
+loop_local_port(Cnf) ->
+  Daddy = dict:fetch(daddy, Cnf),
   receive
-    {show_port,Pid}   -> Pid ! dict:fetch(port,Conf),
-                         loop_local_port(Conf);
+    {show_port,Pid}   -> Pid ! dict:fetch(port,Cnf),
+                         loop_local_port(Cnf);
     stop              -> dbg:flush_trace_port(),
                          exit(local_done);
     {timeout,_,Daddy} -> Daddy ! {local_stop,timeout},
@@ -259,16 +294,16 @@ loop_local_port(Conf) ->
                          exit(timeout)
   end.
 
-mk_port(Conf) ->
-  case dict:fetch(style,Conf) of
+mk_port(Cnf) ->
+  case dict:fetch(style,Cnf) of
     ip ->
-      Port = dict:fetch(port_no,Conf),
-      QueueSize = dict:fetch(queue_size,Conf),
+      Port = dict:fetch(port_no,Cnf),
+      QueueSize = dict:fetch(queue_size,Cnf),
       (dbg:trace_port(ip,{Port, QueueSize}))();
     file ->
-      File = dict:fetch(file,Conf),
-      WrapCount = dict:fetch(wrap_count,Conf),
-      WrapSize = dict:fetch(size,Conf)*1024*1024,% file size (per file) in MB.
+      File = dict:fetch(file,Cnf),
+      WrapCount = dict:fetch(wrap_count,Cnf),
+      WrapSize = dict:fetch(size,Cnf)*1024*1024,% file size (per file) in MB.
       Suffix = ".trc",
       (dbg:trace_port(file,{File, wrap, Suffix, WrapSize, WrapCount}))()
   end.
@@ -283,16 +318,17 @@ mk_port(Conf) ->
 %%%    a trace message is too big
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
--record(ld,{daddy,where,count,maxqueue,maxsize}).
+-record(ld,{daddy,where,count,rtps,maxqueue,maxsize}).
 
-init_local_pid(Conf) ->
-  erlang:start_timer(dict:fetch(time,Conf),self(),dict:fetch(daddy,Conf)),
-  loop_lp({#ld{daddy=dict:fetch(daddy,Conf),
-               where=dict:fetch(where,Conf),
-               maxsize=dict:fetch(maxsize,Conf),
-               maxqueue=dict:fetch(maxqueue,Conf)},
-           buffering(dict:fetch(buffering,Conf)),
-           dict:fetch(count,Conf)}).
+init_local_pid(Cnf) ->
+  erlang:start_timer(dict:fetch(time,Cnf),self(),dict:fetch(daddy,Cnf)),
+  loop_lp({#ld{daddy    =dict:fetch(daddy,Cnf),
+               where    =dict:fetch(where,Cnf),
+               rtps     =dict:fetch(rtps,Cnf),
+               maxsize  =dict:fetch(maxsize,Cnf),
+               maxqueue =dict:fetch(maxqueue,Cnf)},
+           buffering(dict:fetch(buffering,Cnf)),
+           dict:fetch(count,Cnf)}).
 
 buffering(yes) -> [];
 buffering(no) -> no.
@@ -362,9 +398,20 @@ maybe_exit_args(_,_) ->
 
 send_one(LD,Msg) -> LD#ld.where ! [msg(Msg)].
 
-flush(_,no) -> ok;
 flush(LD,Buffer) ->
-  LD#ld.where ! lists:map(fun msg/1,lists:reverse(Buffer)).
+  case Buffer of
+    no -> ok;
+    _  -> LD#ld.where ! lists:map(fun msg/1,lists:reverse(Buffer))
+  end,
+  lists:foreach(fun(RTP) -> flush_time_count(RTP,LD#ld.where) end,LD#ld.rtps).
+
+flush_time_count({MFA,_MatchSpec,Flags},Where) ->
+  Where ! lists:foldl(fun(Flag,A)-> time_count(MFA,Flag,A) end,[],Flags).
+
+time_count(MFA,Flag,A) when Flag == call_count; Flag == call_time ->
+  [{Flag,{MFA,element(2,erlang:trace_info(MFA,Flag))},[],ts(now())}|A];
+time_count(_,_,A) ->
+  A.
 
 msg({'send',Pid,TS,{Msg,To}})          -> {'send',{Msg,pi(To)},pi(Pid),ts(TS)};
 msg({'receive',Pid,TS,Msg})            -> {'recv',Msg,         pi(Pid),ts(TS)};
