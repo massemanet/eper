@@ -680,6 +680,7 @@ delete_triggers() ->
   [watchdog:delete_trigger(K) || {K,_} <- state(triggers)].
 
 mk_receiver(Prot) ->
+  receive after 500 -> ok end,
   spawn_monitor(mk_receiver(Prot,[binary,{reuseaddr,true},{active,true}])).
 
 mk_receiver(udp,Opts) ->

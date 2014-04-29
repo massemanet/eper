@@ -356,12 +356,14 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
               ok
           end;
         {'retn',{{M,F,A},Val}} ->
-          OutFun("~n~s ~s ~p:~p/~p -> ~P",[MTS,to_str(PI),M,F,A,Val,Depth]);
+          OutFun("~n% ~s ~s~n% ~p:~p/~p->~P",
+                 [MTS,to_str(PI),M,F,A,Val,Depth]);
         {'send',{MSG,ToPI}} ->
-          OutFun("~n~s ~s ~s <<< ~P",
+          OutFun("~n% ~s ~s~n% ~s <<< ~P",
                  [MTS,to_str(PI),to_str(ToPI),MSG,Depth]);
         {'recv',MSG} ->
-          OutFun("~n~s ~s <<< ~P",[MTS,to_str(PI),MSG,Depth])
+          OutFun("~n% ~s ~s~n% <<< ~P",
+                 [MTS,to_str(PI),MSG,Depth])
       end
   end.
 
