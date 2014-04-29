@@ -337,15 +337,19 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
   fun({Tag,Data,PI,TS}) ->
       MTS = fix_ts(MS,TS),
       case {Tag,Data} of
+        {call_time,{_,false}} ->
+          ok;
         {call_time,{{M,F,A},PerProcCT}} ->
           PerProc =
             fun({_,Count,Sec,Usec},{AC,AT}) ->
                 {Count+AC,Sec*1000000+Usec+AT}
             end,
           {Count,Time} = lists:foldl(PerProc,{0,0},PerProcCT),
-          OutFun("~n~w:~w/~w : ~w : ~w",[M,F,A,Count,Time]);
+          [OutFun("% ~w:~w/~w : ~w : ~w",[M,F,A,Count,Time]) || 0 < Count];
+        {'call_count',{_,false}} ->
+          ok;
         {'call_count',{{M,F,A},Count}} ->
-          OutFun("~n~w:~w/~w : ~w",[M,F,A,Count]);
+          [OutFun("% ~w:~w/~w : ~w", [M,F,A,Count]) || 0 < Count];
         {'call',{{M,F,A},Bin}} ->
           case Cnf#cnf.print_calls of
             true ->
