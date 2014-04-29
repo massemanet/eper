@@ -326,8 +326,16 @@ spawn_printer(PrintFun,Cnf) ->
 
 wrap_print_fun(#cnf{print_fun=PF}) ->
   case erlang:fun_info(PF,arity) of
-    {arity,1} -> fun(M,N) -> PF(M),N+1 end;
+    {arity,1} -> fun(M,N) -> PF(M),maybe_update_count(M,N) end;
     {arity,2} -> PF
+  end.
+
+maybe_update_count(M,N) ->
+  case element(1,M) of
+    call -> N+1;
+    send -> N+1;
+    recv -> N+1;
+    _    -> N
   end.
 
 mk_outer(#cnf{file=[_|_]}) ->
