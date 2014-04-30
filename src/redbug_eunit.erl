@@ -11,7 +11,7 @@
 
 t_0_test() ->
   Filename = "redbug.txt",
-  {_, _} = redbug:start("lists:sort", [{print_file,Filename},print_msec]),
+  {_,_} = redbug:start("lists:sort",[{print_file,Filename},print_msec]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
@@ -24,7 +24,7 @@ t_0_test() ->
 
 t_01_test() ->
   Filename = "redbug.txt",
-  {_, _} = redbug:start("lists:sort", [{print_file,Filename},arity]),
+  {_,_} = redbug:start("lists:sort",[{print_file,Filename},arity]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
@@ -37,7 +37,7 @@ t_01_test() ->
 
 t_1_test() ->
   Filename = "redbug.txt",
-  {_, _} = redbug:start("lists:sort->return", [{print_file, Filename}]),
+  {_,_} = redbug:start("lists:sort->return",[{print_file,Filename},buffered]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
@@ -50,7 +50,7 @@ t_1_test() ->
 
 t_2_test() ->
   Filename = "redbug.txt",
-  {_, _} = redbug:start("lists:sort->stack", [{print_file, Filename}]),
+  {_,_} = redbug:start("lists:sort->stack",[{print_file,Filename}]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
@@ -65,7 +65,7 @@ t_2_test() ->
 t_3_test() ->
   Filename = "redbug.txt",
   Pid = spawn(fun()->receive P when is_pid(P)->P!ding;quit->ok end end),
-  {_,_} = redbug:start(send,[{procs,Pid},{print_file, Filename}]),
+  {_,_} = redbug:start(send,[{procs,Pid},{print_file,Filename}]),
   Pid ! self(),
   timer:sleep(100),
   redbug:stop(),
@@ -77,7 +77,7 @@ t_3_test() ->
 t_4_test() ->
   Filename = "redbug.txt",
   Pid = spawn(fun()->receive P when is_pid(P)->P!ding;quit->ok end end),
-  {_,_} = redbug:start('receive',[{procs,Pid},{print_file, Filename}]),
+  {_,_} = redbug:start('receive',[{procs,Pid},{print_file,Filename}]),
   Pid ! pling,
   timer:sleep(100),
   redbug:stop(),
@@ -144,7 +144,7 @@ in_shell() ->
 stack() ->
   stack(self()).
 stack(P) ->
-  [string:strip(e(2,(string:tokens(L,"(+)")))) || L<- bt(P), $0 =:= hd(L)].
+  [string:strip(e(2,(string:tokens(L,"(+)")))) || L<- bt(P),$0 =:= hd(L)].
 bt(P) ->
   string:tokens(binary_to_list(e(2,(process_info(P,backtrace)))),"\n").
 
