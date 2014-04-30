@@ -41,6 +41,7 @@ t_1_test() ->
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
+  timer:sleep(100),
   maybe_show(Filename),
   ?assertEqual(<<"lists:sort([3,2,1])">>,
                get_line_seg(Filename,2,2)),
@@ -115,6 +116,16 @@ t_7_test() ->
   ?assertEqual([{{erlang,monitor,2},<<>>},
                 {{erlang,demonitor,1},<<>>}],
                [MFA || {_,MFA,_,_}<-Msgs]).
+
+t_8_test() ->
+  {_,_} = redbug:start("lists:sort->return",[{file,"foo"},{time,999}]),
+  [1,2,3] = lists:sort([3,2,1]),
+  timer:sleep(1100),
+  {2,Msgs} = replay_trc:go("foo0.trc",fun(E,A)->[E]++A end,[]),
+  ?assertEqual(sort,
+               e(2,e(4,e(1,Msgs)))),
+  ?assertEqual(sort,
+               e(2,e(4,e(2,Msgs)))).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% trace file utilities

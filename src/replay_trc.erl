@@ -37,7 +37,7 @@ maybe_to_file(X,Opts) ->
   end.
 
 do(File,Fun,Acc,Opts) ->
-  try bread:trc(File,mk_fun(Fun,Opts),{1,Acc})
+  try bread:trc(File,mk_fun(Fun,Opts),{0,Acc})
   catch R -> R
   end.
 
