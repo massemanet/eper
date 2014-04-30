@@ -132,8 +132,12 @@ arities(M,F) ->
   [Ari || {Fun,Ari} <- functions(M), Fun =:= F].
 
 locals(M) ->
-  {ok,{M,[{locals,Locals}]}} = beam_lib:chunks(code:which(M),[locals]),
-  Locals.
+  case code:which(M) of
+    preloaded -> [];
+    F ->
+      {ok,{M,[{locals,Locals}]}} = beam_lib:chunks(F,[locals]),
+      Locals
+  end.
 
 globals(M) ->
   M:module_info(exports).

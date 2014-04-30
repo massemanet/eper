@@ -11,13 +11,28 @@
 
 t_0_test() ->
   Filename = "redbug.txt",
-  {_, _} = redbug:start("lists:sort", [{print_file, Filename}]),
+  {_, _} = redbug:start("lists:sort", [{print_file,Filename},print_msec]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
   maybe_show(Filename),
   ?assertEqual(<<"lists:sort([3,2,1])">>,
                get_line_seg(Filename,2,2)),
+  ?assertEqual(4,
+               length(re:split(get_line_seg(Filename,1,2),"[:.]"))),
+  maybe_delete(Filename).
+
+t_01_test() ->
+  Filename = "redbug.txt",
+  {_, _} = redbug:start("lists:sort", [{print_file,Filename},arity]),
+  [1,2,3] = lists:sort([3,2,1]),
+  timer:sleep(100),
+  redbug:stop(),
+  maybe_show(Filename),
+  ?assertEqual(<<"lists:sort/1">>,
+               get_line_seg(Filename,2,2)),
+  ?assertEqual(3,
+               length(re:split(get_line_seg(Filename,1,2),"[:.]"))),
   maybe_delete(Filename).
 
 t_1_test() ->
@@ -70,6 +85,36 @@ t_4_test() ->
   ?assertEqual(<<"pling">>,
               get_line_seg(Filename,2,3)),
   maybe_delete(Filename).
+
+t_5_test() ->
+  Filename = "redbug.txt",
+  {_,_} = redbug:start("lists:sort->time",[{print_file,Filename},{time,999}]),
+  [1,2,3] = lists:sort([3,2,1]),
+  timer:sleep(1100),
+  maybe_show(Filename),
+  ?assertEqual(<<"lists:sort([3,2,1])">>,
+               get_line_seg(Filename,2,2)),
+  ?assertEqual(<<"lists:sort/1">>,
+               get_line_seg(Filename,3,6)),
+  maybe_delete(Filename).
+
+t_6_test() ->
+  Filename = "redbug.txt",
+  {_,_} = redbug:start("lists:sort->count",[{print_file,Filename},{time,999}]),
+  [1,2,3] = lists:sort([3,2,1]),
+  timer:sleep(1100),
+  maybe_show(Filename),
+  ?assertEqual(<<"lists:sort([3,2,1])">>,
+               get_line_seg(Filename,2,2)),
+  ?assertEqual(<<"lists:sort/1">>,
+               get_line_seg(Filename,3,4)),
+  maybe_delete(Filename).
+
+t_7_test() ->
+  {_,Msgs} = redbug:start("erlang",[blocking,{time,999},arity]),
+  ?assertEqual([{{erlang,monitor,2},<<>>},
+                {{erlang,demonitor,1},<<>>}],
+               [MFA || {_,MFA,_,_}<-Msgs]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% trace file utilities

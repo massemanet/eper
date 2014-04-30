@@ -353,16 +353,22 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
                 {Count+AC,Sec*1000000+Usec+AT}
             end,
           {Count,Time} = lists:foldl(PerProc,{0,0},PerProcCT),
-          [OutFun("% ~w:~w/~w : ~w : ~w",[M,F,A,Count,Time]) || 0 < Count];
+          [OutFun("% ~6s : ~6s : ~w:~w/~w",
+                  [prf:human(Count),prf:human(Time),M,F,A]) || 0 < Count];
         {'call_count',{_,false}} ->
           ok;
         {'call_count',{{M,F,A},Count}} ->
-          [OutFun("% ~w:~w/~w : ~w", [M,F,A,Count]) || 0 < Count];
+          [OutFun("% ~6s : ~w:~w/~w", [prf:human(Count),M,F,A]) || 0 < Count];
         {'call',{{M,F,A},Bin}} ->
           case Cnf#cnf.print_calls of
             true ->
-              As = string:join([flat("~P",[E,Depth]) || E <- A],", "),
-              OutFun("~n% ~s ~s~n% ~w:~w(~s)",[MTS,to_str(PI),M,F,As]),
+              case is_integer(A) of
+                true ->
+                  OutFun("~n% ~s ~s~n% ~w:~w/~w",[MTS,to_str(PI),M,F,A]);
+                false->
+                  As = string:join([flat("~P",[E,Depth]) || E <- A],", "),
+                  OutFun("~n% ~s ~s~n% ~w:~w(~s)",[MTS,to_str(PI),M,F,As])
+              end,
               lists:foreach(fun(L)->OutFun("  ~s",[L]) end, stak(Bin));
             false->
               ok
@@ -495,7 +501,6 @@ chk_msgs(X) -> throw({bad_msgs,X}).
 
 chk_trc('send',{Flags,RTPs})                   -> {['send'|Flags],RTPs};
 chk_trc('receive',{Flags,RTPs})                -> {['receive'|Flags],RTPs};
-chk_trc('arity',{Flags,RTPs})                  -> {['arity'|Flags],RTPs};
 chk_trc(RTP,{Flags,RTPs}) when ?is_string(RTP) -> {Flags,[chk_rtp(RTP)|RTPs]};
 chk_trc(X,_)                                   -> throw({bad_trc,X}).
 
