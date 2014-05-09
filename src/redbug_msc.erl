@@ -11,8 +11,6 @@
 
 -export([transform/1]).
 
--include_lib("eunit/include/eunit.hrl").
-
 -define(is_string(Str),
         (Str=="" orelse (9=<hd(Str) andalso hd(Str)=<255))).
 
@@ -247,6 +245,8 @@ assert(Fun,Tag) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% eunit tests
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 t_0_test() ->
   ?assert(
@@ -611,5 +611,7 @@ unit({Str,MS}) ->
   try
     MS = transform(Str),true
   catch
-    _:{MS,_}     -> Str,true
+    _:{MS,_} -> true
   end.
+
+-endif. % TEST

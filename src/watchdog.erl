@@ -24,7 +24,6 @@
     ,init/1
     ,rec_info/1]).
 
--include_lib("eunit/include/eunit.hrl").
 -include_lib("kernel/include/inet.hrl").
 -include_lib("kernel/include/file.hrl").
 -include("log.hrl").
@@ -572,6 +571,8 @@ expand_recs(Term) -> Term.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% eunit
 %%lists:member(shell,[element(1,T)||T<-erlang:get_stacktrace()]).
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
 
 udp_port_test() ->
   watchdog:start(),
@@ -730,3 +731,5 @@ validate_file(FN,Match) ->
 
 to_list(L) when is_list(L) -> L;
 to_list(A) when is_atom(A) -> atom_to_list(A).
+
+-endif.
