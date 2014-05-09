@@ -24,10 +24,12 @@ start(Name,Node,Consumer) -> start(Name,Node,Consumer,no_proxy).
 start(Name,Node,Consumer,Proxy)
   when is_atom(Name),is_atom(Node), is_atom(Proxy) ->
   assert_proxy(Proxy),
-  SpawnFun = fun()->init(Consumer,Node,Proxy) end,
-  case whereis(Name) of
-    undefined -> register(Name,Pid = spawner(SpawnFun)),Pid;
-    Pid       -> Pid
+  Self = self(),
+  Pid = spawner(fun()->init(Name,Node,Consumer,Proxy,Self) end),
+  Ref = erlang:monitor(process,Pid),
+  receive
+    {ack,Pid} -> erlang:demonitor(Ref,[flush]);
+    {'DOWN',Ref,process,Pid,_} -> exit({already_started,Name})
   end.
 
 spawner(F) ->
@@ -62,7 +64,9 @@ is_in_shell() ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% runs in the consumer process
 
-init(Consumer, Node, Proxy) ->
+init(Name,Node,Consumer,Proxy,Daddy) ->
+  true = register(Name, self()),
+  Daddy ! {ack, self()},
   process_flag(trap_exit,true),
   prf:ticker_even(),
   Collectors = Consumer:collectors(),
