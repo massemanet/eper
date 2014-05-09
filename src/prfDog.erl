@@ -9,12 +9,13 @@
 %% prf callbacks
 -export([collect/1,config/2]).
 
-% gen_serv callbacks
--export(
-   [handle_info/2
-    ,handle_call/3
-    ,init/1
-    ,rec_info/1]).
+-behaviour(gen_server).
+-export([init/1,terminate/2,code_change/3,
+         handle_call/3,handle_cast/2,handle_info/2]).
+
+-export([state/0]).
+state() ->
+  gen_server:call(?MODULE,state).
 
 -include("log.hrl").
 
@@ -22,7 +23,7 @@
 %% prf callbacks, runs in the prfTarg process
 
 collect(init) ->
-  gen_serv:start(?MODULE),
+  gen_server:start_link({local,?MODULE},?MODULE,[],[]),
   {[],{?MODULE,[]}};
 collect(LD) ->
   {LD,{?MODULE,gen_server:call(?MODULE,get_data)}}.
@@ -35,8 +36,19 @@ config(LD,{secret,Secret}) when is_list(Secret) ->
   LD.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%% gen_serv callbacks
+%% gen_server callbacks
 
+%% boilerplate
+terminate(_Reason,_State) ->
+  ok.
+
+code_change(_OldVsn,State,_Extra) ->
+  {ok,State}.
+
+handle_cast(_What,State) ->
+  {noreply,State}.
+
+%% not boilerplate
 -record(ld,{port,
             acceptor,
             udp_socket,
@@ -44,58 +56,56 @@ config(LD,{secret,Secret}) when is_list(Secret) ->
             msg=orddict:new(),
             secret}).
 
-rec_info(ld) -> record_info(fields,ld);
-rec_info(_)  -> [].
-
 init([]) ->
-  #ld{}.
+  {ok,#ld{}}.
 
+handle_call(state,_,LD) ->
+  Fields = record_info(fields,ld),
+  {reply,lists:zip(Fields,tl(tuple_to_list(LD))),LD};
 handle_call({config,{port,Port}},_,LD) ->
-  {[],LD#ld{acceptor=accept(Port),udp_socket=udp_open(Port)}};
-
+  {reply,[],LD#ld{acceptor=accept(Port),udp_socket=udp_open(Port)}};
 handle_call({config,{secret,Secret}},_,LD) ->
-  {[],LD#ld{secret=Secret}};
-
+  {reply,[],LD#ld{secret=Secret}};
 handle_call(get_data,_,LD) ->
-  {LD#ld.msg,LD#ld{msg=orddict:new()}}.
+  {reply,LD#ld.msg,LD#ld{msg=orddict:new()}}.
 
 handle_info({new_socket,Sock},LD) ->
   %% we accepted a socket towards a producer.
-  LD#ld{tcp_sockets=[Sock|LD#ld.tcp_sockets]};
+  {noreply,LD#ld{tcp_sockets=[Sock|LD#ld.tcp_sockets]}};
 handle_info({tcp,Sock,Bin},LD) ->
   case lists:member(Sock,LD#ld.tcp_sockets) of
     true ->
       %% got data from a known socket. this is good
-      decrypt(Bin,LD);
+      {noreply,decrypt(Bin,LD)};
     false->
       %% got data from unknown socket. wtf?
       ?log([{data_from,Sock},{bytes,byte_size(Bin)}]),
-      LD
+      {noreply,LD}
   end;
 handle_info({tcp_closed, Sock},LD) ->
   case lists:member(Sock,LD#ld.tcp_sockets) of
     true ->
-      LD#ld{tcp_sockets=LD#ld.tcp_sockets--[Sock]};
+      {noreply,LD#ld{tcp_sockets=LD#ld.tcp_sockets--[Sock]}};
     false ->
       ?log([{unknown_socket_exited,Sock}]),
-      LD
+      {noreply,LD}
   end;
 handle_info({tcp_error, Sock, Reason},LD) ->
   ?log([{tcp_error,Reason},{socket,Sock}]),
-  LD;
+  {noreply,LD};
 handle_info({udp,Socket,_IP,_Port,Bin},LD) ->
   case Socket == LD#ld.udp_socket of
     true ->
       inet:setopts(Socket,[{active,once}]),
-      decrypt(Bin,LD);
+      {noreply,decrypt(Bin,LD)};
     false ->
       %% got data from unknown socket. wtf?
       ?log([{unknown_socket,Socket},{bytes,byte_size(Bin)}]),
-      LD
+      {noreply,LD}
   end;
 handle_info(Msg,LD) ->
   ?log([{unrec,Msg}]),
-  LD.
+  {noreply,LD}.
 
 decrypt(Bin,LD) ->
   case LD#ld.secret of
