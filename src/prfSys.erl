@@ -134,7 +134,7 @@ strategy() ->
   case os:type() of
     {unix,linux}            -> {linux,init_linux()};
     _ when Os_mon_p == [ok] -> {os_mon,[]};
-    {{unix,_},_}            -> {ps,init_ps()};
+    {unix,_}                -> {ps,init_ps()};
     _                       -> {none,[]}
   end.
 
