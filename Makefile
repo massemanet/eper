@@ -15,6 +15,13 @@ eunit:
 xref: all
 	@$(REBAR) xref
 
+~/.dialyzer_plt:
+	- dialyzer --output_plt ~/.dialyzer_plt --build_plt \
+           --apps erts kernel stdlib crypto public_key inets eunit xmerl
+
+dialyzer: ~/.dialyzer_plt
+	dialyzer --plt ~/.dialyzer_plt -Wrace_conditions --src src
+
 release_major: xref eunit
 	./bin/release.sh major
 
