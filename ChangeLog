@@ -1,9 +1,185 @@
-commit 8483779d48f3b5c4e6dac40cac9c927fea384223
+commit af617d3b03931c32238afc0494f8d264bf27b2d0
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri May 16 13:21:23 2014 +0200
+
+    v0.81.0
+
+src/eper.app.src
+
+commit 07b2e1170a1109fd3d0dca6c885c4dc49336ea14
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri May 9 14:05:00 2014 +0200
+
+    hide eunit tests from dialyzer
+
+src/redbug_msc.erl
+src/watchdog.erl
+
+commit d1a1deaeb5b3580fd1fbd9d60daf6e076917973a
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri May 9 14:03:23 2014 +0200
+
+    fix dead code
+
+src/prfSys.erl
+
+commit 3ee4d232d8e1d0a1116daace315db3f1909bbb6d
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri May 9 14:03:02 2014 +0200
+
+    fix register race condition in prfHost
+
+src/prfHost.erl
+
+commit 40bcc9aa163c88ded24b7d22694c13e3639d3258
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri May 9 14:02:20 2014 +0200
+
+    remove gen_serv from prfDog
+
+src/prfDog.erl
+
+commit 77072f63c6c1270a8cb7cf8e4017bfd3326b657c
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri May 9 14:01:48 2014 +0200
+
+    add make dialyzer
+
+Makefile
+
+commit 519286a93829d6e5600751f1ddbd1691cc2c9e0a
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 30 15:12:56 2014 +0200
+
+    add trc file tests
+
+src/redbug_eunit.erl
+src/replay_trc.erl
+
+commit c4683659c5caf9f3bd5546eccf4b13b030ba3a28
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 30 13:28:13 2014 +0200
+
+    cosmetic
+
+src/redbug_eunit.erl
+
+commit 0f4553482db0073ecc3e5e961475a5b00eb2b3e6
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 30 13:25:54 2014 +0200
+
+    fix call trace printing
+
+src/prfTrc.erl
+src/redbug.erl
+src/redbug_eunit.erl
+
+commit a5629fe60b2cdae1573b399aaae3cfef1e1b65a6
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Apr 29 16:44:31 2014 +0200
+
+    fix counting of messages
+
+src/redbug.erl
+
+commit 38c1f00143aaedac5db0d234452640d432754a33
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Apr 29 14:54:42 2014 +0200
+
+    fix call_time printing
+
+src/redbug.erl
+
+commit b0d31b80103b66a604c0fddda59cc094883e4f0e
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Apr 29 14:14:28 2014 +0200
+
+    more and better eunit tests
+
+src/redbug.erl
+src/redbug_eunit.erl
+src/watchdog.erl
+
+commit c58f9bd920b5d9aa4f2554a69e2ae244dfc96376
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Apr 28 15:47:31 2014 +0200
+
+    nicer call tracing printouts
+
+src/redbug.erl
+
+commit 6c833ae51bd16efb0cad35442e0102872447b914
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Apr 28 12:56:08 2014 +0200
+
+    implement call_count and call_time support
+
+src/prfTrc.erl
+src/redbug.erl
+
+commit fd59ec87ae2b6198297bf88833752811a8bef80f
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Apr 28 12:54:31 2014 +0200
+
+    fix trace stopping with call_count
+
+src/prfTrc.erl
+
+commit ebebdf5b4879bfe1b28bc570f0c3606183c5641c
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 23 13:57:49 2014 +0200
+
+    allow starting of tracing with call_count etc.
+
+src/redbug_msc.erl
+
+commit 7317417b05d70780b494725ed19c9d68c01c0800
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 23 11:56:25 2014 +0200
+
+    refactor to support call_count
+
+src/redbug_msc.erl
+
+commit 541d97764c79321f4ec24ac481379c70ccfa8ef3
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 23 11:53:42 2014 +0200
+
+    move some parsing to parsing section
+
+src/redbug_msc.erl
+
+commit 77f6bfff90c039f68e5eed320d27263b9633d91b
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 23 10:23:57 2014 +0200
+
+    make both "m:_" and "m:V" do global tracing
+
+src/redbug_msc.erl
+
+commit 803d245ae01dd06221ae79aa62a136b7197d6413
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 23 10:23:06 2014 +0200
+
+    fix hacky parsing of "m" in redbug
+
+src/redbug_msc.erl
+
+commit fa935b2c6c289e7ac0c9728c090b66ef506724f6
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Apr 23 10:19:46 2014 +0200
+
+    remove old tuple-API from redbug
+
+src/redbug.erl
+
+commit eb481b385833f3cc45358957890b2cfe65ac4241
 Author: mats cronqvist <masse@klarna.com>
 Date:   Thu Apr 10 15:27:20 2014 +0200
 
     v0.80.0
 
+ChangeLog
 src/eper.app.src
 
 commit 27e5cdebe13adbdf96bdf3c26bdae22a27d0ff48
