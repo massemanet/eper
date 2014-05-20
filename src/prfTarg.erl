@@ -148,7 +148,9 @@ collector(Colls,Pid,C) ->
     {ok,Coll = #collector{subscribers=Subs}} ->
       Coll#collector{subscribers=lists:umerge(Subs,[Pid])};
     error ->
-      #collector{subscribers=[Pid]}
+      {State,_Data} = C:collect(init),
+      #collector{subscribers=[Pid],
+                 state=State}
   end.
 
 unsubscr(St = #st{collectors = Colls},Pid) ->
