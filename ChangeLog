@@ -1,9 +1,43 @@
-commit af617d3b03931c32238afc0494f8d264bf27b2d0
+commit d8533f0dc5a90a8b28df25a119eb759e5d9de540
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue May 20 11:00:53 2014 +0200
+
+    v0.82.0
+
+src/eper.app.src
+
+commit a11f8e0690952cb5be505ae7537c62b72dd76d87
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue May 20 10:53:37 2014 +0200
+
+    init collector state at startup
+
+src/prfTarg.erl
+
+commit 0a864efa07e3f8209ea5dd7a54aff9d65ba1d9c4
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue May 20 10:53:02 2014 +0200
+
+    handle double term_to_binary
+
+src/prf_crypto.erl
+
+commit e6b9ec549c119704cd7baf7a509c6aa68de23eda
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue May 20 10:52:27 2014 +0200
+
+    cosmetic
+
+.gitignore
+src/prfTarg.erl
+
+commit 21055c70fbfd520a7844c6d20e8cc43cee7ed90b
 Author: mats cronqvist <masse@klarna.com>
 Date:   Fri May 16 13:21:23 2014 +0200
 
     v0.81.0
 
+ChangeLog
 src/eper.app.src
 
 commit 07b2e1170a1109fd3d0dca6c885c4dc49336ea14
