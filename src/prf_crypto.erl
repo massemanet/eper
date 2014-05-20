@@ -48,7 +48,10 @@ pad(Term) ->
 unpad(<<BinSize:32,R/binary>>) ->
   try
     <<Bin:BinSize/binary,_/binary>> = R,
-    binary_to_term(Bin)
+    case binary_to_term(Bin) of
+      Bn when is_binary(Bn) -> binary_to_term(Bn);
+      Term -> Term
+    end
   catch
     _:_ -> []
   end.
