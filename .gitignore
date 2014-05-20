@@ -1,6 +1,7 @@
 .#*
 #*
 *~
+/.rebar/
 /.eunit/
 /ebin/
 /priv/bin/eper
