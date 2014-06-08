@@ -1,9 +1,35 @@
-commit d8533f0dc5a90a8b28df25a119eb759e5d9de540
+commit 8dc9a3c5233f63168ddeefedaab6c21fcb9b3447
+Author: mats cronqvist <masse@klarna.com>
+Date:   Sun Jun 8 21:42:13 2014 +0200
+
+    v0.83.0
+
+src/eper.app.src
+
+commit 1915fd0b841691a4d823d7c05aaa655287cf983a
+Author: mats cronqvist <masse@klarna.com>
+Date:   Sun Jun 8 21:40:49 2014 +0200
+
+    fix double binary_to_term test case
+
+src/watchdog.erl
+
+commit 4290fbe01f690bcbea1e5117b67d9e522c264228
+Author: mats cronqvist <masse@klarna.com>
+Date:   Sun Jun 8 21:30:45 2014 +0200
+
+    fix block-discard interworking
+
+src/prfTrc.erl
+src/redbug.erl
+
+commit fad438c8fe20e0b3728ce2f2b6a886c2f15a3c30
 Author: mats cronqvist <masse@klarna.com>
 Date:   Tue May 20 11:00:53 2014 +0200
 
     v0.82.0
 
+ChangeLog
 src/eper.app.src
 
 commit a11f8e0690952cb5be505ae7537c62b72dd76d87
