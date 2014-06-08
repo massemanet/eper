@@ -33,6 +33,7 @@
           %% print-related
           arity        = false,        % arity instead of args
           buffered     = false,        % output buffering
+          discard      = false,        % discard messages (when counting)
           print_calls  = true,         % print calls
           print_file   = "",           % file to print to (standard_io)
           print_msec   = false,        % print milliseconds in timestamps?
@@ -99,6 +100,7 @@ help() ->
      , "  print-related opts"
      , "arity        (false)       print arity instead of arg list"
      , "buffered     (false)       buffer messages till end of trace"
+     , "discard      (false)       discard messages (when counting)"
      , "print_calls  (true)        print calls"
      , "print_file   (standard_io) print to this file"
      , "print_msec   (false)       print milliseconds on timestamps"
@@ -211,7 +213,7 @@ assert_print_fun(Cnf) ->
 make_print_fun(Cnf) ->
   case Cnf#cnf.blocking of
     false-> mk_outer(Cnf);
-    true -> fun(X,0) -> [X]; (X,A) -> [X|A] end
+    true -> mk_blocker()
   end.
 
 assert_cookie(#cnf{cookie=''}) -> ok;
@@ -338,6 +340,14 @@ maybe_update_count(M,N) ->
     _    -> N
   end.
 
+mk_blocker() ->
+  fun({_,{_,false},_,_},A)      -> A;
+     ({call_time,{_,[]},_,_},A) -> A;
+     ({call_count,{_,0},_,_},A) -> A;
+     (X,0)                      -> [X];
+     (X,A)                      -> [X|A]
+  end.
+
 mk_outer(#cnf{file=[_|_]}) ->
   fun(_) -> ok end;
 mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
@@ -410,8 +420,10 @@ fix_ts(MS,TS) ->
     false-> ts(TS)
   end.
 
-ts({H,M,S,_Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
-ts_ms({H,M,S,Us}) -> flat("~2.2.0w:~2.2.0w:~2.2.0w.~3.3.0w",[H,M,S,Us div 1000]).
+ts({H,M,S,_Us}) ->
+  flat("~2.2.0w:~2.2.0w:~2.2.0w",[H,M,S]).
+ts_ms({H,M,S,Us}) ->
+  flat("~2.2.0w:~2.2.0w:~2.2.0w.~3.3.0w",[H,M,S,Us div 1000]).
 
 flat(Form,List) ->
   lists:flatten(io_lib:fwrite(Form,List)).
@@ -449,6 +461,7 @@ mfaf(I) ->
 %%% Tag = time | flags | rtps | procs | where
 %%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} |
 %%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
+%%%         {term_discard,{Pid,Count,MaxQueue,MaxSize}} |
 %%%         {file,File,Size,Count} |
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -474,7 +487,7 @@ conf_file(Cnf) ->
   {file,Cnf#cnf.file,Cnf#cnf.file_size,Cnf#cnf.file_count}.
 
 conf_term(Cnf) ->
-  {chk_buffered(Cnf#cnf.buffered),
+  {chk_buffered(Cnf#cnf.buffered,Cnf#cnf.discard),
    {Cnf#cnf.print_pid,
     chk_msgs(Cnf#cnf.msgs),
     Cnf#cnf.max_queue,
@@ -486,8 +499,9 @@ maybe_arity(_,Flags)                -> Flags.
 chk_time(Time) when is_integer(Time) -> Time;
 chk_time(X) -> throw({bad_time,X}).
 
-chk_buffered(true)  -> term_buffer;
-chk_buffered(false) -> term_stream.
+chk_buffered(_,true)  -> term_discard;
+chk_buffered(true,_)  -> term_buffer;
+chk_buffered(false,_) -> term_stream.
 
 chk_proc(Pid) when is_pid(Pid) -> Pid;
 chk_proc(Atom) when is_atom(Atom)-> Atom;

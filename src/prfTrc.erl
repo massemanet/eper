@@ -47,6 +47,7 @@ assert(Reg) ->
 %%% Conf = {time,flags,rtps,procs,where}
 %%% Where = {term_buffer,{Pid,Count,MaxQueue,MaxSize}} |
 %%%         {term_stream,{Pid,Count,MaxQueue,MaxSize}} |
+%%%         {term_discard,{Pid,Count,MaxQueue,MaxSize}} |
 %%%         {file,File,Size,Count} |
 %%%         {ip,Port,Queue}
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -233,6 +234,7 @@ real_consumer(C) ->
   end.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+consumer({term_discard,Term},Conf)    -> consumer_pid(Term,discard,Conf);
 consumer({term_buffer,Term},Conf)     -> consumer_pid(Term,yes,Conf);
 consumer({term_stream,Term},Conf)     -> consumer_pid(Term,no,Conf);
 consumer({file,File,Size,Count},Conf) -> consumer_file(File,Size,Count,Conf);
@@ -335,7 +337,7 @@ init_local_pid(Cnf) ->
            dict:fetch(count,Cnf)}).
 
 buffering(yes) -> [];
-buffering(no) -> no.
+buffering(Buf) -> Buf.
 
 loop_lp({LD,Buff,Count}=State) ->
   maybe_exit(msg_queue,LD),
@@ -354,7 +356,8 @@ msg(LD,Buff,Count,Item) ->
   maybe_exit(msg_size,{LD,Item}),
   {LD,buff(Buff,LD,Item),Count-1}.
 
-buff(no,LD,Item) -> send_one(LD,Item),no;
+buff(discard,_,_)   -> discard;
+buff(no,LD,Item)    -> send_one(LD,Item),no;
 buff(Buff,_LD,Item) -> [Item|Buff].
 
 maybe_exit(msg_count,{LD,Buff,0}) ->
@@ -403,9 +406,9 @@ maybe_exit_args(_,_) ->
 send_one(LD,Msg) -> LD#ld.where ! [msg(Msg)].
 
 flush(LD,Buffer) ->
-  case Buffer of
-    no -> ok;
-    _  -> LD#ld.where ! lists:map(fun msg/1,lists:reverse(Buffer))
+  case is_list(Buffer) of
+    true  -> LD#ld.where ! lists:map(fun msg/1,lists:reverse(Buffer));
+    false -> ok
   end,
   lists:foreach(fun(RTP) -> flush_time_count(RTP,LD#ld.where) end,LD#ld.rtps).
 
