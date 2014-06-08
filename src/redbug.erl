@@ -363,12 +363,12 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
                 {Count+AC,Sec*1000000+Usec+AT}
             end,
           {Count,Time} = lists:foldl(PerProc,{0,0},PerProcCT),
-          [OutFun("% ~6s : ~6s : ~w:~w/~w",
+          [OutFun("~n% ~6s : ~6s : ~w:~w/~w",
                   [prf:human(Count),prf:human(Time),M,F,A]) || 0 < Count];
         {'call_count',{_,false}} ->
           ok;
         {'call_count',{{M,F,A},Count}} ->
-          [OutFun("% ~6s : ~w:~w/~w", [prf:human(Count),M,F,A]) || 0 < Count];
+          [OutFun("~n% ~6s : ~w:~w/~w", [prf:human(Count),M,F,A]) || 0 < Count];
         {'call',{{M,F,A},Bin}} ->
           case Cnf#cnf.print_calls of
             true ->
@@ -384,7 +384,7 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
               ok
           end;
         {'retn',{{M,F,A},Val}} ->
-          OutFun("~n% ~s ~s~n% ~p:~p/~p->~P",
+          OutFun("~n% ~s ~s~n% ~p:~p/~p -> ~P",
                  [MTS,to_str(PI),M,F,A,Val,Depth]);
         {'send',{MSG,ToPI}} ->
           OutFun("~n% ~s ~s~n% ~s <<< ~P",
