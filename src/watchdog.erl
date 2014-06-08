@@ -706,7 +706,7 @@ send_recv(PR,SF) ->
 validate_recv({Pid,Ref},Match) ->
   receive
     {'DOWN',Ref,process,Pid,<<_:32,X/binary>>} ->
-      case binary_to_term(prf_crypto:decrypt("PWD",X)) of
+      case prf_crypto:decrypt("PWD",X) of
         {watchdog,_,_,user,Match} -> true;
         Match                     -> true
       end
