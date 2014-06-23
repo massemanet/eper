@@ -40,7 +40,9 @@ spawner(F) ->
 
 stop(Name) ->
   case whereis(Name) of
-    Pid when is_pid(Pid) -> Name ! {self(),stop}, receive stopped -> ok end;
+    Pid when is_pid(Pid) ->
+      Name ! {self(),stop},
+      receive {stopped,R} -> R end;
     _ -> ok
   end.
 
@@ -90,8 +92,8 @@ init(Name,Node,Consumer,Proxy,Daddy) ->
 loop(LD) ->
   receive
     {Stopper,stop} ->
-      do_stop(LD),
-      Stopper ! stopped;
+      R = do_stop(LD),
+      Stopper ! {stopped,R};
     {timeout, _, {tick}} when LD#ld.server == [] ->
       prf:ticker_even(),
       subscribe(LD#ld.node,LD#ld.collectors),

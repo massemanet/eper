@@ -168,6 +168,7 @@ t0_test() ->
   watchdog:config(timeout_release,0),
   watchdog:add_send_subscriber(16#babe,"localhost",Port,Secret),
   watchdog:message(troglodyte),
-  watchdog:stop().
+  watchdog:stop(),
+  prf:stop(dogC).
 
 -endif.

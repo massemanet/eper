@@ -6,18 +6,14 @@
 -export([init/1,terminate/1,tick/2,collectors/0,config/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--record(ld,{node,
-            dest_pid}).
+-record(ld,{msg}).
 
 collectors() -> [prfDog].
 
-init(Node) ->
-  #ld{node = Node}.
+init(_Node) -> #ld{}.
 
-terminate(_LD) -> ok.
+terminate(LD) -> LD#ld.msg.
 
-config(LD,{dest_pid,Pid}) -> LD#ld{dest_pid = Pid}.
+config(LD,_) -> LD.
 
-tick(LD,Data) ->
-  erlang:display({dogConsumer,Data}),
-  LD.
+tick(LD,Data) -> LD#ld{msg = Data}.
