@@ -113,11 +113,15 @@ decrypt(Bin,LD) ->
       ?log([{no_secret}]),
       LD;
     Secret ->
-      case prf_crypto:decrypt(Secret,Bin) of
-        {watchdog,Node,TS,Trig,Msg} ->
-          LD#ld{msg=orddict:store({Node,TS,Trig},Msg,LD#ld.msg)};
-        _ ->
-          ?log({decrypt_failed}),
+      try
+        <<PaySize:32,Payload/binary>> = Bin,
+        PaySize = byte_size(Payload),
+        B = prf_crypto:decrypt(Secret,Payload),
+        {watchdog,Node,TS,Trig,Msg} = binary_to_term(B),
+        LD#ld{msg=orddict:store({Node,TS,Trig},Msg,LD#ld.msg)}
+      catch
+        _:R ->
+          ?log({decrypt_failed,R}),
           LD
       end
   end.
