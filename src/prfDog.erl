@@ -151,3 +151,23 @@ acceptor_loop(ListenSock) ->
   ?MODULE ! {new_socket,Socket},
   gen_tcp:controlling_process(Socket,whereis(?MODULE)),
   acceptor_loop(ListenSock).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% unit tests
+
+-ifdef(TEST).
+-include_lib("eunit/include/eunit.hrl").
+
+t0_test() ->
+  Port = 16#dada,
+  Secret = "PWD",
+  prf:start (dogC,node(),dogConsumer,node()),
+  prf:config(dogC,prfDog,{port,Port}),
+  prf:config(dogC,prfDog,{secret,Secret}),
+  watchdog:start(),
+  watchdog:config(timeout_release,0),
+  watchdog:add_send_subscriber(16#babe,"localhost",Port,Secret),
+  watchdog:message(troglodyte),
+  watchdog:stop().
+
+-endif.
