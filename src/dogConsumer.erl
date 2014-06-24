@@ -6,14 +6,14 @@
 -export([init/1,terminate/1,tick/2,collectors/0,config/2]).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
--record(ld,{msg}).
+-record(ld,{data=[]}).
 
-collectors() -> [prfDog].
+collectors()  -> [prfDog].
 
-init(_Node) -> #ld{}.
+init(_Node)   -> #ld{}.
 
-terminate(LD) -> LD#ld.msg.
+terminate(LD) -> LD#ld.data.
 
-config(LD,_) -> LD.
+config(LD,_)  -> LD.
 
-tick(LD,Data) -> LD#ld{msg = Data}.
+tick(LD,Data) -> LD#ld{data = Data ++ LD#ld.data}.
