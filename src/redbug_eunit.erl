@@ -7,6 +7,7 @@
 -module('redbug_eunit').
 -author('mats cronqvist').
 
+-ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
 
 t_0_test() ->
@@ -45,8 +46,8 @@ t_1_test() ->
   maybe_show(Filename),
   ?assertEqual(<<"lists:sort([3,2,1])">>,
                get_line_seg(Filename,2,2)),
-  ?assertEqual(<<"lists:sort/1->[1,2,3]">>,
-               get_line_seg(Filename,4,2)),
+  ?assertEqual([<<"lists:sort/1">>,<<"->">>,<<"[1,2,3]">>],
+               get_line_seg(Filename,4,2,4)),
   maybe_delete(Filename).
 
 t_2_test() ->
@@ -136,7 +137,10 @@ lines(Filename) ->
   length(read_file(Filename)).
 
 get_line_seg(Filename,Line,Seg) ->
-  e(Seg,e(Line,read_file(Filename))).
+  hd(get_line_seg(Filename,Line,Seg,Seg)).
+
+get_line_seg(Filename,Line,SegF,SegL) ->
+  [e(S,e(Line,read_file(Filename))) || S <- lists:seq(SegF,SegL)].
 
 read_file(Filename) ->
   {ok,C} = file:read_file(Filename),
@@ -161,3 +165,5 @@ bt(P) ->
 
 e(N,L) when is_list(L) -> lists:nth(N,L);
 e(N,T) when is_tuple(T)-> element(N,T).
+
+-endif.
