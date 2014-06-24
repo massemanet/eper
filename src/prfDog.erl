@@ -13,9 +13,13 @@
 -export([init/1,terminate/2,code_change/3,
          handle_call/3,handle_cast/2,handle_info/2]).
 
--export([state/0]).
+-export([state/0,quit/0]).
+
 state() ->
   gen_server:call(?MODULE,state).
+
+quit() ->
+  gen_server:call(?MODULE,quit).
 
 -include("log.hrl").
 
@@ -28,9 +32,13 @@ collect(init) ->
 collect(LD) ->
   {LD,{?MODULE,gen_server:call(?MODULE,get_data)}}.
 
-config(LD,{port,Port}) when is_integer(Port) ->
+config(ports_opened,{port,Port}) when is_integer(Port) ->
+  gen_server:call(?MODULE,quit),
+  gen_server:start_link({local,?MODULE},?MODULE,[],[]),
+  config([],{port,Port});
+config([],{port,Port}) when is_integer(Port) ->
   gen_server:call(?MODULE,{config,{port,Port}}),
-  LD;
+  ports_opened;
 config(LD,{secret,Secret}) when is_list(Secret) ->
   gen_server:call(?MODULE,{config,{secret,Secret}}),
   LD.
@@ -50,19 +58,24 @@ handle_cast(_What,State) ->
 
 %% not boilerplate
 -record(ld,{port,
+            secret,
+            msg=[],
             acceptor,
             udp_socket,
-            tcp_sockets=[],
-            secret}).
+            tcp_sockets=[]}).
 
 init([]) ->
   {ok,#ld{}}.
 
+handle_call(quit,_,LD) ->
+  catch exit(LD#ld.acceptor,kill),
+  catch gen_udp:close(LD#ld.udp_socket),
+  {stop,normal,stopping,#ld{}};
 handle_call(state,_,LD) ->
   Fields = record_info(fields,ld),
   {reply,lists:zip(Fields,tl(tuple_to_list(LD))),LD};
 handle_call({config,{port,Port}},_,LD) ->
-  {reply,[],LD#ld{acceptor=accept(Port),udp_socket=udp_open(Port)}};
+  {reply,[],LD#ld{port=Port,acceptor=accept(Port),udp_socket=udp_open(Port)}};
 handle_call({config,{secret,Secret}},_,LD) ->
   {reply,[],LD#ld{secret=Secret}};
 handle_call(get_data,_,LD) ->
