@@ -7,7 +7,7 @@
 %%%-------------------------------------------------------------------
 -module(prfHost).
 
--export([start/3,start/4,stop/1,config/3]).
+-export([start/3,start/4,stop/1,config/3,state/1]).
 -export([loop/1]).                              %internal
 
 -record(ld, {node, server=[], collectors, config=[],
@@ -43,7 +43,15 @@ stop(Name) ->
     Pid when is_pid(Pid) ->
       Name ! {self(),stop},
       receive {stopped,R} -> R end;
-    _ -> ok
+    _ -> not_started
+  end.
+
+state(Name) ->
+  case whereis(Name) of
+    Pid when is_pid(Pid) ->
+      Name ! {self(),poll},
+      receive {state,R} -> R end;
+    _ -> not_started
   end.
 
 config(Name,Type,Data) ->
@@ -94,6 +102,9 @@ loop(LD) ->
     {Stopper,stop} ->
       R = do_stop(LD),
       Stopper ! {stopped,R};
+    {Poller,poll} ->
+      Poller ! {state,LD#ld.consumer_data},
+      ?LOOP(LD);
     {timeout, _, {tick}} when LD#ld.server == [] ->
       prf:ticker_even(),
       subscribe(LD#ld.node,LD#ld.collectors),

@@ -7,7 +7,7 @@
 %%%-------------------------------------------------------------------
 -module(prf).
 
--export([start/3,start/4,stop/1,config/3]).
+-export([start/3,start/4,stop/1,config/3,state/1]).
 
 %% prf internal
 -export([log/2,ticker_odd/0,ticker_even/0]).
@@ -36,6 +36,8 @@ stop(Name) -> prfHost:stop(Name).
 %%% Data - term() the consumer callbacks config function is called with this
 
 config(Name,Type,Data) -> prfHost:config(Name,Type,Data).
+
+state(Name) -> prfHost:state(Name).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% prf internal
