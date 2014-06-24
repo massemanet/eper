@@ -53,7 +53,6 @@ handle_cast(_What,State) ->
             acceptor,
             udp_socket,
             tcp_sockets=[],
-            msg=orddict:new(),
             secret}).
 
 init([]) ->
@@ -67,7 +66,7 @@ handle_call({config,{port,Port}},_,LD) ->
 handle_call({config,{secret,Secret}},_,LD) ->
   {reply,[],LD#ld{secret=Secret}};
 handle_call(get_data,_,LD) ->
-  {reply,LD#ld.msg,LD#ld{msg=orddict:new()}}.
+  {reply,LD#ld.msg,LD#ld{msg=[]}}.
 
 handle_info({new_socket,Sock},LD) ->
   %% we accepted a socket towards a producer.
@@ -118,7 +117,7 @@ decrypt(Bin,LD) ->
         PaySize = byte_size(Payload),
         B = prf_crypto:decrypt(Secret,Payload),
         {watchdog,Node,TS,Trig,Msg} = binary_to_term(B),
-        LD#ld{msg=orddict:store({Node,TS,Trig},Msg,LD#ld.msg)}
+        LD#ld{msg=[{Node,TS,Trig,Msg}|LD#ld.msg]}
       catch
         _:R ->
           ?log({decrypt_failed,R}),

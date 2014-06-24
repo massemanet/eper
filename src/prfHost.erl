@@ -142,19 +142,12 @@ de_proxy(_,[]) -> [];
 de_proxy(LD,Data) ->
   case LD#ld.proxy of
     []              -> Data;
-    {Node,[prfDog]} -> dog_data(Data,Node);
-    {Node,Colls}    -> de_colls(Colls,dog_data(Data,Node))
+    {Node,[prfDog]} -> dog_data(Data,Node)
   end.
 
-de_colls(Colls,DogData) ->
-  F0 = fun({_,Ev},_) -> Ev=:=ticker end,
-  CD = orddict:filter(F0,DogData),
-  F1 = fun(C,_) -> lists:member(C,Colls) end,
-  orddict:filter(F1,CD).
-
 dog_data([{prfDog,DogData}|_],Node) ->
-  F = fun({N,_,_},_) -> N=:=Node end,
-  orddict:filter(F, DogData).
+  F = fun({N,_,_,_}) -> N=:=Node end,
+  lists:filter(F, DogData).
 
 do_config(CollData, LD) ->
   case LD#ld.server of
