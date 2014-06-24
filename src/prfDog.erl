@@ -171,16 +171,27 @@ acceptor_loop(ListenSock) ->
 -include_lib("eunit/include/eunit.hrl").
 
 t0_test() ->
+  net_kernel:start([wdt,shortnames]),
   Port = 16#dada,
   Secret = "PWD",
   prf:start (dogC,node(),dogConsumer,node()),
-  prf:config(dogC,prfDog,{port,Port}),
   prf:config(dogC,prfDog,{secret,Secret}),
+  prf:config(dogC,prfDog,{port,Port}),
   watchdog:start(),
-  watchdog:config(timeout_release,0),
+  watchdog:delete_triggers(),
+  watchdog:add_trigger(user, true),
   watchdog:add_send_subscriber(16#babe,"localhost",Port,Secret),
   watchdog:message(troglodyte),
   watchdog:stop(),
-  prf:stop(dogC).
+  poll(),
+  ?assertMatch([{_,_,user,troglodyte}],
+               prf:stop(dogC)).
+
+poll() ->
+  case prf:state(dogC) of
+    {ld,[]} -> receive after 300 -> ok end,
+               poll();
+    _ -> ok
+  end.
 
 -endif.
