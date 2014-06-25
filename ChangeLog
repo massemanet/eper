@@ -1,9 +1,136 @@
-commit 8dc9a3c5233f63168ddeefedaab6c21fcb9b3447
+commit 1f4c40de071f63f9560cfeb83cbb3d242fd07dff
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Jun 25 11:29:11 2014 +0200
+
+    v0.83.1
+
+src/eper.app.src
+
+commit e8404b3f32698d1fcca704864ebc1eb35a5560f3
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 16:46:34 2014 +0200
+
+    fix race conditions in tests
+
+src/prfDog.erl
+
+commit f422cc1de385f014fc8b3cd4f26a1d0370df7f26
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 16:46:14 2014 +0200
+
+    implement prfDog:quit/0
+
+src/prfDog.erl
+
+commit 376883bd07620c7aaf0c0184860e21664e488482
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 16:44:55 2014 +0200
+
+    cosmetic
+
+src/dogConsumer.erl
+
+commit 0de9c6f526be2347a53b7e4826d6e8b070010869
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 16:44:33 2014 +0200
+
+    remove orddict dependency
+
+src/prfDog.erl
+src/prfHost.erl
+
+commit 3b7340ff2877f5c52c23d6b131581c59a808fd85
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 16:42:01 2014 +0200
+
+    get collector state through prfHost:state/1
+
+src/prf.erl
+src/prfHost.erl
+
+commit b4c1061071f4d812b9145542784787550bf3f769
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 16:40:36 2014 +0200
+
+    fix testcases
+
+src/watchdog.erl
+
+commit f6d3dc95728b64ce1c415a8ad8198f3ba9cd3962
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 16:40:16 2014 +0200
+
+    add watchdog:delete_triggers/0
+
+src/watchdog.erl
+
+commit b52a1c72d463d4aed8f7782ab7a2fe2f7e9c7ab3
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 12:49:34 2014 +0200
+
+    hide eunit behind TEST macro
+
+src/redbug_eunit.erl
+
+commit 638e8fc6a40091922cd6d5a7ac84e06ab5d04048
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Jun 24 12:48:54 2014 +0200
+
+    new rebar
+
+rebar
+
+commit 0d57710736c780a3e5247c78ad891fed9b53e69c
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Jun 23 16:47:49 2014 +0200
+
+    make prf:stop/1 return the value of CB:terminate/1 (for testing)
+
+src/dogConsumer.erl
+src/prfDog.erl
+src/prfHost.erl
+
+commit 1538074ed5fef965b2943164fbe3a29e86ce80be
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Jun 23 16:28:54 2014 +0200
+
+    prfDog unit test
+
+src/dogConsumer.erl
+src/prfDog.erl
+
+commit 34358d534a6ef666ddac3c832196c1d5ca795ba1
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Jun 23 14:29:06 2014 +0200
+
+    fix prfDog/watchdog interwork
+
+src/prfDog.erl
+src/prf_crypto.erl
+
+commit 066c9251e6e51dd6fd56be1546906becafd1f5b8
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Jun 9 16:18:16 2014 +0200
+
+    cosmetic
+
+src/redbug.erl
+
+commit 828acc90bbd8f164913cb50efd1295c7c81b6a98
+Author: mats cronqvist <masse@klarna.com>
+Date:   Sun Jun 8 22:12:42 2014 +0200
+
+    cosmetic
+
+src/redbug.erl
+
+commit 2e9ddf3b3ae95ca5f64adfc7d12e5922cc506bbb
 Author: mats cronqvist <masse@klarna.com>
 Date:   Sun Jun 8 21:42:13 2014 +0200
 
     v0.83.0
 
+ChangeLog
 src/eper.app.src
 
 commit 1915fd0b841691a4d823d7c05aaa655287cf983a
