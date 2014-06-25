@@ -34,8 +34,9 @@ collect(LD) ->
 
 config(ports_opened,{port,Port}) when is_integer(Port) ->
   gen_server:call(?MODULE,quit),
+  Secret = proplists:get_value(secret,gen_server:call(?MODULE,state)),
   gen_server:start_link({local,?MODULE},?MODULE,[],[]),
-  config([],{port,Port});
+  config(config([],{secret,Secret}),{port,Port});
 config([],{port,Port}) when is_integer(Port) ->
   gen_server:call(?MODULE,{config,{port,Port}}),
   ports_opened;
