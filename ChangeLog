@@ -1,9 +1,26 @@
-commit f74c2617429f81ce5faf302b05456560cc5c424e
+commit e783b256f6b6e72d2b0220f70e9cbdcd70023547
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Jun 25 14:40:22 2014 +0200
+
+    v0.85.0
+
+src/eper.app.src
+
+commit 8213c49dd30b06439f83815b4a1f4dfe6c5b8a10
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Jun 25 14:39:50 2014 +0200
+
+    prfDog drops secret when changing port
+
+src/prfDog.erl
+
+commit 3480de21b5c665d87e30bc2777c205fda04355f0
 Author: mats cronqvist <masse@klarna.com>
 Date:   Wed Jun 25 11:30:53 2014 +0200
 
     v0.84.0
 
+ChangeLog
 src/eper.app.src
 
 commit e8404b3f32698d1fcca704864ebc1eb35a5560f3
