@@ -20,6 +20,7 @@ usage(){
 VSN=""
 XTRA=""
 echo=""
+node=""
 
 while [ -n "$1" ]
   do
@@ -50,6 +51,10 @@ while [ -n "$1" ]
           usage
           ;;
       *)
+          # The first non-option argument is the node name.
+          if [ -z "$node" ]; then
+              node=$1
+          fi
           XTRA=" $XTRA $1"
           ;;
   esac
@@ -59,8 +64,16 @@ done
 if [ -z "$XTRA" ]; then usage; fi
 
 PATHS="-pa $self/ebin"
+# If the node name contains a dot after the @ sign, it is a long name,
+# and we need to use a long name ourselves.
+case $node in
+    *@*.*)
+        name_option="-name" ;;
+    *)
+        name_option="-sname" ;;
+esac
 name="redbug_"$$
-DISTR="-noshell -hidden -sname $name $cookie $nettick"
+DISTR="-noshell -hidden $name_option $name $cookie $nettick"
 START="-run redbug unix"
 
 $echo erl $VSN $DISTR $PATHS $START $XTRA
