@@ -1,13 +1,17 @@
 REBAR = ./rebar
 
-.PHONY: all clean eunit xref release release_minor release_major
+.PHONY: all compile test clean eunit xref release release_minor release_major
 
-all:
+all: compile
+
+compile:
 	@$(REBAR) compile escriptize
 
 clean:
 	@find . -name "*~" -exec rm {} \;
 	@$(REBAR) clean
+
+test: compile eunit xref
 
 eunit:
 	@$(REBAR) eunit

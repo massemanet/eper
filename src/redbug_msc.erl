@@ -91,6 +91,9 @@ compile_args('_') ->
 compile_args(As) ->
   lists:foldl(fun ca_fun/2,{[],[]},As).
 
+ca_fun({bin,Bs},{Vars,O}) ->
+  Es = [V||{bin_element,_,{T,_,V},_,_}<-Bs,T==integer orelse T==string],
+  {Vars,O++[list_to_binary(lists:flatten(Es))]};
 ca_fun({list,Es},{Vars,O}) ->
   {Vs,Ps} = ca_fun_list(Es,Vars),
   {Vs,O++[Ps]};
@@ -252,7 +255,9 @@ t_0_test() ->
   ?assert(
      unit(
        {"f:c(<<>>)",
-        bad_type})).
+        {{f,c,1},
+         [{[<<>>],[],[]}],
+         [local]}})).
 t_1_test() ->
   ?assert(
      unit(
@@ -606,6 +611,14 @@ t49_test() ->
      unit(
        {"x:c(Aw)hen [A,A] == [A]++[A]",
         syntax_error})).
+
+t50_test() ->
+  ?assert(
+     unit(
+       {"f:m(<<1,\"abc\">>)",
+        {{f,m,1},
+         [{[<<1,$a,$b,$c>>],[],[]}],
+         [local]}})).
 
 unit({Str,MS}) ->
   try
