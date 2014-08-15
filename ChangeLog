@@ -1,9 +1,45 @@
-commit e783b256f6b6e72d2b0220f70e9cbdcd70023547
+commit 4a00f14d26f529a59020fc19d287d7739c95c01d
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Aug 15 12:34:00 2014 +0200
+
+    v0.86.0
+
+src/eper.app.src
+
+commit 223302da65dbc4b9bee29a10bb4056758ddcacdb
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Aug 15 11:59:35 2014 +0200
+
+    handle binaries in RTP's
+
+src/redbug_msc.erl
+
+commit 461382ad37a0aa0f35b535b691fef842baf99f0f
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Aug 12 18:03:40 2014 +0200
+
+    quick hack to support literal binaries in arg list
+
+Makefile
+src/redbug_msc.erl
+
+commit de3f5635b11c9ea9c66168b7c44b07a143fb1713
+Author: Magnus Henoch <magnus.henoch@gmail.com>
+Date:   Wed Jul 30 17:56:07 2014 +0100
+
+    In redbug script, use long node names if appropriate
+    If the node name of the target node contains a dot after the @ sign, it
+    must be a long node name, and we should use -name instead of -sname.
+
+priv/bin/redbug
+
+commit 56206a0bc7f15870f9aa4013de3f9808893347db
 Author: mats cronqvist <masse@klarna.com>
 Date:   Wed Jun 25 14:40:22 2014 +0200
 
     v0.85.0
 
+ChangeLog
 src/eper.app.src
 
 commit 8213c49dd30b06439f83815b4a1f4dfe6c5b8a10
