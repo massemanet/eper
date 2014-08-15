@@ -69,6 +69,9 @@ gd_fun({Op,V1,V2},{Vars,O}) ->               % binary
 unpack_op(Op,As,Vars) ->
   list_to_tuple([Op|[unpack_var(A,Vars)||A<-As]]).
 
+unpack_var({bin,Bs},_) ->
+  {value,Bin,[]} = erl_eval:expr({bin,1,Bs},[]),
+  Bin;
 unpack_var({tuple,Es},Vars) ->
   {list_to_tuple([unpack_var(E,Vars)||E<-Es])};
 unpack_var({list,Es},Vars) ->
@@ -92,8 +95,8 @@ compile_args(As) ->
   lists:foldl(fun ca_fun/2,{[],[]},As).
 
 ca_fun({bin,Bs},{Vars,O}) ->
-  Es = [V||{bin_element,_,{T,_,V},_,_}<-Bs,T==integer orelse T==string],
-  {Vars,O++[list_to_binary(lists:flatten(Es))]};
+  {value,Bin,[]} = erl_eval:expr({bin,1,Bs},[]),
+  {Vars,O++[Bin]};
 ca_fun({list,Es},{Vars,O}) ->
   {Vs,Ps} = ca_fun_list(Es,Vars),
   {Vs,O++[Ps]};
@@ -619,6 +622,44 @@ t50_test() ->
         {{f,m,1},
          [{[<<1,$a,$b,$c>>],[],[]}],
          [local]}})).
+
+t51_test() ->
+  ?assert(
+     unit(
+       {"erlang:binary_to_list(A)when A==<<48>>",
+        {{erlang,binary_to_list,1},
+         [{['$1'],[{'==','$1',<<"0">>}],[]}],
+         [local]}})).
+
+t52_test() ->
+  ?assert(
+     unit(
+       {"erlang:binary_to_list(<<48>>)",
+        {{erlang,binary_to_list,1},
+         [{[<<"0">>],[],[]}],
+         [local]}})).
+
+t53_test() ->
+  ?assert(
+     unit(
+       {"erlang:binary_to_list(<<\"0\">>)",
+        {{erlang,binary_to_list,1},
+         [{[<<"0">>],[],[]}],
+         [local]}})).
+
+t54_test() ->
+  ?assert(
+     unit(
+       {"erlang:binary_to_list(<<1:3,1:5>>)",
+        {{erlang,binary_to_list,1},
+         [{[<<"!">>],[],[]}],
+         [local]}})).
+
+t55_test() ->
+  ?assert(
+     unit(
+       {"erlang:binary_to_list(<<1:3,_:5>>)",
+        unbound_var})).
 
 unit({Str,MS}) ->
   try
