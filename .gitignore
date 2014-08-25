@@ -1,6 +1,7 @@
 .#*
 #*
 *~
+/*.plt
 /.rebar/
 /.eunit/
 /ebin/
