@@ -2,6 +2,22 @@
 %%% Created : 21 Aug 2014 by  <masse@klarna.com>
 
 %% @doc
+%% {[Allocator,Instance,Group,Type,Info],Count}
+%%
+%% Allocator         -> atom(AllocatorName++"_alloc")
+%% AllocatorName     -> temp| std| sl| ll| fix| ets| eheap| driver| binary
+%% Instance          -> integer()
+%% Group             -> CarrierGroup | CallGroup
+%% CarrierGroup      -> sbcs | mbcs (multiblockcarriers | singleblockcarriers)
+%% CallGroup         -> calls
+%% Type              -> CarrierType | CallType
+%% CarrierType       -> sys | mseg | blocks
+%% CallType          -> AllocatorSpecific | sys | mseg
+%% AllocatorSpecific -> AllocatorName
+%% Info              -> CallInfo | CarrierInfo
+%% CallInfo          -> alloc | realloc | dealloc | free
+%% CarrierInfo       -> count | size
+%% Count             -> size in bytes | counts
 %% @end
 
 -module('atop').
@@ -10,35 +26,38 @@
 -export([aggregate/0,aggregate/1,aggregate/2]).
 
 aggregate() ->
-  aggregate([1,3,4,5]).
+  aggregate(indices()--[instance]).
 aggregate(AggregateIndices) ->
   aggregate(AggregateIndices,[]).
 aggregate(AggregateIndices,FilterTags) ->
-  filter(
-    FilterTags,
-    aggr(
-      AggregateIndices,
+  aggr(
+    AggregateIndices,
+    filter(
+      FilterTags,
       getallocdata())).
 
 allocs() ->
-  allocs(2).
-allocs(SortI) ->
-  allocs(SortI,[1,3]).
-allocs(SortIndex,AggregateIndices) ->
+  allocs(allocd).
+allocs(SortCol) ->
+  allocs(SortCol,[allocator,group]).
+allocs(SortCol,AggregateIndices) ->
+  printh(AggregateIndices,columns()),
   lists:foreach(
     fun print/1,
     lists:reverse(
       lists:keysort(
-        SortIndex,
+        column2index(SortCol),
         lists:foldl(
           fun present/2,
           [],
           filter(
             [size],
             aggr(
-              AggregateIndices++[4,5],
+              AggregateIndices++[type,info],
               getallocdata())))))).
 
+printh(AggInds,Cols) ->
+  io:fwrite("~-33w~8w~8w~8w~n",[AggInds]++tl(Cols)).
 print({K,T,U,F}) ->
   io:fwrite("~-33w~8.2f~8.2f~8.2f~n",[K,T,U,F]).
 
@@ -67,8 +86,19 @@ filter(Tags,PL) ->
     end,
     PL).
 
-aggr(Inds,List) ->
+aggr(IndexTags,List) ->
+  Inds = [tag2index(T) || T <- IndexTags],
   lists:foldl(mkaggfun(Inds),[],lists:sort(mksortfun(Inds),List)).
+
+columns() -> [what,allocd,used,frac].
+indices() -> [allocator,instance,group,type,info].
+
+column2index(X) -> x2index(X,columns()).
+tag2index(X) -> x2index(X,indices()).
+
+x2index(X,Xs) -> x2index(X,Xs,1).
+x2index(X,[X|_],N) -> N;
+x2index(X,[_|Xs],N) -> x2index(X,Xs,N+1).
 
 mkaggfun(Inds) ->
   fun({K,V},[]) -> [{mknewkey(K,Inds),V}];
