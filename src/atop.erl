@@ -22,6 +22,7 @@
 
 -module('atop').
 -author('').
+-export([calls/0]).
 -export([allocs/0,allocs/1,allocs/2]).
 -export([aggregate/0,aggregate/1,aggregate/2]).
 
@@ -35,6 +36,19 @@ aggregate(AggregateIndices,FilterTags) ->
     filter(
       FilterTags,
       getallocdata())).
+
+calls() ->
+  io:fwrite("~-20w~11w~11w~11w~11w~n",[allocator,alloc,dealloc,free,realloc]),
+  lists:foreach(
+    fun(L)->io:fwrite("~-20w~11w~11w~11w~11w~n",L)end,
+    lists:foldl(
+      fun({[X,alloc]  ,A},             T)  -> [[X,A,0,0,0]|T];
+         ({[X,dealloc],D},[[X,A,0,0,0]|T]) -> [[X,A,D,0,0]|T];
+         ({[X,free]   ,F},[[X,A,D,0,0]|T]) -> [[X,A,D,F,0]|T];
+         ({[X,realloc],R},[[X,A,D,F,0]|T]) -> [[X,A,D,F,R]|T]
+      end,
+      [],
+      lists:sort(atop:aggregate([allocator,info],[calls])))).
 
 allocs() ->
   allocs(allocd).
@@ -50,11 +64,7 @@ allocs(SortCol,AggregateIndices) ->
         lists:foldl(
           fun present/2,
           [],
-          filter(
-            [size],
-            aggr(
-              AggregateIndices++[type,info],
-              getallocdata())))))).
+          aggregate(AggregateIndices++[type,info],[size]))))).
 
 printh(AggInds,Cols) ->
   io:fwrite("~-33w~8w~8w~8w~n",[AggInds]++tl(Cols)).
