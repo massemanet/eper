@@ -1,9 +1,44 @@
-commit 4a00f14d26f529a59020fc19d287d7739c95c01d
+commit de8005021e8abf77ab3e229187f6185484fda862
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Sep 3 10:43:05 2014 +0200
+
+    v0.87.0
+
+src/eper.app.src
+
+commit ebecc8a76a32e53547006af5f1710be10b59da16
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Sep 2 14:54:38 2014 +0200
+
+    somewhat self-documenting
+
+src/atop.erl
+
+commit 099cff6ba85a2b0b4a7b2d29d1b3c8a4dee6909a
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Aug 27 10:43:31 2014 +0200
+
+    atop works, but the interface is pretty arcane
+
+src/atop.erl
+
+commit 93cbc73f59240bb9f2c802cd678680970f2e900f
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Aug 25 10:44:51 2014 +0200
+
+    add atop (allocator visualizer)
+
+.gitignore
+src/atop.erl
+
+commit 5b167c9ed7ffbb2c81d9d21fd5984bbcd97141e0
 Author: mats cronqvist <masse@klarna.com>
 Date:   Fri Aug 15 12:34:00 2014 +0200
 
     v0.86.0
 
+AUTHORS
+ChangeLog
 src/eper.app.src
 
 commit 223302da65dbc4b9bee29a10bb4056758ddcacdb
