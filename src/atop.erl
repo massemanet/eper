@@ -11,7 +11,7 @@
 %% CarrierGroup      -> sbcs | mbcs (multiblockcarriers | singleblockcarriers)
 %% CallGroup         -> calls
 %% Type              -> CarrierType | CallType
-%% CarrierType       -> sys | mseg | blocks
+%% CarrierType       -> sys | mseg | pool | blocks
 %% CallType          -> AllocatorSpecific | sys | mseg
 %% AllocatorSpecific -> AllocatorName
 %% Info              -> CallInfo | CarrierInfo
@@ -22,9 +22,23 @@
 
 -module('atop').
 -author('').
+-export([help/0]).
+-export([getallocdata/0]).
 -export([calls/0]).
 -export([allocs/0,allocs/1,allocs/2]).
 -export([aggregate/0,aggregate/1,aggregate/2]).
+
+help() ->
+  {indices(),columns()}.
+
+getallocdata() ->
+  [{[A,N,K]++gettag(K,W),getvalue(W)} ||
+    A <- erlang:system_info(alloc_util_allocators),
+    {instance,N,Info} <- erlang:system_info({allocator,A}),
+    {K,V} <- Info,
+    K=/=options,
+    W <- V,
+    gettag(K,W)=/=drop].
 
 aggregate() ->
   aggregate(indices()--[instance]).
@@ -74,6 +88,7 @@ print({K,T,U,F}) ->
 present([],A) -> A;
 present({K,V},A) ->
   case lists:reverse(K) of
+    [size,pool|NK]   -> [{NK,V}|A];
     [size,sys|NK]    -> [{NK,V}|A];
     [size,mseg|NK]   -> [{NK,V0}|A0] = A,
                         [{NK,V+V0}|A0];
@@ -135,23 +150,16 @@ mksortfun(Ind) ->
       end
   end.
 
-getallocdata() ->
-  [{[A,N,K]++gettag(W),getvalue(W)} ||
-    A <- erlang:system_info(alloc_util_allocators),
-    {instance,N,Info} <- erlang:system_info({allocator,A}),
-    {K,V} <- Info,
-    K=:=mbcs orelse K=:=sbcs orelse K=:=calls,
-    W <- V,
-    gettag(W) =/= drop].
-
-gettag(W) ->
+gettag(K,W) ->
   case string:tokens(atom_to_list(element(1,W)),"_") of
     ["blocks"]                    -> [blocks,count];
-    ["carriers"]                  -> drop;
-    ["carriers","size"]           -> drop;
+    ["carriers"]              -> case K of mbcs_pool->[pool,count];_->drop end;
+    ["carriers","size"]       -> case K of mbcs_pool->[pool,size];_->drop end;
     [V,"alloc","carriers"]        -> [list_to_atom(V),count];
     [V,"alloc","carriers","size"] -> [list_to_atom(V),size];
-    Vs                            -> [list_to_atom(V) || V <- Vs]
+    [V]                           -> [list_to_atom(V),''];
+    [V1,V2]                       -> [list_to_atom(V) || V <- [V1,V2]];
+    [V0|Vs]            -> [list_to_atom(V) || V <- [V0,string:join(Vs,"_")]]
   end.
 
 getvalue({_Tag,Current,_HighWaterSinceLastCall,_HighWater}) -> Current;
