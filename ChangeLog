@@ -1,9 +1,35 @@
-commit de8005021e8abf77ab3e229187f6185484fda862
+commit 17f94b3e8db2a4614e3522b07eea7dc4038576c2
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Sep 11 12:46:33 2014 +0200
+
+    v0.88.0
+
+src/eper.app.src
+
+commit 46930d5b27422034010e84d3dbda07cf78c233bf
+Author: mats cronqvist <masse@klarna.com>
+Date:   Thu Sep 11 12:43:00 2014 +0200
+
+    fix crashing bug in atop
+
+.gitignore
+src/atop.erl
+
+commit ef60d4a32efa7fd32fee772078ae542dac1330ac
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Sep 3 18:46:39 2014 +0200
+
+    implement atop:calls/0
+
+src/atop.erl
+
+commit 55e3f69df5e3bcb74b42d2ba056c076298ed6ea7
 Author: mats cronqvist <masse@klarna.com>
 Date:   Wed Sep 3 10:43:05 2014 +0200
 
     v0.87.0
 
+ChangeLog
 src/eper.app.src
 
 commit ebecc8a76a32e53547006af5f1710be10b59da16
