@@ -9,7 +9,7 @@
 
 -export([start/0,start/1,start/2,
          stop/0,
-         sort/1,file/1]).
+         sort/1,file/1,set_max_procs/1]).
 
 start() -> start(node()).
 
@@ -30,3 +30,6 @@ file(Filename) ->
       prf:config(dtop,consumer,{items,no_pad})
   catch _:R -> {error,{R,Filename}}
   end.
+
+set_max_procs(Max) when is_integer(Max) ->
+  prf:config(dtop,prfPrc,{max_procs,Max}).
