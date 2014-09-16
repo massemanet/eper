@@ -2,33 +2,77 @@
 %%% Created : 21 Aug 2014 by  <masse@klarna.com>
 
 %% @doc
-%% {[Allocator,Instance,Group,Type,Info],Count}
-%%
-%% Allocator         -> atom(AllocatorName++"_alloc")
-%% AllocatorName     -> temp| std| sl| ll| fix| ets| eheap| driver| binary
-%% Instance          -> integer()
-%% Group             -> CarrierGroup | CallGroup
-%% CarrierGroup      -> sbcs | mbcs (multiblockcarriers | singleblockcarriers)
-%% CallGroup         -> calls
-%% Type              -> CarrierType | CallType
-%% CarrierType       -> sys | mseg | pool | blocks
-%% CallType          -> AllocatorSpecific | sys | mseg
-%% AllocatorSpecific -> AllocatorName
-%% Info              -> CallInfo | CarrierInfo
-%% CallInfo          -> alloc | realloc | dealloc | free
-%% CarrierInfo       -> count | size
-%% Count             -> size in bytes | counts
 %% @end
 
 -module('atop').
 -author('').
 -export([help/0]).
 -export([getallocdata/0]).
+-export([aggregate/0,aggregate/1,aggregate/2]).
 -export([calls/0]).
 -export([allocs/0,allocs/1,allocs/2]).
--export([aggregate/0,aggregate/1,aggregate/2]).
+
+help_text() ->
+  [" atop - a tool to visualize info about allocators."
+   ,""
+   ," The fundamental function returns a list of allocator info;"
+   ,"getallocdata/0 -> list({AllocatorTags,Count})"
+   ,""
+   ," where"
+   ,"AllocatorTags     -> [Allocator,Instance,Group,Type,Info]"
+   ,"Allocator         -> atom(AllocatorName++\"_alloc\")"
+   ,"AllocatorName     -> temp| std| sl| ll| fix| ets| eheap| driver| binary"
+   ,"Instance          -> integer()"
+   ,"Group             -> CarrierGroup | CallGroup"
+   ,"CarrierGroup      -> sbcs| mbcs (singleblockcarriers| multiblockcarriers)"
+   ,"CallGroup         -> calls"
+   ,"Type              -> CarrierType | CallType"
+   ,"CarrierType       -> sys | mseg | pool | blocks"
+   ,"CallType          -> AllocatorSpecific | sys | mseg"
+   ,"AllocatorSpecific -> AllocatorName"
+   ,"Info              -> CallInfo | CarrierInfo"
+   ,"CallInfo          -> alloc | realloc | dealloc | free"
+   ,"CarrierInfo       -> count | size"
+   ,"Count             -> size in bytes | counts"
+   ,""
+   ," The data can be aggregated, i.e. collapsed over e.g. the Instance."
+   ,"aggregate(TagsToKeep,FilterTags) -> list({Tags,Count})"
+   ,""
+   ," whare"
+   ,"TagsToKeep -> a list of which AllocatorTags not to collapse"
+   ,"              list(allocator|instance|group|type|info)"
+   ,"FilterTags -> a list of required tags, applied before collapsing"
+   ,"              if the tag is {atom()}, its absence is required"
+   ,""
+   ,"aggregate(TagsToKeep) -> aggregate(TagsToKeep,[])"
+   ,"aggregate() -> aggregate([allocator,group,type,info],[])"
+   ,""
+   ," For example;"
+   ,"atop:aggregate([group,type],[size,blocks])."
+   ,"[{[sbcs,sys],0},"
+   ," {[sbcs,mseg],770048},"
+   ," {[sbcs,blocks],768073},"
+   ," {[mbcs_pool,pool],0},"
+   ," {[mbcs_pool,blocks],0},"
+   ," {[mbcs,sys],4922080},"
+   ," {[mbcs,mseg],16777216},"
+   ," {[mbcs,blocks],13028707}]"
+   ,""
+   ," The main functions are calls/0 and allocs/2."
+   ," They print sorted and formatted info from aggregate/2."
+   ,""
+   ,"calls/0 -> ok"
+   ,"allocs(SortColumn,TagsToKeep) -> ok"
+   ,"allocs(SortColumn) -> allocs(SortColumn,[allocator,group])"
+   ,"allocs() -> allocs(allocd,[allocator,group])"
+   ,""
+   ,"where"
+   ,"SortColumn -> what|allocd|used|frac"
+   ,"TagsToKeep -> list(allocator|instance|group)"
+   ,""].
 
 help() ->
+  lists:foreach(fun(S)->io:fwrite("~s~n",[S])end,help_text()),
   {indices(),columns()}.
 
 getallocdata() ->
@@ -62,7 +106,7 @@ calls() ->
          ({[X,realloc],R},[[X,A,D,F,0]|T]) -> [[X,A,D,F,R]|T]
       end,
       [],
-      lists:sort(atop:aggregate([allocator,info],[calls])))).
+      lists:sort(aggregate([allocator,info],[calls])))).
 
 allocs() ->
   allocs(allocd).
@@ -98,13 +142,25 @@ format(NK,V,V0) ->
 divide(_V,0) -> 1.0;
 divide(V,V0) -> V/V0.
 
-filter([],PL) -> PL;
 filter(Tags,PL) ->
-  lists:filter(
-    fun({K,_})->
-        lists:member(true,[lists:member(T,K) || T <- Tags])
-    end,
-    PL).
+  require_mandatory(Tags,remove_forbidden(Tags,PL)).
+
+require_mandatory(Tags,PL) ->
+  case [T || T <- Tags, is_atom(T)] of
+    [] -> PL;
+    Ms ->
+      F = fun({K,_}) -> lists:member(true,[lists:member(M,K) || M <- Ms]) end,
+      lists:filter(F,PL)
+  end.
+
+remove_forbidden(Tags,PL) ->
+  case [T || {T} <- Tags, is_atom(T)] of
+    [] -> PL;
+    Fs ->
+      F = fun({K,_}) -> not lists:member(true,[lists:member(F,K) || F <- Fs])
+          end,
+      lists:filter(F,PL)
+  end.
 
 aggr(IndexTags,List) ->
   Inds = [tag2index(T) || T <- IndexTags],
