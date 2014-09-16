@@ -1,9 +1,42 @@
-commit 17f94b3e8db2a4614e3522b07eea7dc4038576c2
+commit bbed7a1c92be30a70eee38ec3070144328ec00e1
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Sep 16 14:36:46 2014 +0200
+
+    v0.89.0
+
+src/eper.app.src
+
+commit 4936fdac364abe23a6ead700de98cc5aecec78fc
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Sep 16 12:36:24 2014 +0200
+
+    docs
+
+src/atop.erl
+
+commit a8294be74a2daf61e5492b38fc0309a971ea6914
+Author: mats cronqvist <masse@klarna.com>
+Date:   Tue Sep 16 09:50:38 2014 +0200
+
+    refactored presenttion code
+
+src/atop.erl
+
+commit 9d5cd5f76d40becc4d918e6115b7b868843c155b
+Author: mats cronqvist <masse@klarna.com>
+Date:   Mon Sep 15 13:22:43 2014 +0200
+
+    add dtop:set_max_procs/1
+
+src/dtop.erl
+
+commit a08c3699f51f73b2881486a165580b6aa4ac057e
 Author: mats cronqvist <masse@klarna.com>
 Date:   Thu Sep 11 12:46:33 2014 +0200
 
     v0.88.0
 
+ChangeLog
 src/eper.app.src
 
 commit 46930d5b27422034010e84d3dbda07cf78c233bf

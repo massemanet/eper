@@ -1,7 +1,7 @@
 {application, eper,
  [
   {description, "Erlang Performance and Debugging Tools"},
-  {vsn, "0.88.0"},
+  {vsn, "0.89.0"},
   {registered, []},
   {applications, [kernel,stdlib]}
  ]}.
