@@ -85,20 +85,15 @@ printh(AggInds,Cols) ->
 print({K,T,U,F}) ->
   io:fwrite("~-33w~8.2f~8.2f~8.2f~n",[K,T,U,F]).
 
-present([],A) -> A;
 present({K,V},A) ->
-  case lists:reverse(K) of
-    [size,pool|NK]   -> [{NK,V}|A];
-    [size,sys|NK]    -> [{NK,V}|A];
-    [size,mseg|NK]   -> [{NK,V0}|A0] = A,
-                        [{NK,V+V0}|A0];
-    [size,blocks|NK] -> [{NK,V0}|A0] = A,
-                          [{lists:reverse(NK),
-                            V0/1024/1024,
-                            V/1024/1024,
-                            divide(V, V0)}|A0];
-    _                -> A
+  case {A,lists:reverse(K)} of
+    {[{NK,V0}|A0],[size,blocks|NK]} -> [format(NK,V,V0)|A0];
+    {[{NK,V0}|A0],[size,_|NK]}      -> [{NK,V+V0}|A0];
+    {_,[size,_|NK]}                 -> [{NK,V}|A]
   end.
+
+format(NK,V,V0) ->
+  {lists:reverse(NK),V0/1024/1024,V/1024/1024,divide(V,V0)}.
 
 divide(_V,0) -> 1.0;
 divide(V,V0) -> V/V0.
