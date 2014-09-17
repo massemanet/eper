@@ -62,6 +62,11 @@ help_text() ->
    ," They print sorted and formatted info from aggregate/2."
    ,""
    ,"calls/0 -> ok"
+   ," prints the number of calls to the various alloc functions."
+   ," there are 4 calls; allocate, deallocate, reallocate and free,"
+   ," and three flavours; mseg (memory mmapped), sys (system malloc),"
+   ," and allocator specific."
+   ,""
    ,"allocs(SortColumn,TagsToKeep) -> ok"
    ,"allocs(SortColumn) -> allocs(SortColumn,[allocator,group])"
    ,"allocs() -> allocs(allocd,[allocator,group])"
@@ -96,17 +101,38 @@ aggregate(AggregateIndices,FilterTags) ->
       getallocdata())).
 
 calls() ->
-  io:fwrite("~-20w~11w~11w~11w~11w~n",[allocator,alloc,dealloc,free,realloc]),
+  Form = "~-7s~8s~8s~8s~8s~8s~8s~8s~8s~8s~n",
+  io:fwrite(Form,["alloc",
+                  "all/m","deall/m","reall/m",
+                  "all/s","free/s","reall/s",
+                  "alloc","free","reall"]),
   lists:foreach(
-    fun(L)->io:fwrite("~-20w~11w~11w~11w~11w~n",L)end,
+    fun(T) -> io:fwrite(Form,massage(T)) end,
     lists:foldl(
-      fun({[X,alloc]  ,A},             T)  -> [[X,A,0,0,0]|T];
-         ({[X,dealloc],D},[[X,A,0,0,0]|T]) -> [[X,A,D,0,0]|T];
-         ({[X,free]   ,F},[[X,A,D,0,0]|T]) -> [[X,A,D,F,0]|T];
-         ({[X,realloc],R},[[X,A,D,F,0]|T]) -> [[X,A,D,F,R]|T]
+      fun({[X,mseg,alloc],V},A)   -> stuffit(X,1,V,A);
+         ({[X,mseg,dealloc],V},A) -> stuffit(X,2,V,A);
+         ({[X,mseg,realloc],V},A) -> stuffit(X,3,V,A);
+         ({[X,sys,alloc],V},A)    -> stuffit(X,4,V,A);
+         ({[X,sys,free],V},A)     -> stuffit(X,5,V,A);
+         ({[X,sys,realloc],V},A)  -> stuffit(X,6,V,A);
+         ({[X,_,alloc],V},A)      -> stuffit(X,7,V,A);
+         ({[X,_,free],V},A)       -> stuffit(X,8,V,A);
+         ({[X,_,realloc],V},A)    -> stuffit(X,9,V,A)
       end,
       [],
-      lists:sort(aggregate([allocator,info],[calls])))).
+      lists:sort(aggregate([allocator,type,info],[calls])))).
+
+massage(Tup) ->
+  [H|T] = tuple_to_list(Tup),
+  [hd(string:tokens(atom_to_list(H),"_"))|T].
+
+stuffit(X,N,V,A) ->
+  try
+    X = element(1,hd(A)),
+    [setelement(N+1,hd(A),prf:human(V))|tl(A)]
+  catch
+    _:_ -> stuffit(X,N,V,[{X,0,0,0,0,0,0,0,0,0}|A])
+  end.
 
 allocs() ->
   allocs(allocd).
@@ -127,7 +153,7 @@ allocs(SortCol,AggregateIndices) ->
 printh(AggInds,Cols) ->
   io:fwrite("~-33w~8w~8w~8w~n",[AggInds]++tl(Cols)).
 print({K,T,U,F}) ->
-  io:fwrite("~-33w~8.2f~8.2f~8.2f~n",[K,T,U,F]).
+  io:fwrite("~-33w~8s~8s~8.2f~n",[K,prf:human(T),prf:human(U),F]).
 
 present({K,V},A) ->
   case {A,lists:reverse(K)} of
@@ -137,7 +163,7 @@ present({K,V},A) ->
   end.
 
 format(NK,V,V0) ->
-  {lists:reverse(NK),V0/1024/1024,V/1024/1024,divide(V,V0)}.
+  {lists:reverse(NK),V0,V,divide(V,V0)}.
 
 divide(_V,0) -> 1.0;
 divide(V,V0) -> V/V0.
