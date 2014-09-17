@@ -1,9 +1,34 @@
-commit bbed7a1c92be30a70eee38ec3070144328ec00e1
+commit 6d19bd98e3f8f7ee065f951e2f3e2a170f232bfa
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Sep 17 14:19:49 2014 +0200
+
+    v0.90.0
+
+src/eper.app.src
+
+commit 45cb2ae5081eec54878c222725e94158abda7182
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Sep 17 14:19:15 2014 +0200
+
+    docs
+
+README
+
+commit a16807918935f16c8e7a0dc96831b6a0b9112bd4
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Sep 17 14:17:04 2014 +0200
+
+    massaged atop:calls/0
+
+src/atop.erl
+
+commit 638c6d44153dd50176aeceefec4dea1932e6ef40
 Author: mats cronqvist <masse@klarna.com>
 Date:   Tue Sep 16 14:36:46 2014 +0200
 
     v0.89.0
 
+ChangeLog
 src/eper.app.src
 
 commit 4936fdac364abe23a6ead700de98cc5aecec78fc
