@@ -76,6 +76,8 @@ unpack_var({tuple,Es},Vars) ->
   {list_to_tuple([unpack_var(E,Vars)||E<-Es])};
 unpack_var({list,Es},Vars) ->
   [unpack_var(E,Vars)||E<-Es];
+unpack_var({string,S},_) ->
+  S;
 unpack_var({var,Var},Vars) ->
   case proplists:get_value(Var,Vars) of
     undefined -> exit({unbound_variable,Var});
