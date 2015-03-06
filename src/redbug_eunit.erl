@@ -180,22 +180,22 @@ examples() ->
                      FD
                  end;
        (next) -> fun(FD) ->
-                     {ok,Line} = file:read_line(FD),
-                     {FD,strip_nl(Line)}
-                 end;
-       (exit) -> fun(FD,{_,eof}) -> file:close(FD);
-                    (_,Reason) -> exit({Reason,erlang:get_stacktrace()})
+                     case file:read_line(FD) of
+                       {ok,Line} -> {FD,strip_nl(Line)};
+                       eof       -> file:close(FD),finished
+                     end
                  end
     end,
 
   Handler =
     fun("```",{nil,Acc})    -> {exec,[[]|Acc]};
-       ("```",{exec,Acc})   -> {nil,Acc};
+       ("```",{exec,[H|T]}) -> {nil,[lists:reverse(H)|T]};
        (_Line,{nil,Acc})    -> {nil,Acc};
        (Line ,{exec,[H|T]}) -> {exec,[[Line|H]|T]}
     end,
 
-  handle(Stream,Handler,{nil,[]}).
+  {nil,Execs} = handle(Stream,Handler,{nil,[]}),
+  Execs.
 
 strip_nl(Str) ->
   case lists:reverse(Str) of
@@ -204,17 +204,21 @@ strip_nl(Str) ->
   end.
 
 handle(Stream,Handler,Acc) ->
-  handle((Stream(init))(),Stream(next),Stream(exit),Handler,Acc).
-handle(Sstate,Next,Exit,Handler,Acc) ->
-  case happen(Sstate,Next,Exit,Handler,Acc) of
-    {cont,NSstate,NAcc} -> handle(NSstate,Next,Exit,Handler,NAcc);
-    {final,NAcc} -> NAcc;
-    {exit,R,Stack} -> exit({R,Stack})
+  handle((Stream(init))(),Stream(next),Handler,Acc).
+handle(Sstate,Next,Handler,Acc) ->
+  case Next(Sstate) of
+    {NSstate,Element} ->
+      case happen(Handler,Acc,Element) of
+        {cont,NAcc}     -> handle(NSstate,Next,Handler,NAcc);
+        {finished,NAcc} -> NAcc;
+        {exit,R,Stack}  -> exit({R,Stack})
+      end;
+    finished ->
+      Acc
   end.
-happen(Sstate,Next,Exit,Handler,Acc) ->
-  try {NSstate,Element} = Next(Sstate),
-       try {cont,NSstate,Handler(Element,Acc)}
-       catch _:Ri -> {exit,Ri,erlang:get_stacktrace()}
-       end
-  catch _:Ro -> Exit(Sstate,Ro),{final,Acc}
+happen(Handler,Acc,Element) ->
+  try {cont,Handler(Element,Acc)}
+  catch
+    throw:{finished,NAcc} -> {finished,NAcc};
+    _:R -> {exit,R,erlang:get_stacktrace()}
   end.
