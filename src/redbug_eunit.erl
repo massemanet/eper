@@ -183,16 +183,18 @@ examples() ->
                      {ok,Line} = file:read_line(FD),
                      {FD,strip_nl(Line)}
                  end;
-       (exit) -> fun({_,eof},FD) -> file:close(FD);
-                    (Reason,_) -> exit({Reason,erlang:get_stacktrace()})
+       (exit) -> fun(FD,{_,eof}) -> file:close(FD);
+                    (_,Reason) -> exit({Reason,erlang:get_stacktrace()})
                  end
     end,
 
-  Handler = fun("```",{nil,Acc})    -> {exec,[[]|Acc]};
-               ("```",{exec,Acc})   -> {nil,Acc};
-               (_Line,{nil,Acc})    -> {nil,Acc};
-               (Line ,{exec,[H|T]}) -> {exec,[[Line|H]|T]}
-            end,
+  Handler =
+    fun("```",{nil,Acc})    -> {exec,[[]|Acc]};
+       ("```",{exec,Acc})   -> {nil,Acc};
+       (_Line,{nil,Acc})    -> {nil,Acc};
+       (Line ,{exec,[H|T]}) -> {exec,[[Line|H]|T]}
+    end,
+
   handle(Stream,Handler,{nil,[]}).
 
 strip_nl(Str) ->
@@ -214,5 +216,5 @@ happen(Sstate,Next,Exit,Handler,Acc) ->
        try {cont,NSstate,Handler(Element,Acc)}
        catch _:Ri -> {exit,Ri,erlang:get_stacktrace()}
        end
-  catch _:Ro -> Exit(Ro,Sstate),{final,Acc}
+  catch _:Ro -> Exit(Sstate,Ro),{final,Acc}
   end.
