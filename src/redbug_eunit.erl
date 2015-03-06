@@ -6,6 +6,7 @@
 
 -module('redbug_eunit').
 -author('mats cronqvist').
+-export([examples/0]).
 
 -ifdef(TEST).
 -include_lib("eunit/include/eunit.hrl").
@@ -167,3 +168,51 @@ e(N,L) when is_list(L) -> lists:nth(N,L);
 e(N,T) when is_tuple(T)-> element(N,T).
 
 -endif.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% execute examples
+examples() ->
+  Dir = filename:dirname(filename:dirname(code:which(?MODULE))),
+  File = filename:join([Dir,"doc","examples.md"]),
+  Stream =
+    fun(init) -> fun() ->
+                     {ok,FD} = file:open(File,[read]),
+                     FD
+                 end;
+       (next) -> fun(FD) ->
+                     {ok,Line} = file:read_line(FD),
+                     {FD,strip_nl(Line)}
+                 end;
+       (exit) -> fun({_,eof},FD) -> file:close(FD);
+                    (Reason,_) -> exit({Reason,erlang:get_stacktrace()})
+                 end
+    end,
+
+  Handler = fun("```",{nil,Acc})    -> {exec,[[]|Acc]};
+               ("```",{exec,Acc})   -> {nil,Acc};
+               (_Line,{nil,Acc})    -> {nil,Acc};
+               (Line ,{exec,[H|T]}) -> {exec,[[Line|H]|T]}
+            end,
+  handle(Stream,Handler,{nil,[]}).
+
+strip_nl(Str) ->
+  case lists:reverse(Str) of
+    [10|R] -> lists:reverse(R);
+    _ -> Str
+  end.
+
+handle(Stream,Handler,Acc) ->
+  handle((Stream(init))(),Stream(next),Stream(exit),Handler,Acc).
+handle(Sstate,Next,Exit,Handler,Acc) ->
+  case happen(Sstate,Next,Exit,Handler,Acc) of
+    {cont,NSstate,NAcc} -> handle(NSstate,Next,Exit,Handler,NAcc);
+    {final,NAcc} -> NAcc;
+    {exit,R,Stack} -> exit({R,Stack})
+  end.
+happen(Sstate,Next,Exit,Handler,Acc) ->
+  try {NSstate,Element} = Next(Sstate),
+       try {cont,NSstate,Handler(Element,Acc)}
+       catch _:Ri -> {exit,Ri,erlang:get_stacktrace()}
+       end
+  catch _:Ro -> Exit(Ro,Sstate),{final,Acc}
+  end.
