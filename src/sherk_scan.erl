@@ -10,21 +10,19 @@
 
 -include_lib("kernel/include/file.hrl").
 
--export([go/5]).
+-export([go/4]).
 
 -include("log.hrl").
 
--record(state, {seq=0, hits=0, cbs, pattern, out, min, max, eof = false}).
+-record(state, {seq=0, hits=0, cbs, out, min, max, eof = false}).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%%%  go(FileName, Patt, CBs, Min, Max)
-%%%  scans a trace file for messages. filters on sequence number and
-%%%  a pattern. if the sequence number is between Min and Max, and the
-%%%  message matches Patt, the massage is passed to the funs in CBs.
+%%%  go(FileName, CBs, Min, Max)
+%%%  scans a trace file for messages. filters on sequence number.
+%%%  if the sequence number is between Min and Max, the message
+%%%  is passed to the funs in CBs.
 %%%
 %%%  Filename - string()
-%%%  Patt - list(term(P))|term(P) - all terms P must match the message.
-%%%    funs, ports, refs and pids ar turned into atoms.
 %%%  CBs - list(function()) -  CB|list(CB)
 %%%  CB - fun(F)|atom(M)|{fun(F),term(Init)}|{atom(M),term(Init)}
 %%%  M - if M is '', the default callback is called. it will write the
@@ -37,17 +35,17 @@
 %%%  Min - integer() - min sequence number
 %%%  Max - integer() - max sequence number
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-go(FileName, Patt, CBs, '', Max) ->
-  go(FileName, Patt, CBs, 0, Max);
-go(FileName, _Patt, raw, Min, Max) ->
+go(_FileName,_CBs, Min, Max) when Max < Min ->
+  exit({max_less_than_min});
+go(FileName, raw, Min, Max) ->
   {ok, FD} = file:open(FileName, [read, raw, binary,compressed]),
   State = #state{min=Min,max=Max},
   file_action(FD, State, fun raw/2),
   file:close(FD);
-go(FileName, Patt, CBs, Min, Max) ->
+go(FileName, CBs, Min, Max) ->
   sherk_ets:new(?MODULE),
   {ok, FD} = file:open(FileName, [read,raw,binary,compressed]),
-  State = #state{pattern=Patt,cbs=cbs(CBs),min=Min,max=Max},
+  State = #state{cbs=cbs(CBs),min=Min,max=Max},
   St = file_action(FD, State, fun do/2),
   file:close(FD),
   {hits, St#state.hits}.
@@ -111,15 +109,11 @@ do(Mess, Stat) ->
   end.
 
 do_do(end_of_trace = Ms, #state{cbs=CBs, seq=Seq} = State) ->
-  State#state{cbs=do_safe_cbs(CBs, Ms, Seq, [])};
-do_do(Mess, #state{pattern=Patt, cbs=CBs, seq=Seq} = State) ->
-  case grep(Patt, Mess) of
-    false -> State#state{seq = Seq+1};
-    true ->
-      State#state{seq = Seq+1,
-                  hits = State#state.hits+1,
-                  cbs=do_safe_cbs(CBs, Mess, Seq, [])}
-  end.
+  State#state{cbs = do_safe_cbs(CBs, Ms, Seq, [])};
+do_do(Mess, #state{cbs=CBs, seq=Seq} = State) ->
+  State#state{seq = Seq+1,
+              hits = State#state.hits+1,
+              cbs = do_safe_cbs(CBs, Mess, Seq, [])}.
 
 do_safe_cbs([], _, _, O) -> lists:reverse(O);
 do_safe_cbs([CB|CBs], Msg, Seq, O) ->
@@ -133,38 +127,6 @@ write_msg(Msg,Seq,FD) -> io:fwrite(FD,"~.9.0w ~w~n",[Seq,Msg]),FD.
 
 open(File) -> {ok,FD}=file:open(File,[write]),FD.
 
-grep('',_) -> true;
-grep(P,T) when is_list(P) ->
-  case grp(P,T) of
-    [] -> true;
-    _ -> false
-  end;
-grep(P,T) -> grep([P],T).
-
-grp([], _) -> [];
-grp(P, []) -> P;
-grp(P, Fun)
-  when is_function(Fun) -> grp(P, list_to_atom(erlang:fun_to_list(Fun)));
-grp(P, Port)
-  when is_port(Port) -> grp(P, list_to_atom(erlang:port_to_list(Port)));
-grp(P, Rf)
-  when is_reference(Rf) -> grp(P, list_to_atom(erlang:ref_to_list(Rf)));
-grp(P, Pid)
-  when is_pid(Pid) -> grp(P, list_to_atom(pid_to_list(Pid)));
-grp(P, T)
-  when is_tuple(T) ->
-  case lists:member(T,P) of
-    true -> grp(P--[T], []);
-    false -> grp(P,tuple_to_list(T))
-  end;
-grp(P, L)
-  when is_list(L) ->
-  case lists:member(L, P) of
-    true -> grp(P--[L], []);
-    false -> grp(grp(P, hd(L)), tl(L))
-  end;
-grp(P, T) -> grp(P--[T], []).
-
 raw(end_of_trace,State) ->
   State;
 raw(Mess,State) ->
@@ -174,10 +136,10 @@ raw(Mess,State) ->
     _ -> State
   end.
 
-raw_out(_Mess, State = #state{seq=Seq}) ->
-  case {State#state.min < Seq, Seq < State#state.max} of
+raw_out(Mess, State = #state{seq=Seq}) ->
+  case {State#state.min =< Seq, Seq =< State#state.max} of
     {true,true} ->
-      %%io:fwrite("~w - ~w~n",[Seq,Mess]),
+      io:fwrite("~w - ~w~n",[Seq,Mess]),
       State#state{seq=Seq+1};
     {true,false} ->
       State#state{eof=true};
