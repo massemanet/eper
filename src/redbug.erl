@@ -39,6 +39,7 @@
           print_msec   = false,        % print milliseconds in timestamps?
           print_depth  = 999999,       % Limit for "~P" formatting depth
           print_re     = "",           % regexp that must match to print
+          print_return = true,         % print return value
           print_fun    = '',           % custom print handler
           %% trc file-related
           file         = "",           % file to write trace msgs to
@@ -106,6 +107,7 @@ help() ->
      , "print_msec   (false)       print milliseconds on timestamps"
      , "print_depth  (999999)      formatting depth for \"~P\""
      , "print_re     (\"\")          print only strings that match this RE"
+     , "print_return (true)        print the return value"
      , "print_fun    ()            custom print handler, fun/1 or fun/2;"
      , "                             fun(TrcMsg) -> <ignored>"
      , "                             fun(TrcMsg,AccOld) -> AccNew"
@@ -350,7 +352,7 @@ mk_blocker() ->
 
 mk_outer(#cnf{file=[_|_]}) ->
   fun(_) -> ok end;
-mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
+mk_outer(#cnf{print_depth=Depth,print_msec=MS,print_return=Ret} = Cnf) ->
   OutFun = mk_out(Cnf),
   fun({Tag,Data,PI,TS}) ->
       MTS = fix_ts(MS,TS),
@@ -383,7 +385,11 @@ mk_outer(#cnf{print_depth=Depth,print_msec=MS} = Cnf) ->
             false->
               ok
           end;
-        {'retn',{{M,F,A},Val}} ->
+        {'retn',{{M,F,A},Val0}} ->
+	  Val = case Ret of
+	          true  -> Val0;
+		  false -> '...'
+		end,
           OutFun("~n% ~s ~s~n% ~p:~p/~p -> ~P",
                  [MTS,to_str(PI),M,F,A,Val,Depth]);
         {'send',{MSG,ToPI}} ->
