@@ -685,22 +685,41 @@ subscriber_send_tcp_cache_test() ->
   NSF(close,'').
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 %% test helpers
 
 mk_receiver(Prot) ->
-  receive after 500 -> ok end,
-  spawn_monitor(mk_receiver(Prot,[binary,{reuseaddr,true},{active,true}])).
+  Self = self(),
+  Opts = [binary,{reuseaddr,true},{active,true}],
+  {Pid,Ref} = spawn_monitor(mk_receiver(Prot,Opts,Self)),
+  receive
+    {started,Pid} -> {Pid,Ref}
+  end.
 
-mk_receiver(udp,Opts) ->
+mk_receiver(udp,Opts,Daddy) ->
   fun() ->
       {ok,_} = gen_udp:open(16#dada,Opts),
+      Daddy ! {started,self()},
       receive {udp,_,{127,0,0,1},_,B}->exit(B)end
   end;
-mk_receiver(tcp,Opts) ->
+mk_receiver(tcp,Opts,Daddy) ->
   fun() ->
-      {ok,ListenSock} = gen_tcp:listen(16#dada,Opts),
+      ListenSock = get_listen_socket(Opts,[500,1000,2000,4000]),
+      Daddy ! {started,self()},
       {ok,Socket} = gen_tcp:accept(ListenSock),
-      receive {tcp,Socket,B}->exit(B)end
+      receive
+        {tcp,Socket,B} ->
+          exit(B)
+      end
+  end.
+
+get_listen_socket(_,[]) -> error({cannot_get_listen_socket});
+get_listen_socket(Opts,[TO|TOs]) ->
+  case gen_tcp:listen(16#dada,Opts) of
+    {ok,LS} -> LS;
+    {error,eaddrinuse} ->
+      timer:sleep(TO),
+      get_listen_socket(Opts,TOs)
   end.
 
 mk_sender(Prot,LD) ->

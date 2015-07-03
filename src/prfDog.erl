@@ -186,7 +186,8 @@ t0_test() ->
   watchdog:stop(),
   poll(),
   ?assertMatch([{_,_,user,troglodyte}],
-               prf:stop(dogC)).
+               prf:stop(dogC)),
+  prfDog:quit().
 
 poll() ->
   case prf:state(dogC) of
