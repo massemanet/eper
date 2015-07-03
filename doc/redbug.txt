@@ -66,6 +66,7 @@ print_file   (standard_io) print to this file
 print_msec   (false)       print milliseconds on time stamps
 print_depth  (999999)      formatting depth for "~P"
 print_re     ("")          print only strings that match this regexp
+print_return (true)        print return value
 print_fun    ('')          custom print fun. gets called once for each trace
                            message. It can be a fun/1, (called as F(Msg),
                            return value is ignored), or a fun/2 (called as

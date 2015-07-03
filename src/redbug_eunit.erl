@@ -128,6 +128,19 @@ t_8_test() ->
   ?assertEqual(sort,
                e(2,e(4,e(2,Msgs)))).
 
+t_9_test() ->
+  Filename = "redbug.txt",
+  Options = [{print_file, Filename}, {time, 999}, {print_return, false}],
+  {_,_} = redbug:start("lists:sort->return", Options),
+  [1,2,3] = lists:sort([3,2,1]),
+  timer:sleep(1100),
+  maybe_show(Filename),
+  ?assertEqual(<<"lists:sort([3,2,1])">>,
+               get_line_seg(Filename,2,2)),
+  ?assertEqual([<<"lists:sort/1">>,<<"->">>,<<"'...'">>],
+               get_line_seg(Filename,4,2,4)),
+  maybe_delete(Filename).
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% trace file utilities
 maybe_show(Filename) ->
