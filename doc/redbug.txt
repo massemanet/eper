@@ -16,11 +16,11 @@ SYNOPSIS
 DESCRIPTION
 
   redbug is a tool to interact with the Erlang trace facility. It will instruct
-  the Erlang VM to generate so called 'trace messages' when certain events
+  the Erlang VM to generate so-called 'trace messages' when certain events
   (such as a particular function being called) occur. It uses a safe subset of
   the tracing functionality, and exits if it feels overloaded, e.g. if it gets
   flooded by trace messages. It runs in the background, collecting trace
-  messages, until it reaches one of it's termination criteria (number of
+  messages, until it reaches one of its termination criteria (number of
   messages/file size or elapsed time). The trace messages are either printed
   (i.e. human readable) to a file or to the screen; or written to a trc file.
   Using a trc file puts less stress on the system, but there is no way to count
@@ -79,7 +79,7 @@ file_count   (8)           number of trc files
 
 EXAMPLES
 
-%% basic call trace
+%% Basic call trace
 1> redbug:start("erlang:demonitor").
 {30,2}
 15:39:00 <{erlang,apply,2}> {erlang,demonitor,[#Ref<0.0.0.21493>]}
@@ -87,20 +87,20 @@ EXAMPLES
 15:39:00 <{erlang,apply,2}> {erlang,demonitor,[#Ref<0.0.0.21500>]}
 redbug done, timeout - 3
 
-%% as above, print pids
+%% As above, print pids
 2> redbug:start("erlang:demonitor",[{msgs,1},print_pids]).
 {30,2}
 15:42:04 <0.31.0> {erlang,demonitor,[#Ref<0.0.0.21616>]}
 redbug done, msg_count - 1
 
-%% as above, print return value. note that return value is a separate message.
+%% As above, print return value. Note that return value is a separate message.
 3> redbug:start("erlang:demonitor->return",[{msgs,2},print_pids]).
 {30,2}
 15:43:22 <0.31.0> {erlang,demonitor,[#Ref<0.0.0.21677>]}
 15:43:22 <0.31.0> erlang:demonitor/1 -> true
 redbug done, msg_count - 2
 
-%% as above, also print the call stack. note that not all functions in the
+%% As above, also print the call stack. Note that not all functions in the
 %% call chain are on the stack, only functions we will return to (this is a
 %% consequence of tail call optimization.)
 4> redbug:start("erlang:demonitor->return,stack",[{msgs,2},print_pids]).
@@ -114,14 +114,14 @@ redbug done, msg_count - 2
 15:44:35 <0.31.0> erlang:demonitor/1 -> true
 redbug done, msg_count - 2
 
-%% trace on messages that the shell process receives.
+%% Trace on messages that the shell process receives.
 5> redbug:start('receive',[{procs,[self()]}]).
 {1,0}
 15:15:47 <{erlang,apply,2}> <<< {running,1,0}
 15:17:49 <{erlang,apply,2}> <<< timeout
 redbug done, timeout - 2
 
-%% as above, but also trace on sends from the shell process. note that in this
+%% As above, but also trace on sends from the shell process. note that in this
 %% case the 'print_pids' opt would hide that there is a send to the group
 %% server.
 7> redbug:start([send,'receive'],[{procs,[self()]}]).
@@ -132,7 +132,7 @@ redbug done, timeout - 2
                                                     {get_geometry,columns}}
 redbug done, timeout - 2
 
-%% call trace with a function head match. note that the first call to
+%% Call trace with a function head match. Note that the first call to
 %% ets:tab2list/1 does not trigger the tracer.
 8> redbug:start("ets:tab2list(inet_db)",[{msgs,2},print_pids]).
 {30,1}
@@ -143,7 +143,7 @@ ok
 15:47:15 <0.31.0> {ets,tab2list,[inet_db]}
 redbug done, timeout - 1
 
-%% as above, but use the 'blocking' opt. redbug:start/2 blocks until end of
+%% As above, but use the 'blocking' opt. redbug:start/2 blocks until end of
 %% trace, and returns the stop reason and a list of trace messages.
 10> spawn(fun()->receive after 2000->ets:tab2list(inet_db) end end).
 <0.540.0>
