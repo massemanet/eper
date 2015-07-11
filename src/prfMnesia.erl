@@ -27,7 +27,10 @@
 -type count()       :: non_neg_integer().
 -type data()        :: {metric_name(), [metric()]}.
 -type metric()      :: {metric_name(), value()}.
+-type metric_gauge():: {metric_name(), metric_value()}.
 -type metric_name() :: atom().
+-type metric_value():: float() | undefined.
+-type collector()   :: {metric_name(), fun()}.
 -type state()       :: #state{}.
 -type table_name()  :: dets:tab_name() | ets:tab().
 -type table_type()  :: dets | ets | remote_only.
@@ -197,7 +200,7 @@ get_value_collectors(Collectors) ->
 get_change_collectors() ->
   get_collector_names(changes()).
 
--spec get_collector_names([metric_name()]) -> [metric_name()].
+-spec get_collector_names([collector()]) -> [metric_name()].
 get_collector_names(Collectors) ->
   [Name || {Name, _CollectorFun} <- Collectors].
 
@@ -214,7 +217,7 @@ filter_collectors(Collectors, AllowedCollectors) ->
 %% since last time. The first two has a zero-arity collector function,
 %% the last a two-arity collector function where the first argument is
 %% the cache and the second argument is the time since last call.
--spec collectors() -> [{metric_name(), fun()}].
+-spec collectors() -> [collector()].
 collectors() ->
   counters() ++ lists() ++ changes().
 
@@ -265,7 +268,7 @@ time_diff(Then, Now) ->
   timer:now_diff(Now, Then) / ?TIME_DIVISOR.
 
 -spec calculate_changes([metric()], value() | [value()], time_diff()) ->
-                           [{metric_name(), float() | undefined}].
+                           [metric_gauge()].
 calculate_changes(CurrentValues, OldValues, TimeDiff) when
     is_list(CurrentValues) ->
   F = fun(CurrentValue) ->
@@ -274,7 +277,7 @@ calculate_changes(CurrentValues, OldValues, TimeDiff) when
   lists:map(F, CurrentValues).
 
 -spec calculate_change(metric() | value(), value(), time_diff()) ->
-                          {metric_name(), float() | undefined}.
+                          metric_gauge().
 calculate_change({Key, _CurrentValue}, undefined, _TimeDiff) ->
   {Key, undefined};
 calculate_change(_CurrentValue, undefined, _TimeDiff) ->
@@ -303,7 +306,7 @@ get_value_from_cache(Key, Cache) ->
 held_locks() ->
   ets:info(mnesia_held_locks, size).
 
--spec held_locks_change(cache(), time_diff()) -> number().
+-spec held_locks_change(cache(), time_diff()) -> metric_gauge().
 held_locks_change(Cache, TimeDiff) ->
   OldCount = get_value_from_cache(held_locks, Cache),
   calculate_change(held_locks(), OldCount, TimeDiff).
@@ -312,7 +315,7 @@ held_locks_change(Cache, TimeDiff) ->
 lock_queue() ->
   ets:info(mnesia_lock_queue, size).
 
--spec lock_queue_change(cache(), time_diff()) -> number().
+-spec lock_queue_change(cache(), time_diff()) -> metric_gauge().
 lock_queue_change(Cache, TimeDiff) ->
   OldCount = get_value_from_cache(lock_queue, Cache),
   calculate_change(lock_queue(), OldCount, TimeDiff).
@@ -336,7 +339,7 @@ table_sizes() ->
       end,
   lists:foldl(F, [], tables()).
 
--spec table_size_changes(cache(), time_diff()) -> [].
+-spec table_size_changes(cache(), time_diff()) -> [metric_gauge()].
 table_size_changes(Cache, TimeDiff) ->
   OldSizes = get_value_from_cache(table_sizes, Cache),
   calculate_changes(table_sizes(), OldSizes, TimeDiff).
@@ -351,7 +354,7 @@ object_counts() ->
       end,
   lists:foldl(F, [], tables()).
 
--spec object_count_changes(cache(), time_diff()) -> [].
+-spec object_count_changes(cache(), time_diff()) -> [metric_gauge()].
 object_count_changes(Cache, TimeDiff) ->
   OldCounts = get_value_from_cache(object_counts, Cache),
   calculate_changes(object_counts(), OldCounts, TimeDiff).
@@ -360,7 +363,7 @@ object_count_changes(Cache, TimeDiff) ->
 current_transactions() ->
   length(mnesia:system_info(transactions)).
 
--spec current_transactions_change(cache(), time_diff()) -> number().
+-spec current_transactions_change(cache(), time_diff()) -> metric_gauge().
 current_transactions_change(Cache, TimeDiff) ->
   OldCount = get_value_from_cache(current_transactions, Cache),
   calculate_change(current_transactions(), OldCount, TimeDiff).
@@ -369,7 +372,7 @@ current_transactions_change(Cache, TimeDiff) ->
 failed_transactions() ->
   mnesia:system_info(transaction_failures).
 
--spec failed_transactions_change(cache(), time_diff()) -> number().
+-spec failed_transactions_change(cache(), time_diff()) -> metric_gauge().
 failed_transactions_change(Cache, TimeDiff) ->
   OldCount = get_value_from_cache(failed_transactions, Cache),
   calculate_change(failed_transactions(), OldCount, TimeDiff).
@@ -378,7 +381,7 @@ failed_transactions_change(Cache, TimeDiff) ->
 committed_transactions() ->
   mnesia:system_info(transaction_commits).
 
--spec committed_transactions_change(cache(), time_diff()) -> number().
+-spec committed_transactions_change(cache(), time_diff()) -> metric_gauge().
 committed_transactions_change(Cache, TimeDiff) ->
   OldCount = get_value_from_cache(committed_transactions, Cache),
   calculate_change(committed_transactions(), OldCount, TimeDiff).
@@ -387,7 +390,7 @@ committed_transactions_change(Cache, TimeDiff) ->
 restarted_transactions() ->
   mnesia:system_info(transaction_restarts).
 
--spec restarted_transactions_change(cache(), time_diff()) -> number().
+-spec restarted_transactions_change(cache(), time_diff()) -> metric_gauge().
 restarted_transactions_change(Cache, TimeDiff) ->
   OldCount = get_value_from_cache(restarted_transactions, Cache),
   calculate_change(restarted_transactions(), OldCount, TimeDiff).
@@ -396,25 +399,25 @@ restarted_transactions_change(Cache, TimeDiff) ->
 logged_transactions() ->
   mnesia:system_info(transaction_log_writes).
 
--spec logged_transactions_change(cache(), time_diff()) -> number().
+-spec logged_transactions_change(cache(), time_diff()) -> metric_gauge().
 logged_transactions_change(Cache, TimeDiff) ->
   OldCount = get_value_from_cache(logged_transactions, Cache),
   calculate_change(restarted_transactions(), OldCount, TimeDiff).
 
--spec object_count(table_name()) -> count().
+-spec object_count(table_name()) -> count() | undefined.
 object_count(Table) ->
   object_count(Table, get_term_storage_type(Table)).
 
--spec object_count(table_name(), table_type()) -> count().
+-spec object_count(table_name(), table_type()) -> count() | undefined.
 object_count(_Table, remote_only) -> undefined;
 object_count(Table,  dets)        -> dets_object_count(Table);
 object_count(Table,  ets)         -> ets_object_count(Table).
 
--spec table_size(table_name()) -> bytes().
+-spec table_size(table_name()) -> bytes() | undefined.
 table_size(Table) ->
   table_size(Table, get_term_storage_type(Table)).
 
--spec table_size(table_name(), table_type()) -> bytes().
+-spec table_size(table_name(), table_type()) -> bytes() | undefined.
 table_size(_Table, remote_only) -> undefined;
 table_size(Table,  dets)        -> dets_size(Table);
 table_size(Table,  ets)         -> ets_size(Table).
