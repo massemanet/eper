@@ -8,6 +8,8 @@
 -author('Mats Cronqvist').
 -export([read/1]).
 
+-dialyzer({no_return, read/2}).
+
 read(FN) ->
   {ok,FD} = file:open(FN,[read,binary,compressed,raw]),
   try read(FD,<<>>)
