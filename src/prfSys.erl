@@ -24,7 +24,7 @@
 %%
 %% tag                  [unit]    source
 %% node                 [atom()]  erlang:node()
-%% now                  [now()]   erlang:now()
+%% now                  [now()]   erlang:timestamp()
 %% procs                [count]   erlang:system_info(process_count)
 %% context_switches     [count/s] erlang:statistics(context_switches)
 %% gcs                  [count/s] erlang:statistics(garbage_collection)
@@ -62,7 +62,7 @@
 -export([collect/1,config/2]).
 
 -record(cst,{strategy=strategy(), node=node(), total_ram=0, cores=1,
-             cache=[], now=now()}).
+             cache=[], now=erlang:timestamp()}).
 
 -define(RATES,[context_switches,gcs,gc_reclaimed,io_in,io_out,reductions,
                user,nice,kernel,idle,iowait,
@@ -90,7 +90,7 @@ stats() ->
   {Reds,_} = erlang:statistics(reductions),
   RunQ = erlang:statistics(run_queue),
 
-  [{now, now()},
+  [{now,erlang:timestamp()},
    {procs,Procs},
    {context_switches,Ctxt},
    {gcs,GCs},
