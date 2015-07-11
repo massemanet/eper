@@ -10,3 +10,8 @@ case erlang:function_exported(crypto,block_encrypt,3) of
   true  -> KeyAppend(erl_opts,CONFIG,{d,'CRYPTO_R16'},KeyAppend);
   false -> CONFIG
 end.
+
+case erlang:is_builtin(erlang,timestamp,0) of
+  true  -> KeyAppend(erl_opts,CONFIG,{d,'HAS_TIMESTAMP'},KeyAppend);
+  false -> CONFIG
+end.

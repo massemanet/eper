@@ -395,7 +395,7 @@ make_report(Trigger,LD) ->
   reporter(Trigger,LD#ld.prfData).
 
 reporter(Trigger,TriggerData) ->
-  {?MODULE,node(),erlang:timestamp(),Trigger,TriggerData}.
+  {?MODULE,node(),prfTime:ts(),Trigger,TriggerData}.
 
 expand_ps([])                         -> [];
 expand_ps([{T,P}|Es]) when is_pid(P)  -> pii({T,P})++expand_ps(Es);

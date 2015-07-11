@@ -22,7 +22,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% runs in the prfTarg process
 
-collect(LD) -> {LD, {?MODULE, {tick,erlang:timestamp()}}}.
+collect(LD) -> {LD, {?MODULE, {tick,prfTime:ts()}}}.
 
 config(LD,{start,Conf}) -> start(Conf),LD;
 config(LD,{stop,Args}) -> stop(Args),LD;
@@ -416,7 +416,7 @@ flush_time_count({MFA,_MatchSpec,Flags},Where) ->
   Where ! lists:foldl(fun(Flag,A)-> time_count(MFA,Flag,A) end,[],Flags).
 
 time_count(MFA,Flag,A) when Flag == call_count; Flag == call_time ->
-  [{Flag,{MFA,element(2,erlang:trace_info(MFA,Flag))},[],ts(erlang:timestamp())}|A];
+  [{Flag,{MFA,element(2,erlang:trace_info(MFA,Flag))},[],ts(prfTime:ts())}|A];
 time_count(_,_,A) ->
   A.
 

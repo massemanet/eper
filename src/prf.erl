@@ -45,7 +45,7 @@ ticker_even()-> erlang:start_timer(incr(?TICK,0), self(),{tick}).
 ticker_odd() -> erlang:start_timer(incr(?TICK,?TICK div 2), self(),{tick}).
 
 incr(Tick,Offset) ->
-    {_, Sec, Usec} = erlang:timestamp(),
+    {_, Sec, Usec} = prfTime:ts(),
     Skew = Tick div 4,
     Tick+Skew-((round(Sec*1000+Usec/1000)-Offset+Skew) rem Tick).
 

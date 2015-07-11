@@ -18,12 +18,12 @@ go(Msg, Seq, State)          -> handler(Msg) ! {msg,Seq,Msg}, State.
 init() ->
   ?log([{starting,?MODULE}]),
   sherk_ets:new(sherk_prof),
-  {start,erlang:timestamp()}.
+  {start,prfTime:ts()}.
 
 terminate(Seq,{start,Start}) ->
   ?log([{finishing,sherk_prof},
         {seq,Seq},
-        {time,timer:now_diff(erlang:timestamp(),Start)/1000000},
+        {time,timer:now_diff(prfTime:ts(),Start)/1000000},
         {procs,length(ets:match(sherk_prof,{{handler,'$1'},'_'}))}]),
   TermFun = fun({{handler,_},Pid},_) -> Pid ! quit; (_,_) -> ok end,
   ets:foldl(TermFun,[],sherk_prof).

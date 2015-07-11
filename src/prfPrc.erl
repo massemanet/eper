@@ -61,8 +61,8 @@ init_cst() ->
 
 get_info(Cst) ->
   case Cst#cst.max_procs < erlang:system_info(process_count) of
-    true -> {erlang:timestamp(),[]};
-    false-> {erlang:timestamp(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]}
+    true -> {prfTime:ts(),[]};
+    false-> {prfTime:ts(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]}
   end.
 
 %%% Dreds, Dmems, Mems and Msgqs are sorted lists of pids
@@ -73,7 +73,7 @@ select(Cst = #cst{old_info={Then,Olds}},{Now,Curs},Items) ->
   {DredL,DmemL,MemL,MsgqL} = topl(Olds,Curs,outf(Then,Now,Items),empties()),
   PidInfo = lists:usort([I || {_,I} <-lists:append([DredL,DmemL,MemL,MsgqL])]),
   [{node,node()},
-   {now,erlang:timestamp()},
+   {now,prfTime:ts()},
    {dreds,e1e2(DredL)},
    {dmem,e1e2(DmemL)},
    {mem,e1e2(MemL)},
