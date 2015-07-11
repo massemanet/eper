@@ -1,9 +1,117 @@
-commit 6d19bd98e3f8f7ee065f951e2f3e2a170f232bfa
+commit 89451898d83919a795be6c5a2ae7f4af673526bb
+Author: mats cronqvist <mats.cronqvist@gmail.com>
+Date:   Sat Jul 11 17:48:05 2015 +0200
+
+    v0.91.0
+
+src/eper.app.src
+
+commit 03b6686a4306be54ce0a32b0335f0e5908037bfa
+Author: mats cronqvist <mats.cronqvist@gmail.com>
+Date:   Sat Jul 11 17:44:29 2015 +0200
+
+    fix errors in type specs
+
+src/prfMnesia.erl
+
+commit 175a6e9f34b6073c9debd962a5fc533b9ababc4d
+Author: mats cronqvist <mats.cronqvist@gmail.com>
+Date:   Sat Jul 11 16:36:10 2015 +0200
+
+    fixup dialyzing
+
+Makefile
+src/logReader.erl
+
+commit ffefe7a9061ecd7e2182a7fe06082de9434bb2b2
+Author: mats cronqvist <mats.cronqvist@gmail.com>
+Date:   Sat Jul 11 16:33:26 2015 +0200
+
+    erlang:now is obsolete, but what about old OTP's?
+    make erlang:timestamp -> erlang:now change work in old OTP's, that doesn't have
+    erlang:timestamp/0.
+
+rebar.config.script
+src/prf.erl
+src/prfDog.erl
+src/prfPrc.erl
+src/prfSys.erl
+src/prfTime.erl
+src/prfTrc.erl
+src/sherk_prof.erl
+src/watchdog.erl
+
+commit eba5f0b65bd143430bc012d2b1a8a9a4a7aa009d
+Author: David Haguenauer <david@adgear.com>
+Date:   Fri Jul 10 10:31:21 2015 -0400
+
+    Fix some documentation typos.
+
+doc/redbug.txt
+
+commit d435f6cd326ec8d230abacbdaaa7866478c8411e
+Author: Nikita Kalashnikov <nikita@scrapinghub.com>
+Date:   Tue Jul 7 14:53:09 2015 +0300
+
+    Replaced `erlang:now/0` with `erlang:timestamp/0` for Erlang 18 compatibility
+
+src/prf.erl
+src/prfPrc.erl
+src/prfSys.erl
+src/prfTrc.erl
+src/sherk_prof.erl
+src/watchdog.erl
+
+commit 86ba7268948df5f48a149769cbc9e1814f3464a6
+Author: mats cronqvist <masse@klarna.com>
+Date:   Fri Jul 3 15:50:27 2015 +0200
+
+    testing
+
+src/prfDog.erl
+src/watchdog.erl
+
+commit b602d549e1a517cc8a68653df1cc35a12549a8a3
+Author: Roberto Aloi <prof3ta@gmail.com>
+Date:   Tue Jun 30 23:09:44 2015 +0200
+
+    Add support for print_return option
+
+doc/redbug.txt
+src/redbug.erl
+src/redbug_eunit.erl
+
+commit 17c24d712c61b0bc422a7b44f32e7b3d9179409a
+Author: John R. Daily <git@epep.us>
+Date:   Fri Mar 6 08:56:00 2015 -0500
+
+    Handle simple atoms (registered names) as send targets
+
+src/redbug.erl
+
+commit fe53eb018baaacf2362ff5e338c8df50f29130f4
+Author: Matthias <matthias@baktus.se>
+Date:   Tue Nov 4 18:22:06 2014 +0100
+
+    add mnesia prf collector
+
+src/prfMnesia.erl
+
+commit 02d38e33852f41dea4612aa1baff4bbc844345b1
+Author: systra <andrzej.trawinski@systra.com.pl>
+Date:   Thu Sep 18 23:07:44 2014 +0300
+
+    Allow string type variables for guards
+
+src/redbug_msc.erl
+
+commit 2a946220dd78bee759b39bce8194d8ae4d7912f8
 Author: mats cronqvist <masse@klarna.com>
 Date:   Wed Sep 17 14:19:49 2014 +0200
 
     v0.90.0
 
+ChangeLog
 src/eper.app.src
 
 commit 45cb2ae5081eec54878c222725e94158abda7182
