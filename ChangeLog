@@ -1,9 +1,27 @@
-commit 89451898d83919a795be6c5a2ae7f4af673526bb
+commit b5835fa285f86216b44c7fffc2d6c523e683ab80
+Author: mats cronqvist <mats.cronqvist@gmail.com>
+Date:   Tue Jul 14 12:28:30 2015 +0200
+
+    v0.92.0
+
+src/eper.app.src
+
+commit 2234c2085a32216ac27254c264a8445318153cba
+Author: Dmitry Klionsky <dm.klionsky@gmail.com>
+Date:   Tue Jul 14 11:35:14 2015 +0300
+
+    Fix R16 build error
+
+rebar.config.script
+
+commit 493a5b0b838d101373aebd9c21a336795c9aed42
 Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Sat Jul 11 17:48:05 2015 +0200
 
     v0.91.0
 
+AUTHORS
+ChangeLog
 src/eper.app.src
 
 commit 03b6686a4306be54ce0a32b0335f0e5908037bfa
