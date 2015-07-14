@@ -14,7 +14,7 @@
 
 -record(state, { collectors = default_collectors(),
                  cache = [],
-                 timestamp = now()
+                 timestamp = prfTime:ts()
                }).
 
 %% We settle for only measuring changes over seconds
@@ -151,7 +151,7 @@ available_collectors() ->
 
 -spec collect_data(state()) -> [metric()].
 collect_data(State) ->
-  CurrentTime = erlang:now(),
+  CurrentTime = prfTime:ts(),
   Data = collect_values(State) ++ collect_changes(State, CurrentTime),
   [{timestamp, CurrentTime}|Data].
 

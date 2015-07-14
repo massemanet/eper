@@ -1,17 +1,34 @@
 %% -*- mode: erlang;erlang-indent-level: 2;indent-tabs-mode: nil -*-
 %% vim: set ft=erlang ts=2 sw=2:
 
-KeyAppend = fun(Tag,[],E,_)         ->[{Tag,[E]}];
-               (Tag,[{Tag,O}|T],E,_)->[{Tag,[E|O]}|T];
-               (Tag,[H|T],E,G)      ->[H|G(Tag,T,E,G)]
-            end,
-code:ensure_loaded(crypto),
-CONFIG2 = case erlang:function_exported(crypto,block_encrypt,3) of
-            true  -> KeyAppend(erl_opts,CONFIG,{d,'CRYPTO_R16'},KeyAppend);
-            false -> CONFIG
-          end.
+%% this code is not particularly nice.
+%% the idea is to test for the presence of functions, in order to set
+%% preprocessor flags, so that we can use the preprocessor to hide new
+%% functions from old compilers.
+%% "erl_opts" gets passed to the compiler.
+%% "CONFIG" is a magic rebar thing.
 
-case erlang:is_builtin(erlang,timestamp,0) of
-  true  -> KeyAppend(erl_opts,CONFIG2,{d,'HAS_TIMESTAMP'},KeyAppend);
-  false -> CONFIG2
-end.
+KeyAppend =
+fun(Tag,[],E,_)          -> [{Tag,[E]}];
+   (Tag,[{Tag,O}|T],E,_) -> [{Tag,[E|O]}|T];
+   (Tag,[H|T],E,G)       -> [H|G(Tag,T,E,G)]
+end,
+
+Crypto =
+fun(CFG) ->
+    code:ensure_loaded(crypto),
+    case erlang:function_exported(crypto,block_encrypt,3) of
+      true  -> KeyAppend(erl_opts,CFG,{d,'CRYPTO_R16'},KeyAppend);
+      false -> CFG
+    end
+end,
+
+Timestamp =
+fun(CFG) ->
+    case erlang:is_builtin(erlang,timestamp,0) of
+      true  -> KeyAppend(erl_opts,CFG,{d,'HAS_TIMESTAMP'},KeyAppend);
+      false -> CFG
+    end
+end,
+
+lists:foldl(fun(F,Cfg) -> F(Cfg) end,CONFIG,[Crypto,Timestamp]).
