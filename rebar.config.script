@@ -6,12 +6,12 @@ KeyAppend = fun(Tag,[],E,_)         ->[{Tag,[E]}];
                (Tag,[H|T],E,G)      ->[H|G(Tag,T,E,G)]
             end,
 code:ensure_loaded(crypto),
-case erlang:function_exported(crypto,block_encrypt,3) of
-  true  -> KeyAppend(erl_opts,CONFIG,{d,'CRYPTO_R16'},KeyAppend);
-  false -> CONFIG
-end.
+CONFIG2 = case erlang:function_exported(crypto,block_encrypt,3) of
+            true  -> KeyAppend(erl_opts,CONFIG,{d,'CRYPTO_R16'},KeyAppend);
+            false -> CONFIG
+          end.
 
 case erlang:is_builtin(erlang,timestamp,0) of
-  true  -> KeyAppend(erl_opts,CONFIG,{d,'HAS_TIMESTAMP'},KeyAppend);
-  false -> CONFIG
+  true  -> KeyAppend(erl_opts,CONFIG2,{d,'HAS_TIMESTAMP'},KeyAppend);
+  false -> CONFIG2
 end.
