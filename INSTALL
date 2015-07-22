@@ -1,23 +1,12 @@
-  if building from tarball;
-
-get tarball from http://code.google.com/p/eper/downloads/list
-
-$ tar -xzf ~etxmacr/eper-N.nn.tar.gz 
-$ cd eper-N.nn/
-$ ./configure  --prefix=<some nice place>
-$ make
-$ make install
-
-
   if building from github (using rebar);
 
 $ git clone git://github.com/massemanet/eper.git
-$ cd eper 
+$ cd eper
 $ make
 
   or using autotools;
 
-$ aclocal ; autoconf ; automake
+$ aclocal && automake --gnu --add-missing && autoconf
 $ ./configure --prefix=<some nice place>
 $ make
 $ make install

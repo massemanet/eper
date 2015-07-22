@@ -10,7 +10,7 @@ AC_COPYRIGHT(Copyright (C) 2008-2013 Mats Cronqvist)
 dnl AC_REVISION($Id$)
 
 dnl Require automake version >=1.9.5.
-AM_INIT_AUTOMAKE(1.9.5)
+AM_INIT_AUTOMAKE([foreign 1.9.5])
 
 dnl Erlang-related configuration.
 AC_ERLANG_SUBST_ROOT_DIR
