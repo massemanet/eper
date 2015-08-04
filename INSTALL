@@ -1,15 +1,7 @@
-  if building from github (using rebar);
+  Clone from github.
+  Run make (which uses rebar);
 
 $ git clone git://github.com/massemanet/eper.git
 $ cd eper
 $ make
-
-  or using autotools;
-
-$ aclocal && automake --gnu --add-missing && autoconf
-$ ./configure --prefix=<some nice place>
-$ make
-$ make install
-
-  you'll need autoconf 2.59c or higher, and automake 1.9.5 or higher.
 
