@@ -6,14 +6,8 @@
 /.eunit/
 /ebin/
 /priv/bin/eper
-/priv/bin/Makefile
-/src/Makefile
-Makefile.in
-/aclocal.m4
-/autom4te.cache
 /doc/*.html
 /doc/*.css
 /doc/*.png
 /doc/edoc-info
-config*
 *beam
