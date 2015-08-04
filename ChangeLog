@@ -1,9 +1,89 @@
-commit b5835fa285f86216b44c7fffc2d6c523e683ab80
+commit 1adfd0631e676a3658eb8caa909ccf53e75ecc4a
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Tue Aug 4 12:57:06 2015 +0200
+
+    v0.93.0
+
+src/eper.app.src
+
+commit 57e0af762f16d4f7609dcf040f93755bb57560ec
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Tue Aug 4 12:56:33 2015 +0200
+
+    remove autostuff from docs
+
+INSTALL
+
+commit 2f2e2525fdb3084ac7f692b321fca4202a0bad86
+Author: Loïc Hoguin <essen@ninenines.eu>
+Date:   Thu Jul 23 14:35:36 2015 +0200
+
+    Remove autotools support
+
+.gitignore
+Makefile.am
+configure.ac
+priv/bin/Makefile.am
+src/Makefile.am
+
+commit 8e9eee4e1e55bea1483edb2c49df1842be6be683
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Wed Jul 22 15:02:15 2015 +0200
+
+    fixing autotools build (thanks L.Hoguin)
+
+INSTALL
+NEWS
+configure.ac
+depcomp
+install-sh
+missing
+
+commit 436919d794fb5388e3ec228246d5590ac8bda41e
+Author: mats cronqvist <mats.cronqvist@gmail.com>
+Date:   Tue Jul 14 12:54:16 2015 +0200
+
+    integrate with travis. remove all the gtk stuff.
+    make travis use latest vsns of erlang 15, 16, 17, and 18.
+    move sherk et al to its own repo.
+
+.travis.yml
+Makefile
+README
+README.md
+priv/bin/Makefile.am
+priv/bin/gperf
+priv/bin/sherk
+rebar.config
+rebar.config.script
+src/Makefile.am
+src/gperf.erl
+src/gperf.glade
+src/gperf.gladep
+src/gperfConsumer.erl
+src/gperfGtk.erl
+src/prfDog.erl
+src/prfMnesia.erl
+src/sherk.erl
+src/sherk.glade
+src/sherk.gladep
+src/sherk_aquire.erl
+src/sherk_ets.erl
+src/sherk_list.erl
+src/sherk_prof.erl
+src/sherk_scan.erl
+src/sherk_tab.erl
+src/sherk_target.erl
+src/sherk_tree.erl
+
+commit fec69b74b65220a1930acfc57a39174a466600e8
 Author: mats cronqvist <mats.cronqvist@gmail.com>
 Date:   Tue Jul 14 12:28:30 2015 +0200
 
     v0.92.0
 
+AUTHORS
+ChangeLog
 src/eper.app.src
 
 commit 2234c2085a32216ac27254c264a8445318153cba
