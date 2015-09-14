@@ -18,7 +18,6 @@ usage(){
 }
 
 VSN=""
-XTRA=""
 echo=""
 node=""
 
@@ -55,13 +54,14 @@ while [ -n "$1" ]
           if [ -z "$node" ]; then
               node=$1
           fi
-          XTRA=" $XTRA $1"
+          # Let's hold on to the remaining arguments in $@.
+          break
           ;;
   esac
   shift
 done
 
-if [ -z "$XTRA" ]; then usage; fi
+if [ -z "$1" ]; then usage; fi
 
 PATHS="-pa $self/ebin"
 # If the node name contains a dot after the @ sign, it is a long name,
@@ -76,6 +76,6 @@ name="redbug_"$$
 DISTR="-noshell -hidden $name_option $name $cookie $nettick"
 START="-run redbug unix"
 
-$echo erl $VSN $DISTR $PATHS $START $XTRA
+$echo erl $VSN $DISTR $PATHS $START "$@"
 
 if [ "$?" -eq "1" ]; then usage; fi
