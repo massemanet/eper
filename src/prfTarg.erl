@@ -36,7 +36,7 @@ assert(Node,Collectors) ->
 
 assert_loaded(Node,Collectors) ->
   lists:foreach(fun(M) -> ass_loaded(Node,M) end,
-                [prf,prf_crypto,?MODULE|Collectors]).
+                [prf,prf_crypto,prfTime,?MODULE|Collectors]).
 
 ass_loaded(nonode@nohost,Mod) -> {module,Mod}=c:l(Mod);
 ass_loaded(Node,Mod) ->
