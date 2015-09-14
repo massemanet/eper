@@ -1,9 +1,37 @@
-commit 1adfd0631e676a3658eb8caa909ccf53e75ecc4a
+commit a6c83e72a220e932e33593773c3512966cd7fcbd
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Mon Sep 14 16:51:01 2015 +0200
+
+    v0.94.0
+
+src/eper.app.src
+
+commit 565e77daa667c87a251bcf8c2e81848870889d96
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Mon Sep 14 16:35:47 2015 +0200
+
+    new rebar
+
+rebar
+
+commit 0d0eb8f04124aadbb2d33e7d1d4145f374385a16
+Author: Magnus Henoch <magnus.henoch@gmail.com>
+Date:   Mon Sep 14 10:42:22 2015 +0100
+
+    Ensure that prfTime is loaded on the target node
+    prfTime can be called on the target node, so it needs to be loaded
+    there.
+
+src/prfTarg.erl
+
+commit d1fcf03f404cab76fbaf1977ebb3b0898e20ee45
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Tue Aug 4 12:57:06 2015 +0200
 
     v0.93.0
 
+AUTHORS
+ChangeLog
 src/eper.app.src
 
 commit 57e0af762f16d4f7609dcf040f93755bb57560ec
