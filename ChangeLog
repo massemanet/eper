@@ -1,9 +1,26 @@
-commit a6c83e72a220e932e33593773c3512966cd7fcbd
+commit d8a1d1d6c9f98da6ac61d64b337fd76fbb34a93d
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Tue Sep 15 15:05:47 2015 +0200
+
+    v0.95.0
+
+src/eper.app.src
+
+commit 7cd9d485c2706a8b5150eaf83cb1427f5362e3ad
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Tue Sep 15 15:05:03 2015 +0200
+
+    cosmetic
+
+priv/bin/redbug
+
+commit aa3b052dabc225993ec67dfb0fd59564e06e7d42
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Mon Sep 14 16:51:01 2015 +0200
 
     v0.94.0
 
+ChangeLog
 src/eper.app.src
 
 commit 565e77daa667c87a251bcf8c2e81848870889d96
@@ -13,6 +30,22 @@ Date:   Mon Sep 14 16:35:47 2015 +0200
     new rebar
 
 rebar
+
+commit f4e1f8b2d790eb852cfa81071a03ace382e55bdc
+Author: Magnus Henoch <magnus.henoch@gmail.com>
+Date:   Mon Sep 14 12:25:55 2015 +0100
+
+    Quote trace patterns in redbug command line tool
+    This preserves spaces in trace pattern passed on the command line, such
+    as:
+    redbug foo@127.0.0.1 "foo:bar -> return"
+    Without this change, the trace pattern would have been broken up by the
+    shell script, and the only way to write that pattern would be without
+    spaces, "foo:bar->return".  While doable, it's unintuitive, especially
+    as the part before "->" gets interpreted correctly, and you get a trace
+    that shows function calls but no return values.
+
+priv/bin/redbug
 
 commit 0d0eb8f04124aadbb2d33e7d1d4145f374385a16
 Author: Magnus Henoch <magnus.henoch@gmail.com>
