@@ -1,9 +1,46 @@
-commit d8a1d1d6c9f98da6ac61d64b337fd76fbb34a93d
+commit 525c1e842dfb170338c01ea00f7f9e86219fd1e4
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Mon Oct 19 16:34:56 2015 +0200
+
+    v0.96.0
+
+src/eper.app.src
+
+commit 999f81e04d91e757c43ce671a2a0774b1cdda5c1
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Mon Oct 19 16:34:01 2015 +0200
+
+    eunit trget should build
+
+Makefile
+
+commit 594d2b18d08c3c74aeb55cf2cc8160b43edae33b
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Mon Oct 19 15:34:28 2015 +0200
+
+    remove R15 from travis
+
+.travis.yml
+
+commit 5e3247f5f7f97b6516a2eb7b86693de86f2e2142
+Author: Dániel Szoboszlay <daniel.szoboszlay@klarna.com>
+Date:   Fri Oct 16 16:36:46 2015 +0200
+
+    Add a new collector, prfDist, for distribution port statistics
+    The statistics include the number of packets sent and receive on all
+    distribution ports and the idle time in both send and receive
+    directions. The latter can be useful when investigating netsplits.
+
+src/prfDist.erl
+src/watchdog.erl
+
+commit b318668faeff3f35e660e393b887071d74708db3
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Tue Sep 15 15:05:47 2015 +0200
 
     v0.95.0
 
+ChangeLog
 src/eper.app.src
 
 commit 7cd9d485c2706a8b5150eaf83cb1427f5362e3ad
