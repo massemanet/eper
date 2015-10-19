@@ -168,7 +168,7 @@ call_wd(Term) ->
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init([]) ->
-  LD = #ld{prfState=prfTarg:subscribe(node(),self(),[prfSys,prfPrc])},
+  LD = #ld{prfState=prfTarg:subscribe(node(),self(),[prfSys,prfPrc,prfDist])},
   start_monitor(LD#ld.triggers),
   LD.
 
