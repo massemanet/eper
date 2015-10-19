@@ -15,18 +15,18 @@ clean:
 
 test: compile eunit xref dialyze
 
-eunit:
+eunit: all
 	ERL_FLAGS="-sname eunit" $(REBAR) eunit
 
 xref: all
 	@$(REBAR) xref
 
+dialyze: all ~/.dialyzer_plt
+	dialyzer -Wno_return -nn --plt ~/.dialyzer_plt --src src
+
 ~/.dialyzer_plt:
 	- dialyzer -nn --output_plt ~/.dialyzer_plt --build_plt \
            --apps erts kernel stdlib crypto public_key inets eunit xmerl
-
-dialyze: ~/.dialyzer_plt
-	dialyzer -Wno_return -nn --plt ~/.dialyzer_plt --src src
 
 release_major: test
 	./bin/release.sh major
