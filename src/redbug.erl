@@ -308,10 +308,25 @@ stopping(Cnf = #cnf{print_pid=PrintPid}) ->
     X                   -> ?log([{unknown_message,X}])
   end.
 
-done(#cnf{blocking=false},{R,A}) ->
-  io:fwrite("redbug done, ~p - ~p~n",[R,A]);
-done(#cnf{blocking=true},R) ->
-  exit(R).
+done(#cnf{blocking=false},{Reason,Answer}) ->
+  io:fwrite("~s",[done_string(Reason)]),
+  io:fwrite("redbug done, ~p - ~p~n",[Reason,Answer]);
+done(#cnf{blocking=true},Reason) ->
+  exit(Reason).
+
+done_string(Reason) ->
+  case element(1,Reason) of
+    msg_queue ->
+      "you might want to set the max_queue option (see redbug:help/0)\n";
+    stack_size ->
+      "you might want to set the max_msg_size option (see redbug:help/0)\n";
+    arg_length ->
+      "you might want to set the max_msg_size option (see redbug:help/0)\n";
+    arg_size ->
+      "you might want to set the max_msg_size option (see redbug:help/0)\n";
+    _ ->
+      ""
+  end.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 do_start(OCnf) ->
   Cnf = spawn_printer(wrap_print_fun(OCnf),maybe_new_target(OCnf)),
