@@ -11,7 +11,7 @@ self=`dirname $self`
 self=`(cd $self ; pwd)`
 
 usage(){
-    U1="usage: `basename $0` [-setcookie <cookie>] [-nocookie] "
+    U1="usage: `basename $0` [-setcookie <cookie>] [-nocookie] [-name|-sname <name>]"
     U2="[-nettick <tick>] [-vsn <OTP version>] node trace [time [msgs [proc]]]"
     echo $U1 $U2
     exit
@@ -45,6 +45,11 @@ while [ -n "$1" ]
       "-nocookie")
           cookie=""
           ;;
+      "-name"|"-sname")
+          name_option=$1
+          name=$2
+          shift
+          ;;
       "-*")
           echo unrecognized flag $1
           usage
@@ -61,15 +66,17 @@ done
 if [ -z "$1" ]; then usage; fi
 
 PATHS="-pa $self/ebin"
-# If the node name contains a dot after the @ sign, it is a long name,
-# and we need to use a long name ourselves.
-case $NODE in
-    *@*.*)
-        name_option="-name" ;;
-    *)
-        name_option="-sname" ;;
-esac
-name="redbug_"$$
+if [ -z "$name_option" ]; then
+    # If the node name contains a dot after the @ sign, it is a long name,
+    # and we need to use a long name ourselves.
+    case $NODE in
+        *@*.*)
+            name_option="-name" ;;
+        *)
+            name_option="-sname" ;;
+    esac
+    name="redbug_"$$
+fi
 DISTR="-noshell -hidden $name_option $name $cookie $nettick"
 START="-run redbug unix"
 
