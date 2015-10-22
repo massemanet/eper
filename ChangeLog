@@ -1,9 +1,27 @@
-commit 4f1b31ed3337fbcd825d77f077ff5a3078cb96ee
+commit 7ed5ee9447a3a5d992607419428ba4e3f8525fe6
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Oct 22 19:22:30 2015 +0200
+
+    v0.96.2
+
+src/eper.app.src
+
+commit 93f71657bf279844b957e68ab56d4cd94e48f48a
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Oct 22 19:21:25 2015 +0200
+
+    fixed some flaky tests
+
+src/redbug.erl
+src/redbug_eunit.erl
+
+commit 099d590f890eb8a2b9317429d5ea580f6a6dc0d2
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Thu Oct 22 09:47:41 2015 +0200
 
     v0.96.1
 
+ChangeLog
 src/eper.app.src
 
 commit 6389261985deae2c083893953ba4d847876f5f5d
