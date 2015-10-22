@@ -12,10 +12,11 @@
 
 t_0_test() ->
   Filename = "redbug.txt",
-  {_,_} = redbug:start("lists:sort",[{print_file,Filename},print_msec]),
+  {_,_} = redbug:start("lists:sort",[{print_file,Filename},print_msec,debug]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
+  timer:sleep(100),
   maybe_show(Filename),
   ?assertEqual(<<"lists:sort([3,2,1])">>,
                get_line_seg(Filename,2,2)),
@@ -25,10 +26,11 @@ t_0_test() ->
 
 t_01_test() ->
   Filename = "redbug.txt",
-  {_,_} = redbug:start("lists:sort",[{print_file,Filename},arity]),
+  {_,_} = redbug:start("lists:sort",[{print_file,Filename},arity,debug]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
+  timer:sleep(100),
   maybe_show(Filename),
   ?assertEqual(<<"lists:sort/1">>,
                get_line_seg(Filename,2,2)),
@@ -38,7 +40,7 @@ t_01_test() ->
 
 t_1_test() ->
   Filename = "redbug.txt",
-  {_,_} = redbug:start("lists:sort->return",[{print_file,Filename},buffered]),
+  {_,_} = redbug:start("lists:sort->return",[{print_file,Filename},buffered,debug]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
@@ -52,10 +54,11 @@ t_1_test() ->
 
 t_2_test() ->
   Filename = "redbug.txt",
-  {_,_} = redbug:start("lists:sort->stack",[{print_file,Filename}]),
+  {_,_} = redbug:start("lists:sort->stack",[{print_file,Filename},debug]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(100),
   redbug:stop(),
+  timer:sleep(100),
   maybe_show(Filename),
   ?assertEqual(<<"lists:sort([3,2,1])">>,
                get_line_seg(Filename,2,2)),
@@ -67,10 +70,11 @@ t_2_test() ->
 t_3_test() ->
   Filename = "redbug.txt",
   Pid = spawn(fun()->receive P when is_pid(P)->P!ding;quit->ok end end),
-  {_,_} = redbug:start(send,[{procs,Pid},{print_file,Filename}]),
+  {_,_} = redbug:start(send,[{procs,Pid},{print_file,Filename},debug]),
   Pid ! self(),
   timer:sleep(100),
   redbug:stop(),
+  timer:sleep(100),
   maybe_show(Filename),
   ?assertEqual(<<"ding">>,
               get_line_seg(Filename,2,4)),
@@ -79,10 +83,11 @@ t_3_test() ->
 t_4_test() ->
   Filename = "redbug.txt",
   Pid = spawn(fun()->receive P when is_pid(P)->P!ding;quit->ok end end),
-  {_,_} = redbug:start('receive',[{procs,Pid},{print_file,Filename}]),
+  {_,_} = redbug:start('receive',[{procs,Pid},{print_file,Filename},debug]),
   Pid ! pling,
   timer:sleep(100),
   redbug:stop(),
+  timer:sleep(100),
   maybe_show(Filename),
   ?assertEqual(<<"pling">>,
               get_line_seg(Filename,2,3)),
@@ -90,7 +95,7 @@ t_4_test() ->
 
 t_5_test() ->
   Filename = "redbug.txt",
-  {_,_} = redbug:start("lists:sort->time",[{print_file,Filename},{time,999}]),
+  {_,_} = redbug:start("lists:sort->time",[{print_file,Filename},{time,999},debug]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(1100),
   maybe_show(Filename),
@@ -102,7 +107,7 @@ t_5_test() ->
 
 t_6_test() ->
   Filename = "redbug.txt",
-  {_,_} = redbug:start("lists:sort->count",[{print_file,Filename},{time,999}]),
+  {_,_} = redbug:start("lists:sort->count",[{print_file,Filename},{time,999},debug]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(1100),
   maybe_show(Filename),
@@ -113,16 +118,16 @@ t_6_test() ->
   maybe_delete(Filename).
 
 t_7_test() ->
-  {_,Msgs} = redbug:start("erlang",[blocking,{time,999},arity]),
+  {_,Msgs} = redbug:start("erlang",[blocking,{time,999},arity,debug]),
   ?assertEqual([{{erlang,monitor,2},<<>>},
                 {{erlang,demonitor,1},<<>>}],
-               [MFA || {_,MFA,_,_}<-Msgs]).
+               [MFA || {_,MFA,_,_} <- Msgs]).
 
 t_8_test() ->
-  {_,_} = redbug:start("lists:sort->return",[{file,"foo"},{time,999}]),
+  {_,_} = redbug:start("lists:sort->return",[{file,"foo"},{time,999},debug]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(1100),
-  {2,Msgs} = replay_trc:go("foo0.trc",fun(E,A)->[E]++A end,[]),
+  {2,Msgs} = replay_trc:go("foo0.trc",fun(E,A) -> [E]++A end,[]),
   ?assertEqual(sort,
                e(2,e(4,e(1,Msgs)))),
   ?assertEqual(sort,
@@ -131,7 +136,7 @@ t_8_test() ->
 t_9_test() ->
   Filename = "redbug.txt",
   Options = [{print_file, Filename}, {time, 999}, {print_return, false}],
-  {_,_} = redbug:start("lists:sort->return", Options),
+  {_,_} = redbug:start("lists:sort->return",[debug|Options]),
   [1,2,3] = lists:sort([3,2,1]),
   timer:sleep(1100),
   maybe_show(Filename),

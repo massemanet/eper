@@ -262,7 +262,7 @@ init() ->
         R ->
           exit({argument_error,R});
         C:R ->
-          case Cnf#cnf.debug of
+          case Cnf#cnf.debug andalso not Cnf#cnf.blocking of
             false-> ok;
             true -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
           end,
@@ -315,7 +315,7 @@ done(#cnf{blocking=true},Reason) ->
   exit(Reason).
 
 done_string(Reason) ->
-  case element(1,Reason) of
+  case is_tuple(Reason) andalso element(1,Reason) of
     msg_queue ->
       "you might want to set the max_queue option (see redbug:help/0)\n";
     stack_size ->
