@@ -1,9 +1,18 @@
-commit 7ed5ee9447a3a5d992607419428ba4e3f8525fe6
+commit f6a3f5f14c86ee909f730c3adde5d4aad68f0387
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Oct 22 19:31:36 2015 +0200
+
+    v0.96.3
+
+src/eper.app.src
+
+commit b6f7790a1e3782880891ff5f052dcefac789e0a1
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Thu Oct 22 19:22:30 2015 +0200
 
     v0.96.2
 
+ChangeLog
 src/eper.app.src
 
 commit 93f71657bf279844b957e68ab56d4cd94e48f48a
@@ -14,6 +23,29 @@ Date:   Thu Oct 22 19:21:25 2015 +0200
 
 src/redbug.erl
 src/redbug_eunit.erl
+
+commit 8c1a0736329d0b7aa5cd469af130316f38eca575
+Author: Magnus Henoch <magnus.henoch@gmail.com>
+Date:   Thu Oct 22 16:31:46 2015 +0100
+
+    Allow setting node name for redbug node
+    When running redbug from the command line, accept -name and -sname
+    arguments to set the node name for the redbug node.
+    The use case for this is a system that has been configured to only
+    accept connections from certain named nodes.
+
+priv/bin/redbug
+
+commit b3a1ecac00687217325c42a8e8b2281208611f1f
+Author: Magnus Henoch <magnus.henoch@gmail.com>
+Date:   Thu Oct 22 16:29:20 2015 +0100
+
+    Don't fail if 'locals' chunk is missing
+    If the beam file has been stripped with beam_lib:strip/1, the 'locals'
+    chunk ("LocT") will be missing.  In that case, keep going: we'll only
+    lose the ability to trace local functions.
+
+src/prfTrc.erl
 
 commit 099d590f890eb8a2b9317429d5ea580f6a6dc0d2
 Author: mats cronqvist <masse@cronqvi.st>
