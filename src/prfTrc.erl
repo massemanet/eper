@@ -136,8 +136,12 @@ locals(M) ->
   case code:which(M) of
     preloaded -> [];
     F ->
-      {ok,{M,[{locals,Locals}]}} = beam_lib:chunks(F,[locals]),
-      Locals
+      case beam_lib:chunks(F,[locals]) of
+        {ok,{M,[{locals,Locals}]}} ->
+          Locals;
+        {error, beam_lib, {missing_chunk, _, _}} ->
+          []
+      end
   end.
 
 globals(M) ->
