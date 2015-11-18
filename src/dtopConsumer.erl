@@ -19,7 +19,7 @@
          sort=cpu,
          items=19}).
 
-collectors() -> [prfPrc,prfSys].
+collectors() -> [prfPrc,prfSys,prfNet].
 init(_Node) -> #cld{}.
 terminate(_LD) -> ok.
 
@@ -30,19 +30,22 @@ config(LD,_)                                     -> LD.
 
 tick(LD,Data) ->
   case Data of
-    [{prfPrc,PrfPrc},{prfSys,PrfSys}] -> print(LD,PrfSys,PrfPrc), LD;
-    _ -> LD
+    [{prfNet,PrfNet},{prfPrc,PrfPrc},{prfSys,PrfSys}] ->
+      print(LD,PrfSys,PrfPrc,PrfNet), LD;
+    _Err ->
+      LD
   end.
 
-print(#cld{fd=FD,sort=Sort,items=Items},PrfSys,PrfPrc) ->
+print(#cld{fd=FD,sort=Sort,items=Items},PrfSys,PrfPrc,PrfNet) ->
   print_del(FD),
-  print_sys(FD,PrfSys),
+  print_sys(FD,PrfSys,PrfNet,PrfPrc),
   lwrite(FD,"~n",[]),
   print_tags(FD),
   print_procs(FD,Items,PrfSys,which_sort(Sort,PrfPrc)).
 
-print_sys(FD,Sys) ->
-  lwrite(FD,"~s~n",[sys_str(Sys)]),
+print_sys(FD,Sys,Net,Prc) ->
+  lwrite(FD,"~s~n",[name_str(Sys)]),
+  lwrite(FD,"~s~n",[sys_str(Sys,Net,Prc)]),
   lwrite(FD,memf(),memi(Sys)).
 
 memf() -> "memory:      proc~8s, atom~8s, bin~8s, code~8s, ets~8s~n".
@@ -52,36 +55,50 @@ memi(Sys) ->
   catch _:_ -> ["","","","",""]
   end.
 
-sys_str(Sys) ->
+name_str(Sys) ->
+  MEMbeam   = prf:human(lks(beam_vss,Sys,0)),
+  MEM       = prf:human(lks(total,Sys)),
+  Size = lists:append(
+           ["size: " ,MEM,
+            "("      ,MEMbeam,
+            ")"]),
+
   {_, Time} = calendar:now_to_local_time(lks(now, Sys)),
   H         = pad(element(1,Time),2,$0,left),
   M         = pad(element(2,Time),2,$0,left),
   S         = pad(element(3,Time),2,$0,left),
   Node      = to_list(lks(node, Sys)),
-  MEMbeam   = prf:human(lks(beam_vss,Sys,0)),
-  MEM       = prf:human(lks(total,Sys)),
+  lists:append([pad(Node,70-length(Size),$ , right), Size," ",H,":",M,":",S]).
+
+sys_str(Sys,Net,Prc) ->
   CPUbeam   = to_list(100*(lks(beam_user,Sys,0)+lks(beam_kernel,Sys,0))),
+  ChurnIn   = prf:human(lks(churn_in,Prc)),
+  ChurnOut  = prf:human(lks(churn_out,Prc)),
+  PortCount = prf:human(length(Net)),
   CPU       = to_list(100*(lks(user,Sys,0)+lks(kernel,Sys,0))),
   Procs     = prf:human(lks(procs,Sys)),
   RunQ      = prf:human(lks(run_queue, Sys)),
 
-  SYS = lists:sublist(lists:append(["size: "    ,MEM,
-                                    "("         ,MEMbeam,
-                                    "), cpu%: " ,CPUbeam,
-                                    "("         ,CPU,
-                                    "), procs: ",Procs,
-                                    ", runq: "  ,RunQ,
-                                    ", ",H,":",M,":",S]),79),
-  pad(Node,79-length(SYS),$ , right)++SYS.
+  pad(
+    lists:append(
+      ["cpu%: "      ,CPUbeam,
+       "("           ,CPU,
+       "), ports: "  ,PortCount,
+       ", procs: "   ,Procs,
+       ", churn+/-: ",ChurnIn,
+       "/"           ,ChurnOut,
+       ", runq: "    ,RunQ]),
+    79,$ ,left).
 
 pad(Item,Len,Pad,LeftRight) ->
   I = to_list(Item),
   case length(I) of
     L when L=:=Len -> I;
-    L when L<Len -> case LeftRight of
-                      left -> lists:duplicate(Len-L,Pad)++I;
-                      right-> I++lists:duplicate(Len-L,Pad)
-                    end;
+    L when L<Len ->
+      case LeftRight of
+        left -> lists:duplicate(Len-L,Pad)++I;
+        right-> I++lists:duplicate(Len-L,Pad)
+      end;
     _ -> lists:sublist(I,Len)
   end.
 

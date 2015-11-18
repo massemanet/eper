@@ -61,8 +61,11 @@ init_cst() ->
 
 get_info(Cst) ->
   case Cst#cst.max_procs < erlang:system_info(process_count) of
-    true -> {prfTime:ts(),[]};
-    false-> {prfTime:ts(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]}
+    true ->
+      {prfTime:ts(),[]};
+    false->
+      Ps = lists:sort(processes()),
+      {prfTime:ts(),[{P,pid_info(P,?SORT_ITEMS)} || P <- Ps]}
   end.
 
 %%% Dreds, Dmems, Mems and Msgqs are sorted lists of pids
@@ -70,10 +73,14 @@ get_info(Cst) ->
 %%% Info is a list of tagged tuples {atom(),number()}
 
 select(Cst = #cst{old_info={Then,Olds}},{Now,Curs},Items) ->
-  {DredL,DmemL,MemL,MsgqL} = topl(Olds,Curs,outf(Then,Now,Items),empties()),
-  PidInfo = lists:usort([I || {_,I} <-lists:append([DredL,DmemL,MemL,MsgqL])]),
+  {{DredL,DmemL,MemL,MsgqL},{ChurnIn,ChurnOut}} =
+    topl(Olds,Curs,outf(Then,Now,Items),empties(),{0,0}),
+  PidInfo = lists:usort([I || {_,I} <-
+                                lists:append([DredL,DmemL,MemL,MsgqL])]),
   [{node,node()},
    {now,prfTime:ts()},
+   {churn_in,ChurnIn},
+   {churn_out,ChurnOut},
    {dreds,e1e2(DredL)},
    {dmem,e1e2(DmemL)},
    {mem,e1e2(MemL)},
@@ -88,11 +95,16 @@ complete(List,#cst{extra_items=X}) ->
       pid_info(Pid,?INFO_ITEMS)++
       extra_items(Pid,X)} || {Pid,Info} <- List].
 
-topl([],_,_,Out) -> Out;
-topl(_,[],_,Out) -> Out;
-topl(Os=[{Po,_}|_],[{Pc,_}|Cs],Outf,Out) when Pc<Po -> topl(Os,Cs,Outf,Out);
-topl([{Po,_}|Os],Cs=[{Pc,_}|_],Outf,Out) when Po<Pc -> topl(Os,Cs,Outf,Out);
-topl([{P,Io}|Os],[{P,Ic}|Cs],Outf,Out) -> topl(Os,Cs,Outf,Outf(P,Io,Ic,Out)).
+topl([],Cs,_,Out,{ChurnIn,ChurnOut}) ->
+  {Out,{ChurnIn+length(Cs),ChurnOut}};
+topl(Os,[],_,Out,{ChurnIn,ChurnOut}) ->
+  {Out,{ChurnIn,ChurnOut+length(Os)}};
+topl(Os=[{Po,_}|_],[{Pc,_}|Cs],Outf,Out,{ChurnIn,ChurnOut}) when Pc<Po ->
+  topl(Os,Cs,Outf,Out,{ChurnIn+1,ChurnOut});
+topl([{Po,_}|Os],Cs=[{Pc,_}|_],Outf,Out,{ChurnIn,ChurnOut}) when Po<Pc ->
+  topl(Os,Cs,Outf,Out,{ChurnIn,ChurnOut+1});
+topl([{P,Io}|Os],[{P,Ic}|Cs],Outf,Out,Churn) ->
+  topl(Os,Cs,Outf,Outf(P,Io,Ic,Out),Churn).
 
 empties() -> {[],[],[],[]}.
 
