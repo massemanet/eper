@@ -43,8 +43,13 @@ name({name,"udp_inet"},P) ->
   {ok,Port} = inet:port(P),
   {udp,Port};
 name({name,"tcp_inet"},P) ->
-  {ok,{IP,Port}} = inet:peername(P),
-  memoize({prfNet,tcp_name,IP,Port}, fun tcp_name/1);
+  case inet:peername(P) of
+    {ok,{IP,Port}} ->
+      memoize({prfNet,tcp_name,IP,Port}, fun tcp_name/1);
+    {error,enotconn} ->
+      {ok,{_IP,PortNo}} = prim_inet:sockname(P),
+      {tcp,listen,PortNo}
+  end;
 name({name,Name},_P) ->
   {driver,Name}.
 
