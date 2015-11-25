@@ -1,9 +1,26 @@
-commit f6a3f5f14c86ee909f730c3adde5d4aad68f0387
+commit 063e5a54d2716a5f3af9bfc19b854d8c300448c0
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Wed Nov 25 09:51:04 2015 +0100
+
+    v0.96.4
+
+src/eper.app.src
+
+commit 0966b82545cb708a62d190a22a03da8ff7d951b2
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Nov 19 11:38:02 2015 +0100
+
+    use process_info/2 with list of tags
+
+src/prfPrc.erl
+
+commit 43e0442863df9f713a5c88c9b43062b806d96adb
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Thu Oct 22 19:31:36 2015 +0200
 
     v0.96.3
 
+ChangeLog
 src/eper.app.src
 
 commit b6f7790a1e3782880891ff5f052dcefac789e0a1
