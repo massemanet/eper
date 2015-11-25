@@ -61,8 +61,12 @@ init_cst() ->
 
 get_info(Cst) ->
   case Cst#cst.max_procs < erlang:system_info(process_count) of
-    true -> {prfTime:ts(),[]};
-    false-> {prfTime:ts(),[{P,pid_info(P,?SORT_ITEMS)}||P<-lists:sort(processes())]}
+    true ->
+      {prfTime:ts(),
+       []};
+    false->
+      {prfTime:ts(),
+       [{P,pid_info(P,?SORT_ITEMS)} || P <- lists:sort(processes())]}
   end.
 
 %%% Dreds, Dmems, Mems and Msgqs are sorted lists of pids
@@ -149,56 +153,58 @@ extra_item(_,_) ->
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%% pid_info/1
 
-pid_info(Pid) when is_pid(Pid) ->
+pid_info(Pid) ->
   pid_info(Pid,?TAGS).
 
-pid_info(Pid,Tags) when is_list(Tags) ->
-  [pidinfo(Pid,T) || T <- Tags].
+pid_info(Pid,Tags) when is_pid(Pid) ->
+  case process_info(Pid,Tags) of
+    undefined -> [{T,get_default(T,Pid)} || T <- ?TAGS];
+    TagVals   -> [{T,mod_val(Pid,T,V)} || {T,V} <- TagVals]
+  end.
 
-pidinfo(Pid,Tag) ->
-  {Getter,Default} = pidinfo(Tag),
-  {Tag, try Getter(Pid) catch _:_ -> Default end}.
+get_default(Tag,Pid) ->
+  {_,Default} = pidinfo(Tag,Pid),
+  Default.
 
-pidinfo(Type = stack_size) ->
-  {fun(Pid) -> 8*element(2,process_info(Pid, Type))end,
+mod_val(Pid,Tag,Val) ->
+  {Modder,_} = pidinfo(Tag,Pid),
+  Modder(Val).
+
+pidinfo(stack_size,_) ->
+  {fun(Val) -> 8*Val end,
    0};
-pidinfo(Type = heap_size) ->
-  {fun(Pid) -> 8*element(2,process_info(Pid, Type))end,
+pidinfo(heap_size,_) ->
+  {fun(Val) -> 8*Val end,
    0};
-pidinfo(Type = total_heap_size) ->
-  {fun(Pid) -> 8*element(2,process_info(Pid, Type))end,
+pidinfo(total_heap_size,_) ->
+  {fun(Val) -> 8*Val end,
    0};
-pidinfo(Type = last_calls) ->
-  {fun(Pid) ->
-       case process_info(Pid,Type) of
-         {_,false} -> process_flag(Pid,save_calls,16),[];
-         {_,Calls} -> lists:usort(Calls)
+pidinfo(last_calls,Pid) ->
+  {fun(Val) ->
+       case Val of
+         false -> process_flag(Pid,save_calls,16),[];
+         Calls -> lists:usort(Calls)
        end
    end,
    []};
-pidinfo(Type = registered_name) ->
-  {fun(Pid) ->
-       case process_info(Pid, Type) of
-         []       -> [];
-         {Type,N} -> N
-       end
-   end,
-  []};
-pidinfo(Type = initial_call) ->
-  {fun(Pid) ->
-       case process_info(Pid, Type) of
-         {Type,{proc_lib,init_p,5}} ->
+pidinfo(registered_name,_) ->
+  {fun(Val) -> Val end,
+   []};
+pidinfo(initial_call,Pid) ->
+  {fun(Val) ->
+       case Val of
+         {proc_lib,init_p,5} ->
            case proc_lib:translate_initial_call(Pid) of
              {dets,init,2}     -> pinf_dets(Pid);
              {disk_log,init,2} -> pinf_disk_log(Pid);
              IC                -> IC
            end;
-         {Type,IC} -> IC
+         _ -> Val
        end
    end,
    []};
-pidinfo(Type) ->
-  {fun(Pid) -> {Type,I} = process_info(Pid, Type), I end,
+pidinfo(_,_) ->
+  {fun(Val) -> Val end,
    []}.
 
 pinf_dets(Pid) ->
