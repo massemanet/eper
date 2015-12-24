@@ -213,8 +213,8 @@ set_tps(TPs) ->
 set_tps_f({MFA,MatchSpec,Flags},A) ->
   A+erlang:trace_pattern(MFA,MatchSpec,Flags).
 
-mk_prc(all,A) ->
-  [all|A];
+mk_prc(Ps,A) when Ps == running; Ps == all; Ps == new ->
+  [Ps|A];
 mk_prc(Reg,A) when is_atom(Reg) ->
   case whereis(Reg) of
     Pid when is_pid(Pid) -> mk_prc(Pid,A);
