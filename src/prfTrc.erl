@@ -172,7 +172,7 @@ start_trace(LD) ->
   NoProcs = lists:sum([erlang:trace(P,true,Flags) || P <- Ps]),
   untrace(family(redbug)++family(prfTrc),Flags),
   NoFuncs = set_tps(Rtps),
-  assert_trace_targets(NoProcs,NoFuncs,Flags),
+  assert_trace_targets(NoProcs,NoFuncs,Flags,Ps),
   dict:fetch(host_pid,LD) ! {prfTrc,{starting,NoProcs,NoFuncs,self(),Consumer}},
   dict:store(consumer,Consumer,LD).
 
@@ -190,8 +190,8 @@ untrace(Pids,Flags) ->
           node(P)==node(),
           {flags,[]}=/=erlang:trace_info(P,flags)].
 
-assert_trace_targets(NoProcs,NoFuncs,Flags) ->
-  case 0 < NoProcs of
+assert_trace_targets(NoProcs,NoFuncs,Flags,Ps) ->
+  case 0 < NoProcs orelse is_new_pidspec(Ps) of
     true -> ok;
     false-> exit({prfTrc,no_matching_processes})
   end,
@@ -199,6 +199,9 @@ assert_trace_targets(NoProcs,NoFuncs,Flags) ->
     true -> ok;
     false-> exit({prfTrc,no_matching_functions})
   end.
+
+is_new_pidspec(Ps) ->
+  lists:member(new,Ps).
 
 is_message_trace(Flags) ->
   (lists:member(send,Flags) orelse lists:member('receive',Flags)).
