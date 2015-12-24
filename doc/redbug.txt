@@ -51,7 +51,7 @@ msgs         (10)          stop trace after this many messages
 target       (node())      node to trace on
 cookie       ('')          target node cookie
 blocking     (false)       block start/2, return a list of messages
-procs        (all)         atom(all) | list(Proc)
+procs        (all)         atom(all|new|running) | list(Proc)
                            where Proc is pid() | atom(RegName) | {pid,I2,I3}
 max_queue    (5000)        exit if redbug-internal queue gets this long
 max_msg_size (50000)       exit if seeing a message bigger than this
