@@ -1,9 +1,34 @@
-commit 063e5a54d2716a5f3af9bfc19b854d8c300448c0
+commit 4de995a738a3d8b7c4c91a95265894665a57b51d
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Dec 24 17:42:57 2015 +0100
+
+    v0.97.0
+
+src/eper.app.src
+
+commit 44e64027f857c55ee0805dce182168165f029eaa
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Dec 24 14:39:33 2015 +0100
+
+    traced process check takes "new" into account
+
+src/prfTrc.erl
+
+commit b87691923f3bf4b062fe1f8aedcd142ce05e8186
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Dec 24 14:28:29 2015 +0100
+
+    handle all 3 PidSpecs in trace/3
+
+src/prfTrc.erl
+
+commit acb7e2922bcfd80befffe574332efa064a9b5698
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Wed Nov 25 09:51:04 2015 +0100
 
     v0.96.4
 
+ChangeLog
 src/eper.app.src
 
 commit 0966b82545cb708a62d190a22a03da8ff7d951b2
