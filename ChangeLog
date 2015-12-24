@@ -1,9 +1,26 @@
-commit 4de995a738a3d8b7c4c91a95265894665a57b51d
+commit f954307441723b25603155ffe50c907981f61d82
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Dec 24 21:04:34 2015 +0100
+
+    v0.97.1
+
+src/eper.app.src
+
+commit e0cae6beba6a3bd89d1555ec9f89825e92c6ccfe
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Dec 24 21:03:39 2015 +0100
+
+    doc
+
+doc/redbug.txt
+
+commit c43c4efa58442520a665f1c4d39e5689afd530fd
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Thu Dec 24 17:42:57 2015 +0100
 
     v0.97.0
 
+ChangeLog
 src/eper.app.src
 
 commit 44e64027f857c55ee0805dce182168165f029eaa
