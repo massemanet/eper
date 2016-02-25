@@ -17,9 +17,9 @@ end,
 Crypto =
 fun(CFG) ->
     code:ensure_loaded(crypto),
-    case erlang:function_exported(crypto,block_encrypt,3) of
-      true  -> KeyAppend(erl_opts,CFG,{d,'CRYPTO_R16'},KeyAppend);
-      false -> CFG
+    case erlang:function_exported(crypto,block_encrypt,4) of
+      false -> KeyAppend(erl_opts,CFG,{d,'USE_PRE_R16_CRYPTO'},KeyAppend);
+      true  -> CFG
     end
 end,
 
