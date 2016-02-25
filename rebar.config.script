@@ -7,6 +7,11 @@
 %% functions from old compilers.
 %% "erl_opts" gets passed to the compiler.
 %% "CONFIG" is a magic rebar thing.
+%% The foldl takes a [{function(Predicate/0),atom(Macro)}].
+%% If the Predicate is false, the Macro is passed to the compiler.
+%% Predicate should test for presence of new functions, and the Macro
+%% should be used to enable old functions. That way new functions are
+%% enabled by default.
 
 KeyAppend =
 fun(Tag,[],E,_)          -> [{Tag,[E]}];
@@ -14,21 +19,21 @@ fun(Tag,[],E,_)          -> [{Tag,[E]}];
    (Tag,[H|T],E,G)       -> [H|G(Tag,T,E,G)]
 end,
 
-Crypto =
-fun(CFG) ->
-    code:ensure_loaded(crypto),
-    case erlang:function_exported(crypto,block_encrypt,4) of
-      false -> KeyAppend(erl_opts,CFG,{d,'USE_PRE_R16_CRYPTO'},KeyAppend);
+Check =
+fun(CFG,Predicate,Macro) ->
+    case Predicate() of
+      false -> KeyAppend(erl_opts,CFG,{d,Macro},KeyAppend);
       true  -> CFG
     end
 end,
 
-Timestamp =
-fun(CFG) ->
-    case erlang:is_builtin(erlang,timestamp,0) of
-      false -> KeyAppend(erl_opts,CFG,{d,'USE_NOW'},KeyAppend);
-      true  -> CFG
-    end
-end,
-
-lists:foldl(fun(F,Cfg) -> F(Cfg) end,CONFIG,[Crypto,Timestamp]).
+lists:foldl(
+  fun({Predicate,Macro},Cfg) -> Check(Cfg,Predicate,Macro) end,
+  CONFIG,
+  [{fun() -> code:ensure_loaded(crypto),
+             erlang:function_exported(crypto,block_encrypt,4)
+    end,
+    'USE_PRE_R16_CRYPTO'},
+   {fun() -> erlang:is_builtin(erlang,timestamp,0)
+    end,
+    'USE_NOW'}]).
