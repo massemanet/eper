@@ -26,8 +26,8 @@ end,
 Timestamp =
 fun(CFG) ->
     case erlang:is_builtin(erlang,timestamp,0) of
-      true  -> KeyAppend(erl_opts,CFG,{d,'HAS_TIMESTAMP'},KeyAppend);
-      false -> CFG
+      false -> KeyAppend(erl_opts,CFG,{d,'USE_NOW'},KeyAppend);
+      true  -> CFG
     end
 end,
 

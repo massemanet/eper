@@ -7,8 +7,8 @@
 -module('prfTime').
 -export([ts/0]).
 
--ifdef(HAS_TIMESTAMP).
-ts() -> erlang:timestamp().
--else.
+-ifdef(USE_NOW).
 ts() -> erlang:now().
+-else.
+ts() -> erlang:timestamp().
 -endif.
