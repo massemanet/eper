@@ -210,7 +210,7 @@ init_ps() ->
    "ps -o pid,utime,time,vsz,rss,majflt,minflt -p "++os:getpid()++"\n"}.
 
 do_ps(Port,Cmd) ->
-  case port_command(Port,Cmd) of
+  case port_command(Port,Cmd,[]) of
     true ->
       receive
         {Port,{data,Data}} ->
