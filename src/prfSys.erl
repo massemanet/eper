@@ -13,9 +13,7 @@
 %%   if OS is Linux 2.6 or greater;
 %%     - read from /proc/stat, /proc/meminfo (and /proc/net/dev ?)
 %%     - read from /proc/self/stat (and /proc/self/statm ?)
-%%   elseif os_mon is started;
-%%     - call memsup:get_memory_data/0 and cpu_sup:cpu_sup:util([detailed])
-%%   else if OS is unix
+%%   else if OS is darwin
 %%     - run the ps command in a port
 %%   else
 %%     - return an empty list
@@ -83,12 +81,12 @@ constants(#cst{node=Node,total_ram=Total_ram,cores=Cores}) ->
   [{node, Node},{total_ram,Total_ram},{cores,Cores}].
 
 stats() ->
-  Procs = erlang:system_info(process_count),
-  {Ctxt,0} = erlang:statistics(context_switches),
-  {GCs,GCwords,0} = erlang:statistics(garbage_collection),
+  Procs                         = erlang:system_info(process_count),
+  {Ctxt,0}                      = erlang:statistics(context_switches),
+  {GCs,GCwords,0}               = erlang:statistics(garbage_collection),
   {{input,IoIn},{output,IoOut}} = erlang:statistics(io),
-  {Reds,_} = erlang:statistics(reductions),
-  RunQ = erlang:statistics(run_queue),
+  {Reds,_}                      = erlang:statistics(reductions),
+  RunQ                          = erlang:statistics(run_queue),
 
   [{now,prfTime:ts()},
    {procs,Procs},
@@ -130,12 +128,10 @@ init_cst(Cst) ->
   Cst.
 
 strategy() ->
-  Os_mon_p = [ok||{os_mon,_,_}<-application:which_applications()],
   case os:type() of
-    {unix,linux}            -> {linux,init_linux()};
-    _ when Os_mon_p == [ok] -> {os_mon,[]};
-    {unix,_}                -> {ps,init_ps()};
-    _                       -> {none,[]}
+    {unix,linux}  -> {linux,init_linux()};
+    {unix,darwin} -> {ps,init_ps()};
+    _             -> {none,[]}
   end.
 
 %% OS info
@@ -144,8 +140,8 @@ strategy() ->
 
 os_info({linux,#fds{proc_stat=FDs,proc_self_stat=FDss}}) ->
   proc_stat(FDs)++proc_self_stat(FDss);
-os_info(_) ->
-  [].
+os_info({ps,{Port,Cmd}}) ->
+  do_ps(Port,Cmd).
 
 proc_stat(FDs) ->
 %%user nice kernel idle iowait irq softirq steal
@@ -156,7 +152,7 @@ proc_stat(FDs) ->
       _                        -> [0,0,0,0,0]
     end,
   lists:zip([user,nice,kernel,idle,iowait],
-            [to_sec(J) || J <- [User,Nice,Kernel,Idle,Iowait]]).
+            [jiffy_to_sec(J) || J <- [User,Nice,Kernel,Idle,Iowait]]).
 
 proc_self_stat(FDss) ->
 %%% pid,comm,state,ppid,pgrp,session,tty_nr,tpgid,flags,
@@ -171,13 +167,15 @@ proc_self_stat(FDss) ->
         {0,0,0,0,0,0}
     end,
   lists:zip([beam_user,beam_kernel,beam_vss,beam_rss,beam_minflt,beam_majflt],
-            [to_sec(Utime),to_sec(Stime),to_int(Vsize),
-             to_int(Rss), %% in pages...
+            [jiffy_to_sec(Utime),jiffy_to_sec(Stime),
+             to_int(Vsize), %% in bytes
+             to_int(Rss),   %% in pages...
              to_int(Minflt),to_int(Majflt)]).
 
-to_sec(J) ->
+jiffy_to_sec(J) ->
   to_int(J)/100. %should use a better transform jiffies->secs
 
+to_int("-") -> 0;
 to_int(J) -> list_to_integer(J).
 
 init_linux() ->
@@ -208,4 +206,37 @@ total_ram() ->
   end.
 
 init_ps() ->
-  [].
+  {open_port({spawn,"/bin/sh"},[stream]),
+   "ps -o pid,utime,time,vsz,rss,majflt,minflt -p "++os:getpid()++"\n"}.
+
+do_ps(Port,Cmd) ->
+  case port_command(Port,Cmd) of
+    true ->
+      receive
+        {Port,{data,Data}} ->
+          case[string:tokens(L," ")||L<-string:tokens(Data,"\n")] of
+            [["PID","UTIME","TIME","VSZ","RSS","MAJFLT","MINFLT"],
+%%           ["1","0:00.20","0:00.30","2488932","12600","-","-"]]
+             [_,Utime,Time,Vsz,Rss,MajFault,MinFault]] ->
+              UtimeSec = timestr_to_sec(Utime),
+              TimeSec =  timestr_to_sec(Time),              % system+user time
+              [{beam_user,UtimeSec},
+               {beam_kernel,TimeSec-UtimeSec},
+               {beam_vsz,to_int(Vsz)*1024},                 % to bytes
+               {beam_rss,to_int(Rss)},                      % in kB pages
+               {beam_minflt,to_int(MinFault)},
+               {beam_majflt,to_int(MajFault)}];
+            _ ->
+              []
+          end
+      end;
+    false ->
+      []
+  end.
+
+%% "8:11.15"
+timestr_to_sec(Str) ->
+  case string:tokens(Str,":.") of
+    [Min,Sec,CentiSec] -> 60*to_int(Min)+to_int(Sec)+to_int(CentiSec)/100;
+    _ -> 0
+  end.
