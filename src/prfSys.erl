@@ -50,7 +50,7 @@
 %% ctxt                 [frac]    /proc/stat
 %% beam_user,           [frac]    /proc/self/stat
 %% beam_kernel,         [frac]    /proc/self/stat
-%% beam_vss             [byte]    /proc/self/stat
+%% beam_vsz             [byte]    /proc/self/stat
 %% beam_rss             [pages]   /proc/self/stat
 %% beam_minflt          [count/s] /proc/self/stat
 %% beam_majflt          [count/s] /proc/self/stat
@@ -170,7 +170,7 @@ proc_self_stat(FDss) ->
       _ ->
         {0,0,0,0,0,0}
     end,
-  lists:zip([beam_user,beam_kernel,beam_vss,beam_rss,beam_minflt,beam_majflt],
+  lists:zip([beam_user,beam_kernel,beam_vsz,beam_rss,beam_minflt,beam_majflt],
             [to_sec(Utime),to_sec(Stime),to_int(Vsize),
              to_int(Rss), %% in pages...
              to_int(Minflt),to_int(Majflt)]).

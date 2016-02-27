@@ -58,7 +58,7 @@ sys_str(Sys) ->
   M         = pad(element(2,Time),2,$0,left),
   S         = pad(element(3,Time),2,$0,left),
   Node      = to_list(lks(node, Sys)),
-  MEMbeam   = prf:human(lks(beam_vss,Sys,0)),
+  MEMbeam   = prf:human(lks(beam_vsz,Sys,0)),
   MEM       = prf:human(lks(total,Sys)),
   CPUbeam   = to_list(100*(lks(beam_user,Sys,0)+lks(beam_kernel,Sys,0))),
   CPU       = to_list(100*(lks(user,Sys,0)+lks(kernel,Sys,0))),
