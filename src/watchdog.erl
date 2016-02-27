@@ -133,6 +133,7 @@ add_proc_subscriber({Reg,Node}) when is_atom(Reg),is_atom(Node) ->
   call_wd({add_subscriber,{{pid,{Reg,Node}},''}}).
 
 %% E.g:  watchdog:add_send_subscriber(tcp,"localhost",56669,"I'm a Cookie").
+%% E.g:  watchdog:add_send_subscriber(influx,"localhost",56669,'').
 add_send_subscriber(Proto,Host,Port,PassPhrase) ->
   case inet:gethostbyname(Host) of
     {ok,_}    -> call_wd({add_subscriber,{{Proto,{Host,Port}},PassPhrase}});
@@ -430,6 +431,7 @@ lks(Tag,List) ->
 %% Subscriber(close,_) -> void(): closes Subscriber, e.g. by doing file:close/1
 
 mk_subscriber({pid,To},_,_)              -> mk_send(To);
+mk_subscriber({influx,{Host,Port}},_,LD) -> mk_send(udp,Host,Port,influx,LD);
 mk_subscriber({Proto,{Host,Port}},Pwd,LD)-> mk_send(Proto,Host,Port,Pwd,LD);
 mk_subscriber({log,trc},FN,_)            -> mk_log(trc,FN);
 mk_subscriber({log,text},FN,_)           -> mk_log(text,FN);
@@ -526,6 +528,8 @@ mk_send_tcp(true,Host,Port,Cookie) ->
     end
   end.
 
+mk_payload(Chunk,influx) ->
+  io_lib:format("cpu value=~p",[size(term_to_binary(Chunk))]);
 mk_payload(Chunk,Cookie) ->
   BC = term_to_binary(Chunk,[{compressed,3}]),
   Payload = prf_crypto:encrypt(Cookie,BC),
