@@ -529,7 +529,18 @@ mk_send_tcp(true,Host,Port,Cookie) ->
   end.
 
 mk_payload(Chunk,influx) ->
-  io_lib:format("cpu value=~p",[size(term_to_binary(Chunk))]);
+  case Chunk of
+    {watchdog,_Node,_TS,ticker,Data} ->
+      case proplists:get_value(prfSys,Data) of
+        undefined -> "";
+        PrfSys ->
+          case proplists:get_value(beam_user,PrfSys) of
+            undefined -> "";
+            User -> io_lib:format("cpu value=~6.2.0f",[round(User*100)/100])
+          end
+      end;
+    _ -> ""
+  end;
 mk_payload(Chunk,Cookie) ->
   BC = term_to_binary(Chunk,[{compressed,3}]),
   Payload = prf_crypto:encrypt(Cookie,BC),
