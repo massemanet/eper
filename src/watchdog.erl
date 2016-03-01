@@ -388,8 +388,23 @@ add_subscriber(Key,Val,LD = #ld{subscribers=Subs}) ->
 
 %% make report and send to all subscribers
 send_report(LD,Trigger) ->
+  case is_async_report(Trigger) of
+    true  -> spawn(fun () -> do_send_report(LD,Trigger) end);
+    false -> do_send_report(LD,Trigger)
+  end.
+
+do_send_report(LD,Trigger) ->
   Report = make_report(Trigger,LD),
-  [Sub(send,Report) || {_,Sub} <- LD#ld.subscribers].
+  [Sub(send,Report) || {_,Sub} <- LD#ld.subscribers],
+  ok.
+
+is_async_report(sysMon) ->
+    %% sysMon reports are asynchronous, because collecting process and
+    %% port info may take a lot of time, and we shouldn't block the
+    %% watchdog process
+    true;
+is_async_report(_Trigger) ->
+    false.
 
 make_report(user,LD) ->
   reporter(user,LD#ld.userData);
