@@ -539,7 +539,7 @@ mk_log(Type,FN) ->
       close_log_file(FD);
      (reset,_) ->
       close_log_file(FD),
-      mk_log(text,FN);
+      mk_log(Type,FN);
      (send,Term)->
       send_log_term(Type,FD,Term)
   end.
