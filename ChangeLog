@@ -1,9 +1,71 @@
-commit f954307441723b25603155ffe50c907981f61d82
+commit abed665794cd29429b2958031a892811c708c52d
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Wed Mar 2 08:29:00 2016 +0100
+
+    v0.97.2
+
+src/eper.app.src
+
+commit 139a3378e91184a2f90e6031e565e0e8c1773b16
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Sat Feb 27 16:05:06 2016 +0100
+
+    fix dialyzer warning
+    port_command/2 -> true, while port_command/3 -> boolean()...
+    except for that, port_command(X,Y) == port_command(X,Y,[]).
+
+src/prfSys.erl
+
+commit 52d9f79f6cf41094469a96194794d678c73b18be
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Sat Feb 27 15:49:04 2016 +0100
+
+    fix typo (vss -> vsz)
+
+src/dtopConsumer.erl
+src/prfSys.erl
+
+commit ae1a2fe0a9aae872f2d27f4b0b479deab108cb4a
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Sat Feb 27 13:33:24 2016 +0100
+
+    darwin support
+
+src/prfSys.erl
+
+commit de68954175739818201945de1aae8eba9b77bb5a
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Feb 25 20:29:08 2016 +0100
+
+    re-did rebar.config.script to look nicer
+
+rebar.config.script
+
+commit a74a5da7c9d41ea50a8f7f7c94d5526c5257b52d
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Feb 25 19:53:53 2016 +0100
+
+    redo hiding of deprecated funcs in prf_crypto
+
+rebar.config.script
+src/prf_crypto.erl
+
+commit cd19b8619ca0ca91b3ef5e408fdf969f074e54af
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Feb 25 19:06:50 2016 +0100
+
+    change rebar hiding of erlang:now
+
+rebar.config.script
+src/prfTime.erl
+
+commit 1742031e12fb9e6eac0ffacfc593d5a7849fc07f
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Thu Dec 24 21:04:34 2015 +0100
 
     v0.97.1
 
+ChangeLog
 src/eper.app.src
 
 commit e0cae6beba6a3bd89d1555ec9f89825e92c6ccfe
