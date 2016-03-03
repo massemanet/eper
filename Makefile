@@ -22,7 +22,7 @@ xref: all
 	@$(REBAR) xref
 
 dialyze: all ~/.dialyzer_plt
-	dialyzer -Wno_return -nn --plt ~/.dialyzer_plt --src src
+	dialyzer -Wno_return -nn --plt ~/.dialyzer_plt ebin
 
 ~/.dialyzer_plt:
 	- dialyzer -nn --output_plt ~/.dialyzer_plt --build_plt \
