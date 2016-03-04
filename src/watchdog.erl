@@ -22,6 +22,7 @@
 -export(
    [ handle_info/2
     ,handle_call/3
+    ,handle_cast/2
     ,init/1
     ,rec_info/1]).
 
@@ -161,10 +162,13 @@ reset_subscriber(Key) ->
   call_wd({reset_subscriber,Key}).
 
 message(Term) ->
-  call_wd({user,Term}).
+  cast_wd({user,Term}).
 
 call_wd(Term) ->
   gen_server:call(?MODULE,Term).
+
+cast_wd(Term) ->
+  gen_server:cast(?MODULE,Term).
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 init([]) ->
@@ -175,12 +179,6 @@ init([]) ->
 % upgrade
 handle_call(Msg,From,OLD) when not is_record(OLD,ld) ->
   handle_call(Msg,From,upgrade(OLD));
-
-handle_call({user,Data},_,LD) -> % data from user
-  NLD = LD#ld{userData=Data},
-  try {ok,do_user(check_jailed(NLD,userData))}
-  catch _ -> {ok,NLD}
-  end;
 
 % admin configs
 handle_call({cfg,timeout_restart,TR},_,LD) when is_integer(TR) ->
@@ -211,6 +209,12 @@ handle_call({delete_subscriber,Key},_,LD) ->
   {ok,LD#ld{subscribers=delete_subscriber(Key,LD)}};
 handle_call({add_subscriber,{Key,Val}},_,LD) ->
   {ok,LD#ld{subscribers=add_subscriber(Key,Val,LD)}}.
+
+handle_cast({user,Data},LD) -> % data from user
+  NLD = LD#ld{userData=Data},
+  try do_user(check_jailed(NLD,userData))
+  catch _ -> NLD
+  end.
 
 % events
 handle_info(trigger,LD) -> % fake trigger for debugging
@@ -384,8 +388,23 @@ add_subscriber(Key,Val,LD = #ld{subscribers=Subs}) ->
 
 %% make report and send to all subscribers
 send_report(LD,Trigger) ->
+  case is_async_report(Trigger) of
+    true  -> spawn(fun () -> do_send_report(LD,Trigger) end);
+    false -> do_send_report(LD,Trigger)
+  end.
+
+do_send_report(LD,Trigger) ->
   Report = make_report(Trigger,LD),
-  [Sub(send,Report) || {_,Sub} <- LD#ld.subscribers].
+  [Sub(send,Report) || {_,Sub} <- LD#ld.subscribers],
+  ok.
+
+is_async_report(sysMon) ->
+    %% sysMon reports are asynchronous, because collecting process and
+    %% port info may take a lot of time, and we shouldn't block the
+    %% watchdog process
+    true;
+is_async_report(_Trigger) ->
+    false.
 
 make_report(user,LD) ->
   reporter(user,LD#ld.userData);
@@ -539,7 +558,7 @@ mk_log(Type,FN) ->
       close_log_file(FD);
      (reset,_) ->
       close_log_file(FD),
-      mk_log(text,FN);
+      mk_log(Type,FN);
      (send,Term)->
       send_log_term(Type,FD,Term)
   end.
@@ -632,18 +651,20 @@ start_stop_test() ->
   watchdog:stop().
 
 subscriber_log_text_test() ->
-  watchdog:start(),
+  Pid = watchdog:start(),
+  monitor(process, Pid),
   FN = mk_tmpfile(),
   watchdog:add_log_subscriber({text,FN}),
   watchdog:message(trivial),
   watchdog:stop(),
+  receive {'DOWN',_,process,Pid,_} -> ok end,
   ?assert(validate_file(FN,trivial)).
 
 subscriber_send_proc_test() ->
   watchdog:start(),
   watchdog:add_proc_subscriber(self()),
   watchdog:message(finicky),
-  ?assert(receive {watchdog,_,_,user,finicky} -> true after 0 -> false end),
+  ?assert(receive {watchdog,_,_,user,finicky} -> true after 50 -> false end),
   watchdog:stop().
 
 subs_send_proc_test() ->
