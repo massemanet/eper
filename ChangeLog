@@ -1,9 +1,56 @@
-commit abed665794cd29429b2958031a892811c708c52d
+commit 75a59285f77ed7540ee2d7160af5ef4bb764384c
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Fri Mar 4 08:51:40 2016 +0100
+
+    v0.97.3
+
+src/eper.app.src
+
+commit 528ada7fe4f2b68b39a00a3d15a12c5905b8b76f
+Author: Dániel Szoboszlay <daniel.szoboszlay@klarna.com>
+Date:   Thu Mar 3 14:32:57 2016 +0100
+
+    Dialyze beams instead of sources
+    The source analysis doesn't play nice with conditional compilation
+    (e.g. the USE_NOW macro), because dialyzer would need to know about
+    the compile options used by rebar. Otherwise it may produce false
+    positive warnings, as it can check code intended for a different OTP
+    version.
+    Analysing the compiled beams solves this problem.
+
+Makefile
+
+commit caf8d9a3475d2bfe9088f609fdc1044d6c661cc4
+Author: Dániel Szoboszlay <daniel.szoboszlay@klarna.com>
+Date:   Tue Mar 1 16:55:26 2016 +0100
+
+    Build sysMon reports asynchronously
+
+src/watchdog.erl
+
+commit 337e7aece9fce01998a8aef7f143279dfe048000
+Author: Dániel Szoboszlay <daniel.szoboszlay@klarna.com>
+Date:   Tue Mar 1 16:30:17 2016 +0100
+
+    Send user data to watchdog asynchronously
+
+src/watchdog.erl
+
+commit b3ead6c210668dbb018feae6dea56b8b9018f3e3
+Author: Dániel Szoboszlay <daniel.szoboszlay@klarna.com>
+Date:   Tue Mar 1 16:26:41 2016 +0100
+
+    Preserve log type on reset
+
+src/watchdog.erl
+
+commit 3c4b13c77976d29c75d46d80090a08b26618bc9d
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Wed Mar 2 08:29:00 2016 +0100
 
     v0.97.2
 
+ChangeLog
 src/eper.app.src
 
 commit 139a3378e91184a2f90e6031e565e0e8c1773b16
