@@ -189,10 +189,10 @@ t0_test() ->
   watchdog:add_send_subscriber(16#babe,"localhost",Port,Secret),
   watchdog:message(troglodyte),
   watchdog:stop(),
-  poll(),
+  poll(dogC),
   ?assertMatch([{_,_,user,troglodyte}],
                prf:stop(dogC)),
-  prfDog:quit().
+  prf:stop(dogC).
 
 t1_test() ->
   Port = 16#dade,
@@ -206,15 +206,15 @@ t1_test() ->
   watchdog:add_send_subscriber(tcp,"localhost",Port,Secret),
   watchdog:message(troglodyte),
   watchdog:stop(),
-  poll(),
+  poll(dddd),
   ?assertMatch([{_,_,user,troglodyte}],
                prf:stop(dddd)),
-  prfDog:quit().
+  prf:stop(dddd).
 
-poll() ->
-  case prf:state(dogC) of
+poll(I) ->
+  case prf:state(I) of
     {ld,[]} -> receive after 300 -> ok end,
-               poll();
+               poll(I);
     _ -> ok
   end.
 
