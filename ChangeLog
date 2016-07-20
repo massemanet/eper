@@ -1,9 +1,50 @@
-commit 75a59285f77ed7540ee2d7160af5ef4bb764384c
+commit 172cb1971fe58bc3e225d01f61b3a85ef8141341
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Wed Jul 20 11:36:39 2016 +0200
+
+    v0.97.4
+
+src/eper.app.src
+
+commit 776427de044d6752c091e639e3c929e0ae2e3f4d
+Author: mats cronqvist <masse@klarna.com>
+Date:   Wed Jul 20 11:01:58 2016 +0200
+
+    fixx bug in test
+
+src/prfDog.erl
+
+commit 79491844649ce33b6ee2285347b1a4ba605b1caf
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Apr 14 19:36:22 2016 +0200
+
+    fix buggy prfDog:config
+
+src/prfDog.erl
+
+commit 4ef899d898df3e80e690cd15d38cf3a2f5eec931
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Apr 14 13:53:03 2016 +0200
+
+    fix watchdog/prfDog connection over tcp
+
+src/prfDog.erl
+
+commit be051323575e7ca927ba36489d54d727ab0da6a4
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Apr 14 10:08:58 2016 +0200
+
+    docs
+
+doc/watchdog.txt
+
+commit f7a1b4504f5eefc61fb9da7101fdaccc687021cd
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Fri Mar 4 08:51:40 2016 +0100
 
     v0.97.3
 
+ChangeLog
 src/eper.app.src
 
 commit 528ada7fe4f2b68b39a00a3d15a12c5905b8b76f
