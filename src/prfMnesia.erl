@@ -402,7 +402,7 @@ logged_transactions() ->
 -spec logged_transactions_change(cache(), time_diff()) -> metric_gauge().
 logged_transactions_change(Cache, TimeDiff) ->
   OldCount = get_value_from_cache(logged_transactions, Cache),
-  calculate_change(restarted_transactions(), OldCount, TimeDiff).
+  calculate_change(logged_transactions(), OldCount, TimeDiff).
 
 -spec object_count(table_name()) -> count() | undefined.
 object_count(Table) ->
