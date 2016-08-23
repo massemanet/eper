@@ -6,11 +6,23 @@
 
 -module('mtop').
 -author('masse').
--export([start/0]).
+-export([start/0, stop/0]).
 
 start() ->
+  case [Vsn || {mnesia,_,Vsn} <- application:which_applications()] of
+    [] -> mnesia_not_started;
+    [_] -> spawn(fun init/0)
+  end.
+
+stop() ->
+  case whereis(mtop) of
+    undefined -> ok;
+    Pid -> Pid ! quit
+  end.
+
+init() ->
   register(mtop,self()),
-  {State,_}=prfMnesia:collect(init),
+  {State,_} = prfMnesia:collect(init),
   Opts = [{collectors,
            [held_locks,lock_queue,current_transactions,failed_transactions,
             committed_transactions,restarted_transactions,
