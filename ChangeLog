@@ -1,9 +1,35 @@
-commit 172cb1971fe58bc3e225d01f61b3a85ef8141341
+commit 83068510866bd95451b20b526ee9d15e29d19981
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Tue Aug 23 11:21:22 2016 +0200
+
+    v0.97.5
+
+src/eper.app.src
+
+commit dc3832da4302a95ecf21f82b6e8b7a2e59e67a16
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Tue Aug 23 11:17:06 2016 +0200
+
+    fix start/stop in mtop
+
+src/mtop.erl
+
+commit e9a2f3b9b9a1f3b4dc820ac1bea536ea9fa5130a
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Tue Aug 23 10:29:41 2016 +0200
+
+    add (primitive) mnesia top tool mtop
+
+src/mtop.erl
+src/prfMnesia.erl
+
+commit cb77c7c30c4cc644cab949ea4ae134c6c28ba906
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Wed Jul 20 11:36:39 2016 +0200
 
     v0.97.4
 
+ChangeLog
 src/eper.app.src
 
 commit 776427de044d6752c091e639e3c929e0ae2e3f4d
@@ -1130,7 +1156,6 @@ Date:   Thu Apr 10 15:25:00 2014 +0200
 
 Makefile
 bin/release.sh
-release.sh
 
 commit 8dc9c9e7ba21ce1b59bc370eab46cba64ca3c7cf
 Author: mats cronqvist <masse@klarna.com>
@@ -1297,7 +1322,6 @@ Date:   Fri Dec 6 17:46:15 2013 +0100
     renamed getopt to solve name clash
 
 src/eper.erl
-src/getopt.erl
 src/getoptw.erl
 
 commit 1bd0d0212a563c1249fb66e9acd5760be30ff438
@@ -2415,11 +2439,6 @@ Date:   Sat Oct 16 13:30:01 2010 -0600
     Moving bin scripts to priv/bin
 
 bin/Makefile.am
-bin/dtop
-bin/gperf
-bin/ntop
-bin/redbug
-bin/sherk
 priv/bin/dtop
 priv/bin/gperf
 priv/bin/ntop
@@ -3550,7 +3569,6 @@ Date:   Wed Nov 12 13:40:28 2008 +0000
 
 src/Makefile.am
 src/gen_serv.hrl
-src/gen_server.hrl
 src/prfDog.erl
 
 commit a0727b608efb4adcd5441389b7968fed224e69ad
@@ -3711,14 +3729,12 @@ Date:   Wed Oct 22 10:32:04 2008 +0000
       watchdog integegration
 
 src/Makefile.am
-src/prfClient.erl
 src/prfConsumer.erl
 src/prfDog.erl
 src/prfTarg.erl
 src/prfTrc.erl
 src/sherk.erl
 src/sherk_list.erl
-src/watchdog_proxy.erl
 
 commit c30664281574f17c3c3128279bb6ba33786fb819
 Author: mats cronqvist <mats.cronqvist@gmail.com>
@@ -4066,43 +4082,8 @@ bin/sherk
 configure.ac
 doc/redbug.txt
 dtop/Makefile.am
-dtop/dtop
-dtop/dtop.erl
-dtop/dtopConsumer.erl
 gperf/Makefile.am
-gperf/gperf
-gperf/gperf.erl
-gperf/gperf.glade
-gperf/gperf.gladep
-gperf/gperfConsumer.erl
-gperf/gperfGtk.erl
-ntop/ntop
-ntop/ntop.erl
-ntop/ntopConsumer.erl
-prf/prf.erl
-prf/prfClient.erl
-prf/prfHost.erl
-prf/prfNet.erl
-prf/prfPrc.erl
-prf/prfSys.erl
-prf/prfTarg.erl
-prf/prfTrc.erl
-redbug/redbug
-redbug/redbug.erl
-redbug/redbug.txt
-redbug/redbugConsumer.erl
-sherk/sherk
-sherk/sherk.erl
-sherk/sherk.glade
-sherk/sherk.gladep
-sherk/sherk_aquire.erl
-sherk/sherk_ets.erl
-sherk/sherk_list.erl
-sherk/sherk_prof.erl
-sherk/sherk_scan.erl
 sherk/sherk_tab.erl
-sherk/sherk_target.erl
-sherk/sherk_tree.erl
 src/Makefile.am
 src/dtop.erl
 src/dtopConsumer.erl
@@ -4394,7 +4375,6 @@ Date:   Tue Dec 12 09:45:26 2006 +0000
 dtop/Makefile.am
 dtop/dtop.erl
 dtop/dtopConsumer.erl
-dtop/prfDtop.erl
 gperf/gperfConsumer.erl
 prf/Makefile.am
 prf/prf.erl
