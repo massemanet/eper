@@ -35,7 +35,7 @@
           buffered     = false,        % output buffering
           discard      = false,        % discard messages (when counting)
           print_calls  = true,         % print calls
-          print_file   = "",           % file to print to (standard_io)
+          print_file   = standard_io,  % file to print to (standard_io)
           print_msec   = false,        % print milliseconds in timestamps?
           print_depth  = 999999,       % Limit for "~P" formatting depth
           print_re     = "",           % regexp that must match to print
@@ -431,7 +431,7 @@ mk_out(#cnf{print_re=RE,print_file=File}) ->
       end
   end.
 
-get_fd("") -> standard_io;
+get_fd(Atom) when is_atom(Atom)-> Atom;
 get_fd(FN) ->
   case file:open(FN,[write]) of
     {ok,FD} -> FD;
