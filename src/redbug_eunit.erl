@@ -131,7 +131,8 @@ t_8_test() ->
   ?assertEqual(sort,
                e(2,e(4,e(1,Msgs)))),
   ?assertEqual(sort,
-               e(2,e(4,e(2,Msgs)))).
+               e(2,e(4,e(2,Msgs)))),
+  maybe_delete("foo0.trc").
 
 t_9_test() ->
   Filename = "redbug.txt",

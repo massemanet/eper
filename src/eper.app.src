@@ -3,5 +3,10 @@
   {description, "Erlang Performance and Debugging Tools"},
   {vsn, "0.97.6"},
   {registered, []},
-  {applications, [kernel,stdlib]}
+  {applications,
+   [kernel,
+    stdlib,
+    crypto,
+    mnesia,
+    runtime_tools]}
  ]}.

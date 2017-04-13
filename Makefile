@@ -1,4 +1,4 @@
-REBAR = ./rebar
+REBAR = ./rebar3
 
 .PHONY: all compile test clean
 .PHONY: test eunit xref dialyze
@@ -7,7 +7,7 @@ REBAR = ./rebar
 all: compile
 
 compile:
-	@$(REBAR) compile escriptize
+	@$(REBAR) compile
 
 clean:
 	@find . -name "*~" -exec rm {} \;
@@ -21,12 +21,8 @@ eunit: all
 xref: all
 	@$(REBAR) xref
 
-dialyze: all ~/.dialyzer_plt
-	dialyzer -Wno_return -nn --plt ~/.dialyzer_plt ebin
-
-~/.dialyzer_plt:
-	- dialyzer -nn --output_plt ~/.dialyzer_plt --build_plt \
-           --apps erts kernel stdlib crypto public_key inets eunit xmerl
+dialyzer:
+	@$(REBAR) dialyzer
 
 release_major: test
 	./bin/release.sh major
