@@ -178,6 +178,8 @@ acceptor_loop(ListenSock) ->
 -include_lib("eunit/include/eunit.hrl").
 
 t0_test() ->
+  os:cmd("epmd -daemon"),
+  net_kernel:start([testname, shortnames]),
   Port = 16#dada,
   Secret = "PWD",
   prf:start (dogC,node(),dogConsumer,node()),
