@@ -182,7 +182,9 @@ pidinfo(total_heap_size,_) ->
 pidinfo(last_calls,Pid) ->
   {fun(Val) ->
        case Val of
-         false -> process_flag(Pid,save_calls,16),[];
+         false -> try process_flag(Pid,save_calls,16)
+                  catch _:_ -> ok end,
+                  [];
          Calls -> lists:usort(Calls)
        end
    end,
@@ -194,10 +196,12 @@ pidinfo(initial_call,Pid) ->
   {fun(Val) ->
        case Val of
          {proc_lib,init_p,5} ->
-           case proc_lib:translate_initial_call(Pid) of
-             {dets,init,2}     -> pinf_dets(Pid);
-             {disk_log,init,2} -> pinf_disk_log(Pid);
-             IC                -> IC
+           try proc_lib:translate_initial_call(Pid) of
+               {dets,init,2}     -> pinf_dets(Pid);
+               {disk_log,init,2} -> pinf_disk_log(Pid);
+               IC                -> IC
+           catch _:_ ->
+             Val
            end;
          _ -> Val
        end
