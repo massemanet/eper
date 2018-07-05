@@ -30,6 +30,7 @@
          , code_change/3]).
 
 -include("log.hrl").
+-include("try_with_stack.hrl").
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% the API
 
@@ -100,12 +101,13 @@ safer(LD,F,As) ->
   case erlang:function_exported(LD#ld.mod,F,length(As)) of
     false-> safe_default(F,LD);
     true ->
-      try safe_reply(F,LD,apply(LD#ld.mod,F,As))
-      catch
-        error:R ->
-          ?log([R,{mfa,{LD#ld.mod,F,As}},erlang:get_stacktrace()]),
+      case ?try_with_stack(safe_reply(F,LD,apply(LD#ld.mod,F,As))) of
+        {ok,R} ->
+          R;
+        {error,R,S} ->
+          ?log([R,{mfa,{LD#ld.mod,F,As}},S]),
           safe_default(F,LD);
-        throw:R ->
+        {throw,R,_} ->
           {stop,shutdown,R}
       end
   end.

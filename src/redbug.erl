@@ -16,6 +16,7 @@
 -export([stop/0]).
 
 -include("log.hrl").
+-include("try_with_stack.hrl").
 
 %% the redbug server data structure
 %% most can be set in the input proplist
@@ -138,7 +139,7 @@ unix([Node,Trc,Time,Msgs,Proc]) ->
     maybe_halt(0)
   catch
     C:R ->
-      io:fwrite("~p~n",[{C,R,erlang:get_stacktrace()}]),
+      io:fwrite("~p~n",[{C,R}]),
       maybe_halt(1)
   end;
 unix(X) ->
@@ -256,15 +257,15 @@ init() ->
   process_flag(trap_exit,true),
   receive
     {start,Cnf} ->
-      try
-        starting(do_start(Cnf))
-      catch
-        R ->
+      case ?try_with_stack(starting(do_start(Cnf))) of
+        {ok,R} ->
+          R;
+        {throw,R,_} ->
           exit({argument_error,R});
-        C:R ->
+        {C,R,S} ->
           case Cnf#cnf.debug andalso not Cnf#cnf.blocking of
             false-> ok;
-            true -> ?log([{C,R},{stack,erlang:get_stacktrace()}])
+            true -> ?log([{C,R},{stack,S}])
           end,
           exit(R)
       end

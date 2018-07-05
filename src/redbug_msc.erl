@@ -247,7 +247,7 @@ assert(Fun,Tag) ->
     _:{this_is_too_confusing,C}  -> exit({syntax_error,{C,Tag}});
     _:{_,{error,{1,erl_parse,L}}}-> exit({syntax_error,{lists:flatten(L),Tag}});
     _:{unknown_action,A}         -> exit({syntax_error,{unknown_action,A}});
-    _:R                          -> exit({R,Tag,erlang:get_stacktrace()})
+    _:R                          -> exit({R,Tag})
   end.
 
 
