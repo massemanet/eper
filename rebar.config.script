@@ -13,11 +13,6 @@
 %% should be used to enable old functions. That way new functions are
 %% enabled by default.
 
-STACKTRACE =
-{fun() -> not lists:member(erlang:system_info(otp_release),
-                           [integer_to_list(I)||I<-lists:seq(1,20)]) end,
- 'USE_GET_STACKTRACE'},
-
 CRYPTO =
 {fun() -> code:ensure_loaded(crypto),
           erlang:function_exported(crypto,block_encrypt,4)
@@ -29,7 +24,7 @@ NOW =
   end,
   'USE_NOW'},
 
-Checks = [CRYPTO, NOW, STACKTRACE],
+Checks = [CRYPTO, NOW],
 
 %% ================================================
 KeyAppend = fun(Tag,[],E,_)          -> [{Tag,[E]}];
