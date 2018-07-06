@@ -1,5 +1,6 @@
 .#*
 \#*
 *~
+*crashdump
 /_build/
 /rebar.lock

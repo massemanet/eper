@@ -13,12 +13,13 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% gen_serv API
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 -export([start/0,start/1,stop/0]).
 -export([print_state/0]).
 
 -include("log.hrl").
+-include("try_with_stack.hrl").
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 ri(ld) -> record_info(fields,ld);
 ri(_) -> [].
 
@@ -48,9 +49,10 @@ handle_call(In,_,LD) -> gen_safe(fun(Ld)->reply(do_call(Ld,In))end,LD).
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %% utilities
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-gen_safe(F, LD) ->
-  try F(LD)
-  catch _:R -> {stop,{R,erlang:get_stacktrace()},LD}
+gen_safe(F,LD) ->
+  case ?try_with_stack(F(LD)) of
+    {ok,Result} -> Result;
+    {_,Reason,Stack} -> {stop,{Reason,Stack},LD}
   end.
 
 ok(X) -> {ok,X}.
