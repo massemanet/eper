@@ -1,6 +1,5 @@
 {application, eper,
- [
-  {description, "Erlang Performance and Debugging Tools"},
+ [{description, "Erlang Performance and Debugging Tools"},
   {vsn, "0.99.0"},
   {registered, []},
   {applications,
@@ -8,5 +7,8 @@
     stdlib,
     crypto,
     mnesia,
-    runtime_tools]}
- ]}.
+    runtime_tools]},
+  {maintainers, ["Mats Cronqvist"]},
+  {licenses, ["MIT"]},
+  {links, [{"Github", "https://github.com/massemanet/eper"}]}
+]}.
