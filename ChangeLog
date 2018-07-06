@@ -1,9 +1,28 @@
-commit 1da036f81641f95e80c05f0049bad6aa774b8b01
+commit cec9e4d29e7a8ee0e9c9bd4b651cfff013affe66
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Fri Jul 6 15:31:34 2018 +0200
+
+    v0.99.1
+
+src/eper.app.src
+
+commit 987d81ba53d833971c339bbaf1affb40cf22ebd9
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Fri Jul 6 15:31:15 2018 +0200
+
+    metadata
+
+rebar.config
+src/eper.app.src
+
+commit f9ff7d32a2e437f5d14b697fd88922470fe16840
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Fri Jul 6 14:57:14 2018 +0200
 
     v0.99.0
 
+AUTHORS
+ChangeLog
 src/eper.app.src
 
 commit 054f2cde5fe225430be42d718df7f5ee5ba7fcec
