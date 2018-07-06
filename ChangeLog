@@ -1,9 +1,75 @@
-commit 79404a436eb74a138d9abdcadc48f3c27a6dc57e
+commit 1da036f81641f95e80c05f0049bad6aa774b8b01
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Fri Jul 6 14:57:14 2018 +0200
+
+    v0.99.0
+
+src/eper.app.src
+
+commit 054f2cde5fe225430be42d718df7f5ee5ba7fcec
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Fri Jul 6 10:58:20 2018 +0200
+
+    fix for OTP16
+
+.gitignore
+rebar.config.script
+src/try_with_stack.hrl
+
+commit cf112a0f63b2132c786f56ac53050796025e5f8e
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Thu Jul 5 14:49:04 2018 +0200
+
+    erlang21
+
+.travis.yml
+rebar.config.script
+src/gen_serv.erl
+src/gen_serv.hrl
+src/log.hrl
+src/redbug.erl
+src/redbug_msc.erl
+src/try_with_stack.hrl
+
+commit a4e6797827e4507b85a1f034a8e1f627a6a535ef
+Author: mats cronqvist <masse@cronqvi.st>
+Date:   Sat May 26 16:11:30 2018 +0200
+
+    announce parking of the project
+
+README.md
+
+commit 03d4be3ce7dd75ae332fc21ba7d5c18678affc5b
+Author: Hans Svensson <hans.svensson@quviq.com>
+Date:   Mon May 21 08:34:50 2018 +0200
+
+    process might die between pid_info and pidinfo
+
+src/prfPrc.erl
+
+commit 6c854cdcd009db56fb17ac4c70d0a34c2e04f311
+Author: getong <getong@users.noreply.github.com>
+Date:   Sat Apr 21 14:45:25 2018 +0800
+
+    update rebar3 version to 3.5.0
+
+rebar3
+
+commit 8613965900ccf7ed1a895d5453409a4bcb299562
+Author: getong <getong@users.noreply.github.com>
+Date:   Tue Aug 29 14:50:20 2017 +0800
+
+    add erlang 19, 20 for test
+
+.travis.yml
+
+commit f23776f716aaa8e8746ea4195a11df3605d6a885
 Author: mats cronqvist <masse@cronqvi.st>
 Date:   Thu Apr 13 21:05:43 2017 +0200
 
     v0.98.0
 
+ChangeLog
 src/eper.app.src
 
 commit 2d5744cf0f269b3e79047afc3d38114e3d890c9a
